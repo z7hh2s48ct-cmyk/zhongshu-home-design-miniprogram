@@ -11,7 +11,7 @@ const miniProgramDirectory = join(repositoryDirectory, '前端程序')
 const adminDirectory = join(repositoryDirectory, '管理后台')
 const backendDirectory = join(repositoryDirectory, '后端程序')
 const requestedTarget = process.argv[2] ?? 'all'
-const supportedTargets = new Set(['all', 'doctor', 'mini', 'admin', 'backend'])
+const supportedTargets = new Set(['all', 'full', 'doctor', 'mini', 'admin', 'backend', 'e2e'])
 const isWindows = process.platform === 'win32'
 
 class VerificationError extends Error {
@@ -145,8 +145,8 @@ function printSensitiveEnvironmentPresence() {
 
 function doctor(target) {
   checkNode()
-  if (target === 'all' || target === 'admin') checkAdmin()
-  if (target === 'all' || target === 'backend') checkBackend()
+  if (target === 'all' || target === 'full' || target === 'admin') checkAdmin()
+  if (target === 'all' || target === 'full' || target === 'backend' || target === 'e2e') checkBackend()
   printSensitiveEnvironmentPresence()
 }
 
@@ -192,8 +192,12 @@ function verifyBackend() {
   )
 }
 
+function verifyE2E() {
+  runStep('e2e', '37 个三端全链检查点', process.execPath, ['e2e/zs-e2e.mjs'], repositoryDirectory)
+}
+
 function usage() {
-  console.log('用法：node scripts/verify.mjs [all|doctor|mini|admin|backend]')
+  console.log('用法：node scripts/verify.mjs [all|full|doctor|mini|admin|backend|e2e]')
 }
 
 try {
@@ -206,11 +210,16 @@ try {
   doctor(doctorTarget)
   if (requestedTarget === 'doctor') process.exit(0)
 
-  const stages = requestedTarget === 'all' ? ['mini', 'admin', 'backend'] : [requestedTarget]
+  const stages = requestedTarget === 'all'
+    ? ['mini', 'admin', 'backend']
+    : requestedTarget === 'full'
+      ? ['mini', 'admin', 'backend', 'e2e']
+      : [requestedTarget]
   for (const stage of stages) {
     if (stage === 'mini') verifyMiniProgram()
     if (stage === 'admin') verifyAdmin()
     if (stage === 'backend') verifyBackend()
+    if (stage === 'e2e') verifyE2E()
   }
   console.log(`\n[verify] ${stages.join(' -> ')} 全部通过`)
 } catch (error) {

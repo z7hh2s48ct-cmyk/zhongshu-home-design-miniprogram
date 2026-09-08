@@ -40,13 +40,14 @@ cd ..
 ```bash
 node scripts/verify.mjs doctor
 node scripts/verify.mjs all
+node scripts/verify.mjs e2e
 ```
 
-`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 17 个后端众墅合同测试文件”执行；后端合同测试使用 Testcontainers，需要 JDK 17 和可用的 Docker daemon。失败摘要会标明具体端与阶段。也可用 `mini`、`admin`、`backend` 参数单独复跑。
+`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 17 个后端众墅合同测试文件”执行；`e2e` 在已启动的 `local,pg,zsdev` 后端上执行 37 个三端全链检查点；`full` 依次执行两组验证。后端合同测试和 E2E 都需要 JDK 17 与可用的 Docker daemon。也可用 `mini`、`admin`、`backend` 参数单独复跑，E2E 运行说明见 [`e2e/README.md`](e2e/README.md)。
 
 环境自检只输出敏感变量的“已设置/未设置”状态，不打印变量值。CI 与本地复用这组命令。
 
-根级 GitHub Actions 在 `main` 的 push、面向 `main` 的 pull request 及手动触发时运行三个独立检查：`mini`、`admin`、`backend`。后端 Surefire 报告无论成功或失败都会保留 14 天。工作流首次在远端全绿后，应按 `CONTRIBUTING.md` 启用分支保护。
+根级 GitHub Actions 在 `main` 的 push、面向 `main` 的 pull request 及手动触发时运行四个独立检查：`mini`、`admin`、`backend`、`e2e`。Surefire 报告和 E2E 报告/日志无论成功或失败都会保留 14 天。工作流首次在远端全绿后，应按 `CONTRIBUTING.md` 启用分支保护。
 
 ## 项目治理
 
