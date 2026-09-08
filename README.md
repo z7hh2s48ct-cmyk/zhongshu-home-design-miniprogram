@@ -23,6 +23,27 @@
 
 各端的安装、运行和验证方式见对应目录内的 `README.md` 与 `package.json` / `pom.xml`。
 
+## 统一验证
+
+先安装管理端依赖：
+
+```bash
+cd 管理后台
+pnpm install --frozen-lockfile
+cd ..
+```
+
+然后在仓库根目录执行：
+
+```bash
+node scripts/verify.mjs doctor
+node scripts/verify.mjs all
+```
+
+`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 17 个后端众墅合同测试文件”执行；后端合同测试使用 Testcontainers，需要 JDK 17 和可用的 Docker daemon。失败摘要会标明具体端与阶段。也可用 `mini`、`admin`、`backend` 参数单独复跑。
+
+环境自检只输出敏感变量的“已设置/未设置”状态，不打印变量值。CI 与本地复用这组命令。
+
 ## 项目治理
 
 - [源码来源与归档完整性](SOURCE_PROVENANCE.md)
