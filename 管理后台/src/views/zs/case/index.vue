@@ -16,20 +16,38 @@
       <!-- 筛选 -->
       <el-form inline class="zs-filter">
         <el-form-item label="来源">
-          <el-select v-model="query.sourceType" clearable placeholder="全部" style="width: 120px" @change="load">
+          <el-select
+            v-model="query.sourceType"
+            clearable
+            placeholder="全部"
+            style="width: 120px"
+            @change="load"
+          >
             <el-option label="公司案例" value="COMPANY" />
             <el-option label="AI案例" value="AI" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="query.publicationStatus" clearable placeholder="全部" style="width: 120px" @change="load">
+          <el-select
+            v-model="query.publicationStatus"
+            clearable
+            placeholder="全部"
+            style="width: 120px"
+            @change="load"
+          >
             <el-option label="草稿" value="DRAFT" />
             <el-option label="已上架" value="PUBLISHED" />
             <el-option label="已下架" value="OFFLINE" />
           </el-select>
         </el-form-item>
         <el-form-item label="关键词">
-          <el-input v-model="query.keyword" placeholder="案例名称" clearable style="width: 180px" @keyup.enter="load" />
+          <el-input
+            v-model="query.keyword"
+            placeholder="案例名称"
+            clearable
+            style="width: 180px"
+            @keyup.enter="load"
+          />
         </el-form-item>
         <el-form-item>
           <el-button class="zs-btn-primary" @click="load">查询</el-button>
@@ -45,7 +63,12 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="list" v-loading="loading" stripe @selection-change="(rows) => (selectedIds = rows.map((r) => r.caseId))">
+      <el-table
+        :data="list"
+        v-loading="loading"
+        stripe
+        @selection-change="(rows) => (selectedIds = rows.map((r) => r.caseId))"
+      >
         <el-table-column type="selection" width="44" />
         <el-table-column label="案例编号" prop="caseId" width="160" />
         <el-table-column label="案例名称" prop="title" min-width="130" />
@@ -59,7 +82,9 @@
         <el-table-column label="面积(㎡)" prop="buildingArea" width="84" />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <span class="zs-tag" :class="statusColor(row.publicationStatus)">{{ statusText(row.publicationStatus) }}</span>
+            <span class="zs-tag" :class="statusColor(row.publicationStatus)">{{
+              statusText(row.publicationStatus)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="更新时间" width="165">
@@ -67,9 +92,21 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <span class="zs-link" @click="$router.push(`/zs/case/create?id=${row.caseId}`)">编辑</span>
-            <span class="zs-link" v-if="row.publicationStatus !== 'PUBLISHED'" @click="doPublish(row)">上架</span>
-            <span class="zs-link-danger" v-if="row.publicationStatus === 'PUBLISHED'" @click="doOffline(row)">下架</span>
+            <span class="zs-link" @click="$router.push(`/zs/case/create?id=${row.caseId}`)"
+              >编辑</span
+            >
+            <span
+              class="zs-link"
+              v-if="row.publicationStatus !== 'PUBLISHED'"
+              @click="doPublish(row)"
+              >上架</span
+            >
+            <span
+              class="zs-link-danger"
+              v-if="row.publicationStatus === 'PUBLISHED'"
+              @click="doOffline(row)"
+              >下架</span
+            >
             <span class="zs-link" @click="$router.push(`/zs/review?id=${row.caseId}`)">预览</span>
           </template>
         </el-table-column>
@@ -98,10 +135,18 @@ const loading = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const selectedIds = ref<string[]>([])
-const query = reactive({ sourceType: '', publicationStatus: '', keyword: '', pageNo: 1, pageSize: 10 })
+const query = reactive({
+  sourceType: '',
+  publicationStatus: '',
+  keyword: '',
+  pageNo: 1,
+  pageSize: 10
+})
 
-const statusText = (s: string) => ({ DRAFT: '草稿', PUBLISHED: '已上架', OFFLINE: '已下架' }[s] || s)
-const statusColor = (s: string) => ({ DRAFT: 'gray', PUBLISHED: 'green', OFFLINE: 'red' }[s] || 'gray')
+const statusText = (s: string) =>
+  ({ DRAFT: '草稿', PUBLISHED: '已上架', OFFLINE: '已下架' })[s] || s
+const statusColor = (s: string) =>
+  ({ DRAFT: 'gray', PUBLISHED: 'green', OFFLINE: 'red' })[s] || 'gray'
 
 const load = async () => {
   loading.value = true
@@ -133,7 +178,11 @@ const doOffline = async (row: any) => {
   load()
 }
 const bulk = async (publish: boolean) => {
-  const res = await ZsApi.bulkCaseAction({ caseIds: selectedIds.value, publish, reason: '批量操作' })
+  const res = await ZsApi.bulkCaseAction({
+    caseIds: selectedIds.value,
+    publish,
+    reason: '批量操作'
+  })
   const okCount = (res?.items || []).filter((i: any) => i.success).length
   message.info(`批量完成：成功 ${okCount} / ${selectedIds.value.length}`)
   load()
@@ -147,10 +196,10 @@ onMounted(load)
 }
 
 .zs-bulk {
+  display: flex;
   margin-bottom: 12px;
   font-size: 13px;
   color: #6f6f6f;
-  display: flex;
   align-items: center;
   gap: 10px;
 }

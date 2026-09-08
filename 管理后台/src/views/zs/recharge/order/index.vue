@@ -25,12 +25,16 @@
         <el-table-column label="赠送点" prop="bonusPoints" width="80" />
         <el-table-column label="支付状态" width="96">
           <template #default="{ row }">
-            <span class="zs-tag" :class="payColor(row.paymentState)">{{ payText(row.paymentState) }}</span>
+            <span class="zs-tag" :class="payColor(row.paymentState)">{{
+              payText(row.paymentState)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="到账状态" width="96">
           <template #default="{ row }">
-            <span class="zs-tag" :class="fulColor(row.fulfillmentState)">{{ fulText(row.fulfillmentState) }}</span>
+            <span class="zs-tag" :class="fulColor(row.fulfillmentState)">{{
+              fulText(row.fulfillmentState)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="168">
@@ -39,9 +43,15 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <span class="zs-link" @click="openDetail(row)">详情</span>
-            <span class="zs-link" v-if="row.paymentState === 'PENDING' || row.paymentState === 'UNKNOWN'"
-              @click="doReconcile(row)">主动查单</span>
-            <span class="zs-link-danger" v-if="canRefund(row)" @click="doRefund(row)">整单退款</span>
+            <span
+              class="zs-link"
+              v-if="row.paymentState === 'PENDING' || row.paymentState === 'UNKNOWN'"
+              @click="doReconcile(row)"
+              >主动查单</span
+            >
+            <span class="zs-link-danger" v-if="canRefund(row)" @click="doRefund(row)"
+              >整单退款</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -51,11 +61,16 @@
         <el-table-column label="订单号" prop="orderNo" width="165" />
         <el-table-column label="用户" prop="userId" width="100" />
         <el-table-column label="退款金额(元)" width="120">
-          <template #default="{ row }">{{ ((row.refundAmountCents || row.amountCents || 0) / 100).toFixed(2) }}</template>
+          <template #default="{ row }">{{
+            ((row.refundAmountCents || row.amountCents || 0) / 100).toFixed(2)
+          }}</template>
         </el-table-column>
         <el-table-column label="渠道状态" width="120">
           <template #default="{ row }">
-            <span class="zs-tag" :class="row.channelState === 'SUCCEEDED' ? 'zs-tag--green' : 'zs-tag--yellow'">
+            <span
+              class="zs-tag"
+              :class="row.channelState === 'SUCCEEDED' ? 'zs-tag--green' : 'zs-tag--yellow'"
+            >
               {{ refundText(row.channelState || row.status) }}
             </span>
           </template>
@@ -78,15 +93,31 @@
 
     <el-dialog v-model="detail.visible" title="订单详情" width="560px">
       <el-descriptions v-if="detail.data" :column="2" border>
-        <el-descriptions-item label="订单号">{{ detail.data.orderNo || detail.data.orderId }}</el-descriptions-item>
+        <el-descriptions-item label="订单号">{{
+          detail.data.orderNo || detail.data.orderId
+        }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ detail.data.userId }}</el-descriptions-item>
-        <el-descriptions-item label="金额(元)">{{ ((detail.data.amountCents || 0) / 100).toFixed(2) }}</el-descriptions-item>
-        <el-descriptions-item label="到账设计点">{{ (detail.data.basePoints || 0) + (detail.data.bonusPoints || 0) }}</el-descriptions-item>
-        <el-descriptions-item label="支付状态">{{ payText(detail.data.paymentState) }}</el-descriptions-item>
-        <el-descriptions-item label="到账状态">{{ fulText(detail.data.fulfillmentState) }}</el-descriptions-item>
-        <el-descriptions-item label="支付时间">{{ fmtTime(detail.data.paidAt) }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ fmtTime(detail.data.createdAt) }}</el-descriptions-item>
-        <el-descriptions-item label="可执行动作" :span="2">{{ (detail.data.allowedActions || []).join('、') || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="金额(元)">{{
+          ((detail.data.amountCents || 0) / 100).toFixed(2)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="到账设计点">{{
+          (detail.data.basePoints || 0) + (detail.data.bonusPoints || 0)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="支付状态">{{
+          payText(detail.data.paymentState)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="到账状态">{{
+          fulText(detail.data.fulfillmentState)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="支付时间">{{
+          fmtTime(detail.data.paidAt)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{
+          fmtTime(detail.data.createdAt)
+        }}</el-descriptions-item>
+        <el-descriptions-item label="可执行动作" :span="2">{{
+          (detail.data.allowedActions || []).join('、') || '—'
+        }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </div>
@@ -107,15 +138,31 @@ const query = reactive({ pageNo: 1, pageSize: 10 })
 const detail = reactive({ visible: false, data: null as any })
 
 const payText = (s: string) =>
-  ({ CREATED: '已创建', PENDING: '待支付', SUCCEEDED: '已支付', CLOSED: '已关闭', FAILED: '失败', UNKNOWN: '未知' }[s] || s)
+  ({
+    CREATED: '已创建',
+    PENDING: '待支付',
+    SUCCEEDED: '已支付',
+    CLOSED: '已关闭',
+    FAILED: '失败',
+    UNKNOWN: '未知'
+  })[s] || s
 const payColor = (s: string) =>
-  ({ SUCCEEDED: 'green', PENDING: 'orange', FAILED: 'red', UNKNOWN: 'red' }[s] || 'gray')
-const fulText = (s: string) => ({ NOT_READY: '未到账', PENDING: '到账中', CREDITED: '已到账', FAILED: '到账失败' }[s] || s)
-const fulColor = (s: string) => ({ CREDITED: 'green', FAILED: 'red', PENDING: 'orange' }[s] || 'gray')
+  ({ SUCCEEDED: 'green', PENDING: 'orange', FAILED: 'red', UNKNOWN: 'red' })[s] || 'gray'
+const fulText = (s: string) =>
+  ({ NOT_READY: '未到账', PENDING: '到账中', CREDITED: '已到账', FAILED: '到账失败' })[s] || s
+const fulColor = (s: string) =>
+  ({ CREDITED: 'green', FAILED: 'red', PENDING: 'orange' })[s] || 'gray'
 const refundText = (s: string) =>
-  ({ CREATED: '已创建', PENDING: '处理中', SUCCEEDED: '退款成功', FAILED: '退款失败', UNKNOWN: '确认中' }[s] || s)
+  ({
+    CREATED: '已创建',
+    PENDING: '处理中',
+    SUCCEEDED: '退款成功',
+    FAILED: '退款失败',
+    UNKNOWN: '确认中'
+  })[s] || s
 
-const canRefund = (row: any) => row.paymentState === 'SUCCEEDED' && row.fulfillmentState === 'CREDITED'
+const canRefund = (row: any) =>
+  row.paymentState === 'SUCCEEDED' && row.fulfillmentState === 'CREDITED'
 
 const load = async () => {
   loading.value = true

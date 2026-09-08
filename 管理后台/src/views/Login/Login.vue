@@ -48,21 +48,21 @@ $prefix-cls: #{$namespace}-login;
   &__left-bg {
     width: 100%;
     height: 100%;
+    background-color: #f5eee7;
     background-image: url('@/assets/imgs/zs/login-left.png');
-    background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-color: #f5eee7;
+    background-size: cover;
   }
 
   &__right {
-    flex: 1;
-    height: 100%;
     display: flex;
+    height: 100%;
+    overflow-y: auto;
+    background-color: #fbf7f2;
+    flex: 1;
     align-items: center;
     justify-content: center;
-    background-color: #fbf7f2;
-    overflow-y: auto;
   }
 }
 
@@ -71,7 +71,7 @@ $prefix-cls: #{$namespace}-login;
   max-width: 560px;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .#{$prefix-cls}__left {
     display: none;
   }

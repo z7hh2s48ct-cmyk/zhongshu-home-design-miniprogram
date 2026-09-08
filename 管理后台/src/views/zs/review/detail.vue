@@ -18,7 +18,11 @@
               <div class="zs-preview-placeholder" v-else>资产 {{ asset.assetId }}</div>
               <span>{{ asset.label }}</span>
             </div>
-            <el-empty v-if="!previewAssets.length" description="暂无预览（联调后显示方案图）" :image-size="80" />
+            <el-empty
+              v-if="!previewAssets.length"
+              description="暂无预览（联调后显示方案图）"
+              :image-size="80"
+            />
           </div>
         </div>
       </el-col>
@@ -27,17 +31,32 @@
           <div class="zs-panel-title">审核操作</div>
           <el-form label-position="top">
             <el-form-item label="审核意见">
-              <el-input v-model="comment" type="textarea" :rows="4" placeholder="通过/退回时给出的说明（退回必填）" />
+              <el-input
+                v-model="comment"
+                type="textarea"
+                :rows="4"
+                placeholder="通过/退回时给出的说明（退回必填）"
+              />
             </el-form-item>
             <el-form-item>
               <div class="zs-review-actions">
-                <el-button class="zs-btn-primary" :loading="saving" @click="decide('APPROVE')">通过</el-button>
-                <el-button type="warning" :loading="saving" @click="decide('CHANGES_REQUESTED')">要求修改</el-button>
-                <el-button type="danger" :loading="saving" @click="decide('REJECT')">拒绝</el-button>
+                <el-button class="zs-btn-primary" :loading="saving" @click="decide('APPROVE')"
+                  >通过</el-button
+                >
+                <el-button type="warning" :loading="saving" @click="decide('CHANGES_REQUESTED')"
+                  >要求修改</el-button
+                >
+                <el-button type="danger" :loading="saving" @click="decide('REJECT')"
+                  >拒绝</el-button
+                >
               </div>
             </el-form-item>
-            <el-alert type="info" :closable="false"
-              title="发布是独立命令" description="审核通过后还需在案例库中对 AI 案例执行上架；生成参考授权不随审核自动获得。" />
+            <el-alert
+              type="info"
+              :closable="false"
+              title="发布是独立命令"
+              description="审核通过后还需在案例库中对 AI 案例执行上架；生成参考授权不随审核自动获得。"
+            />
           </el-form>
         </div>
       </el-col>
@@ -90,26 +109,26 @@ onMounted(async () => {
   gap: 14px;
 
   .zs-preview-item {
-    background: #faf6f0;
-    border-radius: 8px;
     overflow: hidden;
-    text-align: center;
     font-size: 13px;
     color: #6f6f6f;
+    text-align: center;
+    background: #faf6f0;
+    border-radius: 8px;
 
     img {
+      display: block;
       width: 100%;
       height: 150px;
       object-fit: cover;
-      display: block;
     }
 
     .zs-preview-placeholder {
-      height: 150px;
       display: flex;
+      height: 150px;
+      color: #b8b0a4;
       align-items: center;
       justify-content: center;
-      color: #b8b0a4;
     }
 
     span {

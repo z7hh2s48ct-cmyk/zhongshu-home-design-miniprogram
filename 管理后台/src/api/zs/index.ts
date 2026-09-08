@@ -28,8 +28,7 @@ export const bulkReview = (data) =>
   request.post({ url: `${BASE}/submissions/bulk-review-commands`, data })
 
 // ---------- 授权码 ----------
-export const getAccessCodePage = (params) =>
-  request.get({ url: `${BASE}/access-codes`, params })
+export const getAccessCodePage = (params) => request.get({ url: `${BASE}/access-codes`, params })
 export const getAccessCodeStats = () => request.get({ url: `${BASE}/access-codes/stats` })
 export const disableAccessCode = (codeId) =>
   request.patch({ url: `${BASE}/access-codes/${codeId}`, data: { action: 'disable' } })
@@ -53,8 +52,7 @@ export const getOrderPage = (params) => request.get({ url: `${BASE}/recharge-ord
 export const getOrder = (orderId) => request.get({ url: `${BASE}/recharge-orders/${orderId}` })
 export const createRefundRequest = (orderId, data) =>
   request.post({ url: `${BASE}/recharge-orders/${orderId}/refund-requests`, data })
-export const getRefundOrderPage = (params) =>
-  request.get({ url: `${BASE}/refund-orders`, params })
+export const getRefundOrderPage = (params) => request.get({ url: `${BASE}/refund-orders`, params })
 export const reconcileOrder = (orderId, data) =>
   request.post({ url: `${BASE}/recharge-orders/${orderId}/reconciliation`, data })
 

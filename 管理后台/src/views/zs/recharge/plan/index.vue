@@ -3,7 +3,9 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">充值方案</h1>
-        <div class="zs-page-subtitle">小程序端展示的充值档位；改价不影响历史订单（订单引用快照）</div>
+        <div class="zs-page-subtitle"
+          >小程序端展示的充值档位；改价不影响历史订单（订单引用快照）</div
+        >
       </div>
       <el-button class="zs-btn-primary" @click="$router.push('/zs/recharge-plan/edit')">
         <Icon icon="ep:plus" class="mr-4px" /> 新增方案
@@ -37,7 +39,9 @@
         </el-table-column>
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
-            <span class="zs-link" @click="$router.push(`/zs/recharge-plan/edit?id=${row.id}`)">编辑</span>
+            <span class="zs-link" @click="$router.push(`/zs/recharge-plan/edit?id=${row.id}`)"
+              >编辑</span
+            >
             <span class="zs-link-danger" v-if="row.enabled" @click="toggle(row, false)">停用</span>
             <span class="zs-link-success" v-else @click="toggle(row, true)">启用</span>
           </template>

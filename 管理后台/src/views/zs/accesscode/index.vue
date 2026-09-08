@@ -34,7 +34,13 @@
 
       <el-form inline class="zs-filter">
         <el-form-item label="授权码/用户">
-          <el-input v-model="query.codeMask" placeholder="搜索掩码" clearable style="width: 200px" @keyup.enter="load" />
+          <el-input
+            v-model="query.codeMask"
+            placeholder="搜索掩码"
+            clearable
+            style="width: 200px"
+            @keyup.enter="load"
+          />
         </el-form-item>
         <el-form-item>
           <el-button class="zs-btn-primary" @click="load">查询</el-button>
@@ -47,7 +53,9 @@
         <el-table-column label="授权码" prop="codeMask" width="180" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <span class="zs-tag" :class="statusColor(row.status)">{{ statusText(row.status) }}</span>
+            <span class="zs-tag" :class="statusColor(row.status)">{{
+              statusText(row.status)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="绑定用户" prop="boundUser" width="120" />
@@ -58,12 +66,16 @@
           <template #default="{ row }">{{ fmtTime(row.issuedAt) }}</template>
         </el-table-column>
         <el-table-column label="有效期至" width="150">
-          <template #default="{ row }">{{ row.expiresAt ? fmtDate(row.expiresAt) : '长期' }}</template>
+          <template #default="{ row }">{{
+            row.expiresAt ? fmtDate(row.expiresAt) : '长期'
+          }}</template>
         </el-table-column>
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <span class="zs-link" v-if="row.status === 'ACTIVE'" @click="doDisable(row)">停用</span>
-            <span class="zs-link-success" v-if="row.status === 'DISABLED'" @click="doEnable()">启用</span>
+            <span class="zs-link-success" v-if="row.status === 'DISABLED'" @click="doEnable()"
+              >启用</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -105,8 +117,10 @@ const stats = ref([
   { label: '已停用', value: 0, icon: 'ep:circle-close', color: '#d0342c' }
 ])
 
-const statusText = (s: string) => ({ ACTIVE: '未使用', CONSUMED: '已绑定', DISABLED: '已停用' }[s] || s)
-const statusColor = (s: string) => ({ ACTIVE: 'blue', CONSUMED: 'green', DISABLED: 'red' }[s] || 'gray')
+const statusText = (s: string) =>
+  ({ ACTIVE: '未使用', CONSUMED: '已绑定', DISABLED: '已停用' })[s] || s
+const statusColor = (s: string) =>
+  ({ ACTIVE: 'blue', CONSUMED: 'green', DISABLED: 'red' })[s] || 'gray'
 
 const loadStats = async () => {
   try {
@@ -117,7 +131,9 @@ const loadStats = async () => {
       stats.value[2].value = res.EXPIRED || 0
       stats.value[3].value = res.DISABLED || 0
     }
-  } catch { /* 统计卡容错 */ }
+  } catch {
+    /* 统计卡容错 */
+  }
 }
 
 const load = async () => {
@@ -160,12 +176,12 @@ watch(activeTab, load)
 }
 
 .zs-footnote {
-  margin-top: 16px;
   padding: 12px 16px;
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #8a8a8a;
   background: #faf6f0;
   border-radius: 8px;
-  font-size: 12px;
-  color: #8a8a8a;
-  line-height: 1.9;
 }
 </style>

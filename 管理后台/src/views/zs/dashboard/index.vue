@@ -59,12 +59,16 @@
             <el-table-column label="消耗设计点" prop="pointCost" width="100" />
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <span class="zs-tag" :class="'zs-tag--' + row.statusColor">{{ row.statusText }}</span>
+                <span class="zs-tag" :class="'zs-tag--' + row.statusColor">{{
+                  row.statusText
+                }}</span>
               </template>
             </el-table-column>
             <el-table-column label="时间" prop="createTime" width="170" />
           </el-table>
-          <div class="zs-link zs-view-all" @click="$router.push('/zs/recharge-order')">查看全部 ›</div>
+          <div class="zs-link zs-view-all" @click="$router.push('/zs/recharge-order')"
+            >查看全部 ›</div
+          >
         </div>
       </el-col>
       <!-- 快捷操作 -->
@@ -111,16 +115,46 @@ const summary = ref<Record<string, any>>({
 })
 const statCards = computed(() => [
   { label: '今日AI生成', value: summary.value.aiJobsSucceededToday, delta: '', icon: 'ep:cpu' },
-  { label: '待审核案例', value: summary.value.submissionsPendingReview, delta: '', icon: 'ep:document-checked' },
-  { label: '今日消耗设计点', value: summary.value.pointsConsumedToday, delta: '', icon: 'ep:wallet' },
+  {
+    label: '待审核案例',
+    value: summary.value.submissionsPendingReview,
+    delta: '',
+    icon: 'ep:document-checked'
+  },
+  {
+    label: '今日消耗设计点',
+    value: summary.value.pointsConsumedToday,
+    delta: '',
+    icon: 'ep:wallet'
+  },
   { label: '有效授权', value: summary.value.accessGrantsActive, delta: '', icon: 'ep:ticket' }
 ])
 
 const todos = computed(() => [
-  { label: 'AI案例待审核', count: summary.value.submissionsPendingReview, color: '#c07a1f', go: () => $router.push('/zs/review') },
-  { label: '支付未到账', count: summary.value.ordersPendingFulfillment, color: '#d0342c', go: () => $router.push('/zs/recharge-order') },
-  { label: '支付状态未知', count: summary.value.ordersUnknownPayment, color: '#d0342c', go: () => $router.push('/zs/recharge-order') },
-  { label: '进行中任务', count: summary.value.aiJobsRunning, color: '#714320', go: () => $router.push('/zs/access-code') }
+  {
+    label: 'AI案例待审核',
+    count: summary.value.submissionsPendingReview,
+    color: '#c07a1f',
+    go: () => $router.push('/zs/review')
+  },
+  {
+    label: '支付未到账',
+    count: summary.value.ordersPendingFulfillment,
+    color: '#d0342c',
+    go: () => $router.push('/zs/recharge-order')
+  },
+  {
+    label: '支付状态未知',
+    count: summary.value.ordersUnknownPayment,
+    color: '#d0342c',
+    go: () => $router.push('/zs/recharge-order')
+  },
+  {
+    label: '进行中任务',
+    count: summary.value.aiJobsRunning,
+    color: '#714320',
+    go: () => $router.push('/zs/access-code')
+  }
 ])
 
 const quickActions = [
@@ -154,7 +188,6 @@ const trendOptions = computed((): any => ({
 const trendDays = ref<string[]>([])
 const trendValues = ref<number[]>([])
 
-
 onMounted(async () => {
   try {
     const res = await ZsApi.getDashboardSummary()
@@ -169,9 +202,21 @@ onMounted(async () => {
       requestedCount: j.requestedCount,
       pointCost: (j.requestedCount || 0) * 20,
       statusText:
-        j.status === 'SUCCEEDED' ? '已完成' : j.status === 'RUNNING' ? '生成中' : j.status === 'FAILED' ? '已退回' : j.status,
+        j.status === 'SUCCEEDED'
+          ? '已完成'
+          : j.status === 'RUNNING'
+            ? '生成中'
+            : j.status === 'FAILED'
+              ? '已退回'
+              : j.status,
       statusColor:
-        j.status === 'SUCCEEDED' ? 'green' : j.status === 'RUNNING' ? 'orange' : j.status === 'FAILED' ? 'red' : 'gray',
+        j.status === 'SUCCEEDED'
+          ? 'green'
+          : j.status === 'RUNNING'
+            ? 'orange'
+            : j.status === 'FAILED'
+              ? 'red'
+              : 'gray',
       createTime: j.createTime || ''
     }))
   } catch {}
@@ -193,20 +238,20 @@ onMounted(async () => {
 }
 
 .zs-panel-title {
+  margin-bottom: 14px;
   font-size: 16px;
   font-weight: 700;
   color: #282728;
-  margin-bottom: 14px;
 }
 
 .zs-todo-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 14px 0;
-  border-bottom: 1px solid #f5f0e8;
   font-size: 14px;
   color: #282728;
+  border-bottom: 1px solid #f5f0e8;
+  align-items: center;
+  justify-content: space-between;
 
   &:last-child {
     border-bottom: none;
@@ -237,9 +282,9 @@ onMounted(async () => {
 }
 
 .zs-view-all {
-  text-align: center;
   margin-top: 14px;
   font-size: 13px;
+  text-align: center;
 }
 
 .zs-quick-grid {
@@ -248,17 +293,17 @@ onMounted(async () => {
   gap: 14px;
 
   .zs-quick-item {
+    display: flex;
+    padding: 22px 0;
+    font-size: 14px;
+    color: #714320;
+    cursor: pointer;
     background: #faf6f0;
     border-radius: 10px;
-    padding: 22px 0;
-    display: flex;
+    transition: all 0.2s;
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    color: #714320;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
 
     &:hover {
       background: #f5eee7;

@@ -269,15 +269,13 @@ const remainingRouter: AppRouteRecordRaw[] = [
       breadcrumb: false
     }
   },
-          {
+  {
     path: '/pay',
     component: Layout,
     name: 'pay',
     meta: { hidden: true },
-    children: [
-    ]
+    children: []
   }
-
 ]
 
 export default remainingRouter

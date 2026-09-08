@@ -3,7 +3,9 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">数据导出</h1>
-        <div class="zs-page-subtitle">异步导出：创建任务 → 后台生成 CSV → 凭一次性票据下载（24 小时有效）</div>
+        <div class="zs-page-subtitle"
+          >异步导出：创建任务 → 后台生成 CSV → 凭一次性票据下载（24 小时有效）</div
+        >
       </div>
     </div>
 
@@ -16,12 +18,19 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" :loading="creating" @click="create">创建导出任务</el-button>
+          <el-button class="zs-btn-primary" :loading="creating" @click="create"
+            >创建导出任务</el-button
+          >
           <el-button @click="refreshAll">刷新列表</el-button>
         </el-form-item>
       </el-form>
 
-      <el-alert v-if="!jobs.length" type="info" :closable="false" title="暂无导出任务；创建后自动轮询状态，完成后可直接下载" />
+      <el-alert
+        v-if="!jobs.length"
+        type="info"
+        :closable="false"
+        title="暂无导出任务；创建后自动轮询状态，完成后可直接下载"
+      />
 
       <el-table v-else :data="jobs" v-loading="loading" stripe>
         <el-table-column label="任务号" prop="exportJobId" width="200" />
@@ -30,15 +39,34 @@
         </el-table-column>
         <el-table-column label="状态" width="130">
           <template #default="{ row }">
-            <span class="zs-tag" :class="statusClass(row.status)">{{ statusTextMap[row.status] || row.status }}</span>
+            <span class="zs-tag" :class="statusClass(row.status)">{{
+              statusTextMap[row.status] || row.status
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="失效时间" prop="expiresAt" min-width="170" />
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 'PENDING' || row.status === 'RUNNING'" size="small" text type="primary" @click="refresh(row)">刷新</el-button>
-            <el-button v-if="row.status === 'COMPLETED'" size="small" type="success" plain :loading="row.downloading" @click="download(row)">下载</el-button>
-            <span v-if="row.status === 'FAILED'" style="color: #d0342c; font-size: 12px">生成失败</span>
+            <el-button
+              v-if="row.status === 'PENDING' || row.status === 'RUNNING'"
+              size="small"
+              text
+              type="primary"
+              @click="refresh(row)"
+              >刷新</el-button
+            >
+            <el-button
+              v-if="row.status === 'COMPLETED'"
+              size="small"
+              type="success"
+              plain
+              :loading="row.downloading"
+              @click="download(row)"
+              >下载</el-button
+            >
+            <span v-if="row.status === 'FAILED'" style="font-size: 12px; color: #d0342c"
+              >生成失败</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -62,12 +90,22 @@ const jobs = ref<any[]>([])
 
 const form = reactive({ jobType: 'POINT_LEDGER' })
 
-const typeText = (t: string) => ({ POINT_LEDGER: '设计点流水', AUDIT_EVENTS: '审计事件' }[t] || t)
+const typeText = (t: string) => ({ POINT_LEDGER: '设计点流水', AUDIT_EVENTS: '审计事件' })[t] || t
 const statusTextMap: Record<string, string> = {
-  PENDING: '排队中', RUNNING: '生成中', COMPLETED: '已完成', FAILED: '失败', EXPIRED: '已过期'
+  PENDING: '排队中',
+  RUNNING: '生成中',
+  COMPLETED: '已完成',
+  FAILED: '失败',
+  EXPIRED: '已过期'
 }
 const statusClass = (s: string) =>
-  ({ PENDING: 'zs-tag--yellow', RUNNING: 'zs-tag--yellow', COMPLETED: 'zs-tag--green', FAILED: 'zs-tag--red', EXPIRED: 'zs-tag--red' }[s] || '')
+  ({
+    PENDING: 'zs-tag--yellow',
+    RUNNING: 'zs-tag--yellow',
+    COMPLETED: 'zs-tag--green',
+    FAILED: 'zs-tag--red',
+    EXPIRED: 'zs-tag--red'
+  })[s] || ''
 
 const create = async () => {
   creating.value = true
@@ -135,11 +173,11 @@ const download = async (job: any) => {
 }
 
 .zs-footnote {
-  margin-top: 16px;
   padding: 12px 16px;
-  background: #faf6f0;
-  border-radius: 8px;
+  margin-top: 16px;
   font-size: 12px;
   color: #8a8a8a;
+  background: #faf6f0;
+  border-radius: 8px;
 }
 </style>

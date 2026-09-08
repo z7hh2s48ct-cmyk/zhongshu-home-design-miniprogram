@@ -3,7 +3,9 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">批量生成授权码</h1>
-        <div class="zs-page-subtitle">完整明文仅一次交付：INLINE 在创建响应内返回 / TICKET 通过一次性票据下载</div>
+        <div class="zs-page-subtitle"
+          >完整明文仅一次交付：INLINE 在创建响应内返回 / TICKET 通过一次性票据下载</div
+        >
       </div>
       <el-button @click="$router.back()">返回</el-button>
     </div>
@@ -20,10 +22,20 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="有效期（天）">
-          <el-input-number v-model="form.validityDays" :min="1" :max="3650" placeholder="留空=长期有效" />
+          <el-input-number
+            v-model="form.validityDays"
+            :min="1"
+            :max="3650"
+            placeholder="留空=长期有效"
+          />
         </el-form-item>
         <el-form-item label="用途备注">
-          <el-input v-model="form.purposeNote" placeholder="如：渠道A体验 / 核心客户" maxlength="100" style="max-width: 420px" />
+          <el-input
+            v-model="form.purposeNote"
+            placeholder="如：渠道A体验 / 核心客户"
+            maxlength="100"
+            style="max-width: 420px"
+          />
         </el-form-item>
         <el-form-item>
           <el-button class="zs-btn-primary" :loading="creating" @click="create">生成批次</el-button>
@@ -32,8 +44,12 @@
 
       <!-- INLINE 明文结果 -->
       <div v-if="inlineCodes.length" class="zs-codes">
-        <el-alert type="warning" :closable="false" show-icon
-          title="以下完整明文仅此一次显示，关闭页面后无法再次获取，请立即离线保存！" />
+        <el-alert
+          type="warning"
+          :closable="false"
+          show-icon
+          title="以下完整明文仅此一次显示，关闭页面后无法再次获取，请立即离线保存！"
+        />
         <div class="zs-codes-list">
           <code v-for="c in inlineCodes" :key="c">{{ c }}</code>
         </div>
@@ -42,8 +58,12 @@
 
       <!-- TICKET 结果 -->
       <div v-if="ticket" class="zs-codes">
-        <el-alert type="success" :closable="false" show-icon
-          title="交付票据已生成（10 分钟内有效、单次消费）" />
+        <el-alert
+          type="success"
+          :closable="false"
+          show-icon
+          title="交付票据已生成（10 分钟内有效、单次消费）"
+        />
         <div class="zs-ticket-row">
           <code>{{ ticket }}</code>
           <el-button size="small" @click="downloadByTicket">下载加密文件</el-button>
@@ -124,14 +144,14 @@ const downloadByTicket = async () => {
   margin-top: 24px;
 
   .zs-codes-list {
-    margin: 12px 0;
-    padding: 16px;
-    background: #faf6f0;
-    border-radius: 8px;
     max-height: 300px;
+    padding: 16px;
+    margin: 12px 0;
     overflow: auto;
     font-size: 13px;
     line-height: 1.9;
+    background: #faf6f0;
+    border-radius: 8px;
 
     code {
       display: block;
@@ -140,16 +160,16 @@ const downloadByTicket = async () => {
   }
 
   .zs-ticket-row {
-    margin-top: 12px;
     display: flex;
+    margin-top: 12px;
     align-items: center;
     gap: 12px;
 
     code {
-      background: #faf6f0;
       padding: 8px 14px;
-      border-radius: 6px;
       word-break: break-all;
+      background: #faf6f0;
+      border-radius: 6px;
     }
   }
 }

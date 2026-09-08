@@ -15,9 +15,9 @@
 ## 工具版本
 
 - Node.js：`>= 20.19.0`
-- pnpm：`>= 8.6.0`
+- pnpm：`11.19.0`（由 `package.json#packageManager` 固定）
 
-精确 pnpm 版本将由 T02-01 在 `package.json#packageManager` 中冻结。在此之前不要绕过锁文件供应链校验。
+项目级 `.npmrc` 固定使用 npm 官方 registry；`pnpm-workspace.yaml` 仅允许锁文件中 3 个明确登记的传递依赖执行安装脚本。
 
 ## 环境配置
 
@@ -26,14 +26,15 @@
 ```dotenv
 NODE_ENV=development
 VITE_APP_TITLE=众墅之家设计管理后台
-VITE_BASE_URL=/
-VITE_API_URL=http://localhost:48080/admin-api
+VITE_BASE_PATH=/
+VITE_BASE_URL=
+VITE_API_URL=/admin-api
 VITE_UPLOAD_TYPE=server
 VITE_APP_TENANT_ENABLE=false
 VITE_APP_CAPTCHA_ENABLE=true
 VITE_APP_DOCALERT_ENABLE=false
 VITE_OPEN=false
-VITE_PORT=80
+VITE_PORT=5173
 ```
 
 不要提交真实环境地址、账号、令牌或其它凭据。
@@ -48,7 +49,7 @@ pnpm lint
 pnpm build:prod
 ```
 
-当前归档基线的锁文件含镜像 tarball URL 元数据不一致问题；T02-01 完成前，冻结安装可能被供应链校验拒绝。以根级项目状态看板为准。
+`build:prod` 使用已入库的 `.env.prod` 安全默认值；部署环境可按目标域名覆盖公开的 Vite 构建变量。不要把令牌、密钥或其它机密放入 `VITE_*` 变量。
 
 ## 质量要求
 

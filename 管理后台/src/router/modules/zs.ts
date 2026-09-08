@@ -52,7 +52,13 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'access-code/batch',
         component: () => import('@/views/zs/accesscode/batch.vue'),
         name: 'ZsAccessCodeBatch',
-        meta: { title: '批量生成授权码', icon: 'ep:plus', noCache: true, hidden: true, activeMenu: '/zs/access-code' }
+        meta: {
+          title: '批量生成授权码',
+          icon: 'ep:plus',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/access-code'
+        }
       },
       {
         path: 'recharge-plan',
@@ -64,7 +70,12 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'recharge-plan/edit',
         component: () => import('@/views/zs/recharge/plan-edit.vue'),
         name: 'ZsRechargePlanEdit',
-        meta: { title: '编辑充值方案', noCache: true, hidden: true, activeMenu: '/zs/recharge-plan' }
+        meta: {
+          title: '编辑充值方案',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/recharge-plan'
+        }
       },
       {
         path: 'recharge-order',

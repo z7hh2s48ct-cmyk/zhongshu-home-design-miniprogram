@@ -11,10 +11,22 @@
     <div class="zs-table-card zs-form">
       <el-form :model="form" label-width="110px" label-position="left">
         <el-form-item label="案例名称" required>
-          <el-input v-model="form.title" placeholder="如：云栖雅院" maxlength="60" style="max-width: 420px" />
+          <el-input
+            v-model="form.title"
+            placeholder="如：云栖雅院"
+            maxlength="60"
+            style="max-width: 420px"
+          />
         </el-form-item>
         <el-form-item label="案例说明">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="设计亮点、户型说明等" maxlength="300" style="max-width: 640px" />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="3"
+            placeholder="设计亮点、户型说明等"
+            maxlength="300"
+            style="max-width: 640px"
+          />
         </el-form-item>
         <el-form-item label="风格" required>
           <el-select v-model="form.styleCode" style="width: 200px">
@@ -46,7 +58,9 @@
           <UploadImg v-model="form.elevationUrl" />
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" :loading="saving" @click="save(false)">保存草稿</el-button>
+          <el-button class="zs-btn-primary" :loading="saving" @click="save(false)"
+            >保存草稿</el-button
+          >
           <el-button :loading="saving" @click="saveAndPublish">保存并上架</el-button>
         </el-form-item>
       </el-form>
