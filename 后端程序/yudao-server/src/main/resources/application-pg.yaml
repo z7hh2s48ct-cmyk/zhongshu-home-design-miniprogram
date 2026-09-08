@@ -6,6 +6,10 @@
 # 边界：底座 system/infra 在 PG 上的初始化与回归属于平台阶段 1A/1B 门禁（见 T00 登记 §4）；
 # 本 profile 当前承载业务库基线与 CI，完整服务器 PG 启动验收在平台门禁通过后补证。
 spring:
+  data:
+    redis:
+      host: ${ZS_REDIS_HOST:127.0.0.1}
+      port: ${ZS_REDIS_PORT:6379}
   flyway:
     enabled: true
     url: ${ZS_PG_URL:jdbc:postgresql://127.0.0.1:5432/zhongshu_design}

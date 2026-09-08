@@ -30,11 +30,54 @@
 
 ## 环境要求
 
-- JDK 17
-- Maven 3.8+；T02-02 将加入 Maven Wrapper
-- PostgreSQL 16/17
-- Redis 6+
-- Docker 为推荐的本地依赖运行方式
+- JDK 17（`.java-version` 已声明；启动脚本会拒绝其它主版本）
+- Maven 3.9.16（通过 Maven Wrapper 3.3.4 自动获取并校验，不要求全局安装 Maven）
+- Docker Engine / Docker Desktop 与 Compose
+- 本地编排固定 PostgreSQL 16.15、Redis 7.4.11
+
+Wrapper 的脚本和 JAR 来自 Apache Maven 官方 3.3.4 发行包，Maven 发行包与 Wrapper JAR 的 SHA-256 已固定在 `.mvn/wrapper/maven-wrapper.properties`。
+
+## Windows 一键本地启动
+
+在本目录执行：
+
+```powershell
+.\script\dev\start-local.ps1
+```
+
+脚本会依次完成：
+
+1. 检查 JDK 17 与 Docker daemon；
+2. 首次运行时从 `.env.example` 创建被 Git 忽略的 `.env`；
+3. 启动并等待 PostgreSQL、Redis 健康；
+4. 通过 Maven Wrapper 编译全部启用模块；
+5. 以 `local,pg,zsdev` 启动后端，执行 Flyway 迁移并等待 `/actuator/health` 返回 `UP`。
+
+成功后 PID 与日志位于 `target/local-dev/`。停止服务与依赖：
+
+```powershell
+.\script\dev\stop-local.ps1
+```
+
+只有确认要清空本机开发数据库和 Redis 数据时才执行：
+
+```powershell
+.\script\dev\stop-local.ps1 -DeleteData
+```
+
+`-DeleteData` 会删除 Docker 开发卷，数据不可恢复。
+
+## macOS / Linux 手动启动
+
+```bash
+cp .env.example .env
+docker compose --env-file .env -f compose.dev.yml up -d --wait
+./mvnw -B -DskipTests package
+./mvnw -pl yudao-server -am spring-boot:run \
+  -Dspring-boot.run.profiles=local,pg,zsdev
+```
+
+另一个终端执行 `curl --fail http://127.0.0.1:48080/actuator/health` 验证健康状态。
 
 ## Profiles
 
@@ -45,20 +88,20 @@
 本地 Stub 联调使用：
 
 ```bash
-mvn spring-boot:run -pl yudao-server \
+./mvnw spring-boot:run -pl yudao-server \
   -Dspring-boot.run.profiles=local,pg,zsdev
 ```
 
 生产环境不得启用 `zsdev`，并必须通过受控环境变量或密钥托管提供所需配置。
 
+`.env` 中可通过 `ZS_PG_PORT` / `ZS_PG_URL` 和 `ZS_REDIS_HOST` / `ZS_REDIS_PORT` 调整本机端口；修改 PostgreSQL 端口时需同步更新 JDBC URL。
+
 ## Build and test
 
-当前 Maven Wrapper 和统一本地编排尚在 T02-02 范围内。工具链可用时执行：
-
 ```bash
-mvn -B -DskipTests package
-mvn -B test
-mvn -B -pl yudao-server -am test
+./mvnw -B -DskipTests package
+./mvnw -B test
+./mvnw -B -pl yudao-server -am test
 ```
 
 众墅专项测试大量依赖 PostgreSQL/Testcontainers。测试结果必须来自当前提交和可取回的 CI runner 报告。
@@ -73,6 +116,8 @@ mvn -B -pl yudao-server -am test
 - 管理菜单：`yudao-server/src/main/resources/db/migration/platform/`
 
 已发布迁移不得原地修改。新增迁移必须包含升级验证和恢复说明。
+
+全新本地 PostgreSQL 卷会先按 `sql/postgresql/ruoyi-vue-pro.sql` 与 `quartz.sql` 初始化底座表；后端第一次启动时，再由 Flyway 执行五个众墅迁移目录。复用已有卷不会重复执行初始化 SQL。
 
 ## 当前真实集成边界
 
