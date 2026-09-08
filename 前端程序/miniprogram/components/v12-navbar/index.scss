@@ -1,0 +1,75 @@
+@import '../../styles/v12-tokens.scss';
+
+:host { display: block; }
+
+.navbar-spacer { width: 100%; }
+
+.navbar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 150;
+  box-sizing: border-box;
+  background: rgba(247, 244, 238, 0.98);
+}
+
+.navbar-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 32rpx;
+  box-sizing: border-box;
+}
+
+.navbar-left {
+  position: absolute;
+  left: 32rpx;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.brand-logo { width: 188rpx; height: auto; }
+
+.navbar-title {
+  width: 100%;
+  padding: 0 176rpx;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 34rpx;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #171717;
+}
+
+.back-button {
+  width: 64rpx;
+  height: 64rpx;
+  margin-left: -18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notice-button {
+  position: absolute;
+  right: 34rpx;
+  bottom: -70rpx;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notice-dot {
+  position: absolute;
+  right: 4rpx;
+  top: 4rpx;
+  width: 13rpx;
+  height: 13rpx;
+  border: 3rpx solid $v12-page-beige;
+  border-radius: 50%;
+  background: #e44545;
+}

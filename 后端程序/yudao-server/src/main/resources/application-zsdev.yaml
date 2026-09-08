@@ -1,0 +1,33 @@
+--- #################### 众墅专项本机联调 profile ####################
+# 启用方式：--spring.profiles.active=local,pg,zsdev
+#
+# ⚠️ 本文件内的密钥是公开的占位值，仅用于本机联调，严禁用于任何共享或生产环境。
+# 生产只启用 local,pg（或 prod,pg），密钥由环境变量/密钥托管注入，缺失即快速失败。
+#
+# 与 pg profile 的分工：
+# - pg     = 数据库基线 + 生产安全默认（无密钥、不播种、不开内容端点）
+# - zsdev  = 开发便利开关（占位密钥、种子数据、本地对象内容端点）
+zhongshu:
+  ai:
+    # C6 internal-api 签名联调占位值；生产由密钥托管注入，缺失时 internal 端点全部拒绝
+    internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
+    internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+  identity:
+    # 无真实 AppID 时用 Stub 身份适配器，登录链路可在开发者工具内跑通
+    wechat-appid: ${ZS_WX_APPID:stub-appid}
+    access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
+    access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
+    access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:ZGV2LW9ubHktYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzISEh}
+  design:
+    # 启动时写入计价规则/充值方案/预算规则/示例案例/测试授权码；已存在则跳过
+    seed-dev-data: ${ZS_SEED_DEV_DATA:true}
+    # C2 驱动器：校验→结算→候选晋升→Outbox 投递→支付补偿（P4D 前的过渡 Runtime 缺席兜底）
+    driver-enabled: ${ZS_DRIVER_ENABLED:true}
+    # C10 导出 worker：export_job PENDING 任务生成 CSV 并落对象存储
+    export-worker-enabled: ${ZS_EXPORT_WORKER_ENABLED:true}
+    cancel-grace-minutes: ${ZS_CANCEL_GRACE_MINUTES:10}
+    no-runtime-grace-minutes: ${ZS_NO_RUNTIME_GRACE_MINUTES:30}
+    asset:
+      # 本地存储的 local:// URL 无法被小程序 image 组件加载，开发期凭一次性票据流式输出字节；
+      # 切 COS 后关闭，由 COS 签名 URL 取代
+      dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:true}

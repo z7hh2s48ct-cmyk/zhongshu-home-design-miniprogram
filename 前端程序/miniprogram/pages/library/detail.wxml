@@ -1,0 +1,22 @@
+<view class="v12-page detail-page" wx:if="{{accessReady}}">
+  <v12-navbar title="户型详情" show-back show-brand="{{false}}" />
+  <image class="detail-hero" src="/assets/v12/villa-detail.png" mode="scaleToFill" />
+  <view class="detail-summary">
+    <text class="detail-title">{{caseDetail.title || '加载中…'}}</text>
+    <text class="detail-source">{{caseDetail.sourceLabel || '公司案例'}}</text>
+    <text class="detail-meta">{{caseDetail.meta || '参数加载中'}}</text>
+  </view>
+  <view class="detail-tabs"><view wx:for="{{['立面效果','一层平面','二层平面']}}" wx:key="*this" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item}}</view></view>
+  <view class="plan-card">
+    <block wx:if="{{tab === 0}}">
+      <image class="elevation-line" src="{{tabImages[0] || '/assets/v12/front-elevation-line.jpg'}}" mode="aspectFill" />
+      <view class="design-copy"><text>设计说明</text><text>{{caseDetail.description || '该方案暂无设计说明。'}}</text></view>
+    </block>
+    <image wx:elif="{{tab === 1}}" class="floor-plan" src="{{tabImages[1] || '/assets/v12/plan-b-1.png'}}" mode="aspectFit" />
+    <image wx:else class="floor-plan" src="{{tabImages[2] || '/assets/v12/plan-b-2.png'}}" mode="aspectFit" />
+  </view>
+  <view class="detail-action">
+    <view class="favorite" bindtap="toggleFavorite"><t-icon name="{{favorite ? 'star-filled' : 'star'}}" size="23px" color="#7b5532" /><text>{{favorite ? '已收藏' : '收藏'}}</text></view>
+    <view class="v12-primary-button" bindtap="useHouse">用此户型设计</view>
+  </view>
+</view>

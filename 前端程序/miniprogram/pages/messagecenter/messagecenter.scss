@@ -1,0 +1,11 @@
+@import '../../styles/v12-theme.scss';
+
+.message-page .v12-content { padding-top: 28rpx; }
+.message { margin-bottom: 22rpx; padding: 28rpx; display: flex; gap: 22rpx; }
+.message-icon { width: 64rpx; height: 64rpx; flex: 0 0 64rpx; border-radius: 50%; background: #f6eee5; display: flex; align-items: center; justify-content: center; }
+.message > view:nth-child(2) { flex: 1; }
+.message text { display: block; font-size: 28rpx; }
+.message text + text { margin-top: 12rpx; color: $v12-secondary-text; font-size: 23rpx; }
+.message span { color: #999; font-size: 20rpx; }
+.message-empty { padding: 60rpx 30rpx; text-align: center; color: #a89a8c; font-size: 25rpx; }
+.message.unread > view > text:first-child { font-weight: 600; }

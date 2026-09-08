@@ -1,0 +1,27 @@
+@import '../../styles/v12-theme.scss';
+
+.profile-content { padding-top: 44rpx; }
+.user-card { padding: 34rpx 38rpx 40rpx; }
+.identity { display: flex; align-items: center; }
+.identity image { width: 118rpx; height: 118rpx; border-radius: 50%; }
+.guest-avatar { width: 118rpx; height: 118rpx; flex-shrink: 0; border-radius: 50%; background: #f5eee6; display: flex; align-items: center; justify-content: center; }
+.name { margin-left: 26rpx; font-size: 35rpx; font-weight: 600; }
+.authorized { margin-left: 18rpx; padding: 5rpx 13rpx; border: 1rpx solid #d3a570; border-radius: 7rpx; color: #8a4b1d; font-size: 20rpx; }
+.auth-link { margin-left: auto; display: flex; align-items: center; font-size: 25rpx; }
+.numbers { margin-top: 42rpx; display: grid; grid-template-columns: repeat(3,1fr); }
+.numbers view { text-align: center; border-right: 1rpx solid $v12-divider; }
+.numbers view:last-child { border: 0; }
+.numbers text { display: block; color: #7b3f17; font-size: 38rpx; }
+.numbers text + text { margin-top: 12rpx; color: $v12-secondary-text; font-size: 24rpx; }
+.points-card { margin-top: 28rpx; padding: 25rpx 35rpx; border-radius: 24rpx; background: #f7eee2; display: flex; align-items: center; }
+.coin { width: 64rpx; height: 64rpx; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; }
+.points-card > view:nth-child(2) { min-width: 0; flex: 1; margin-left: 20rpx; }
+.points-card > view:nth-child(2) > text:first-child { white-space: nowrap; }
+.points-card text { display: block; font-size: 28rpx; }
+.points-card .points-value { color: #7b3f17; font-size: 32rpx; font-weight: 600; }
+.points-card text + text { margin-top: 5rpx; color: $v12-secondary-text; font-size: 22rpx; }
+.recharge { margin-left: auto; padding: 20rpx 28rpx; border-radius: 40rpx; color: #fff; background: linear-gradient(100deg,#8b4818,#7b5532); font-size: 25rpx; }
+.menu-card { margin-top: 28rpx; padding: 0 38rpx; }
+.menu-card > view { height: 96rpx; display: flex; align-items: center; gap: 26rpx; border-bottom: 1rpx solid $v12-divider; }
+.menu-card > view:last-child { border: 0; }
+.menu-card text { flex: 1; font-size: 27rpx; }

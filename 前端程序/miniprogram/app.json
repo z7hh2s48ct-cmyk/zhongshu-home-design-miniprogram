@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/library/index",
+    "pages/ai-design/index",
+    "pages/profile/index",
+    "pages/auth/index",
+    "pages/library/detail",
+    "pages/ai-design/generating",
+    "pages/ai-design/plane-select",
+    "pages/ai-design/elevation-setup",
+    "pages/ai-design/elevation-select",
+    "pages/ai-design/result",
+    "pages/ai-design/publish",
+    "pages/budget/input",
+    "pages/budget/result",
+    "pages/wallet/recharge",
+    "pages/payment/success",
+    "pages/messagecenter/messagecenter"
+  ],
+  "usingComponents": {
+    "t-icon": "/components/tdesign-miniprogram/icon/icon"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#6f6f6f",
+    "selectedColor": "#7b3f17",
+    "backgroundColor": "#fffdf8",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页" },
+      { "pagePath": "pages/library/index", "text": "户型库" },
+      { "pagePath": "pages/ai-design/index", "text": "AI设计" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationStyle": "custom"
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

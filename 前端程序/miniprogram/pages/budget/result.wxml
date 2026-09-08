@@ -1,0 +1,8 @@
+<view class="v12-page budget-result-page" wx:if="{{accessReady}}">
+  <v12-navbar title="参考预算" show-back show-brand="{{false}}" />
+  <view class="estimate-card"><text>预计总投入</text><view><b>{{rangeText}}</b></view><text wx:if="{{unitText}}">{{unitText}}</text><image src="/assets/v12/budget-sketch.png" mode="aspectFit" /></view>
+  <view class="v12-card costs" wx:if="{{costs.length}}"><text>费用构成</text><view wx:for="{{costs}}" wx:key="name"><view class="cost-icon"><t-icon name="layers" size="24px" color="#9a591d" /></view><text>{{item.name}}</text><span>{{item.range}}</span><t-icon name="chevron-right" size="16px" color="#777" /></view></view>
+  <view class="v12-card basis"><text>测算依据</text><view wx:for="{{basis}}" wx:key="name"><text>{{item.name}}</text><span>{{item.value}}</span></view></view>
+  <view class="warning"><t-icon name="info-circle-filled" size="18px" color="#ad6500" /> {{disclaimer || '不含土地、软装、报建及特殊地基处理'}}</view>
+  <view class="v12-primary-button" bindtap="save">保存预算单</view><view class="adjust" bindtap="adjust">调整参数</view>
+</view>

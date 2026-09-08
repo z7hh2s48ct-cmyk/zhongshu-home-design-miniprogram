@@ -1,0 +1,33 @@
+@import '../styles/v12-tokens.scss';
+
+.tabbar-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(255, 253, 248, 0.99);
+  transform: translateZ(0);
+}
+
+.tabbar {
+  height: 116rpx;
+  display: flex;
+  box-sizing: border-box;
+  border-top: 1rpx solid rgba(232, 222, 209, 0.8);
+}
+
+.tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #707070;
+}
+
+.tabbar-item--active { color: #7b3f17; }
+.tabbar-icon { height: 50rpx; display: flex; align-items: center; justify-content: center; }
+.tabbar-glyph { font-family: Georgia, 'Times New Roman', serif; font-size: 46rpx; line-height: 1; }
+.tabbar-label { margin-top: 6rpx; font-size: 23rpx; line-height: 1; }

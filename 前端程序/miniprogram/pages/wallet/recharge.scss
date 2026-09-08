@@ -1,0 +1,31 @@
+@import '../../styles/v12-theme.scss';
+
+.recharge-page { padding: 32rpx 34rpx 190rpx; }
+.recharge-page > v12-navbar { margin: -32rpx -34rpx 0; }
+.balance-card { position: relative; margin-top: 20rpx; padding: 36rpx 40rpx; }
+.balance-card > text { display: block; color: $v12-secondary-text; font-size: 27rpx; }
+.balance-card > b { display: block; margin-top: 8rpx; color: #8a3d0d; font-size: 66rpx; }
+.balance-card > span { display: inline-block; margin-top: 18rpx; padding: 7rpx 15rpx; border: 1rpx solid #c68027; border-radius: 22rpx; color: #b9690b; font-size: 22rpx; }
+.balance-card > view { position: absolute; right: 38rpx; top: 105rpx; color: #777; font-size: 24rpx; display: flex; align-items: center; }
+.section-title { display: block; margin: 42rpx 4rpx 25rpx; font-size: 34rpx; font-weight: 500; }
+.package-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 18rpx; }
+.package { position: relative; min-height: 440rpx; padding: 45rpx 18rpx 30rpx; box-sizing: border-box; border: 1rpx solid transparent; border-radius: 18rpx; background: #fffdf8; box-shadow: 0 8rpx 24rpx rgba(72,49,32,.06); }
+.package.selected { border: 2rpx solid #8a4a1a; }
+.package > b { display: block; margin-bottom: 28rpx; text-align: center; color: #8a3d0d; font-size: 45rpx; }
+.package > view { min-height: 82rpx; padding: 14rpx 0; border-top: 1rpx dashed #c9c1b8; display: flex; flex-direction: column; justify-content: center; }
+.package > view text { color: #666; font-size: 22rpx; }
+.package > view span { margin-top: 5rpx; color: #5d5149; font-size: 22rpx; white-space: nowrap; }
+.package > view.bonus text, .package > view.bonus span { color: #dc8b00; }
+.recommend { position: absolute; right: -1rpx; top: -1rpx; padding: 7rpx 14rpx; border-radius: 0 17rpx 0 14rpx; background: #a65b25; color: #fff; font-size: 19rpx; }
+.package > i { position: absolute; left: 50%; bottom: 15rpx; transform: translateX(-50%); width: 36rpx; height: 36rpx; border-radius: 50%; background: #8a4a1a; color: #fff; font-style: normal; display: flex; align-items: center; justify-content: center; }
+.pay-title { margin-top: 52rpx; }
+.wechat { height: 108rpx; padding: 0 35rpx; display: flex; align-items: center; gap: 24rpx; font-size: 29rpx; }
+.wechat-icon { width: 55rpx; height: 55rpx; display: flex; align-items: center; justify-content: center; }
+.wechat i { width: 34rpx; height: 34rpx; margin-left: auto; border: 8rpx solid #8a4a1a; border-radius: 50%; box-sizing: border-box; }
+.pay-tips { margin: 38rpx 18rpx; color: #777; font-size: 23rpx; }
+.pay-tips view { margin-top: 23rpx; display: flex; align-items: center; gap: 14rpx; }
+.pay-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; padding: 24rpx 48rpx calc(24rpx + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 280rpx; align-items: center; background: #fffdf8; box-shadow: 0 -10rpx 30rpx rgba(72,49,32,.06); }
+.pay-bar text { display: block; color: $v12-secondary-text; font-size: 23rpx; }
+.pay-bar text + text { margin-top: 12rpx; }
+.pay-bar b { color: #8a3d0d; font-size: 34rpx; }
+.pay-bar .v12-primary-button { height: 86rpx; }

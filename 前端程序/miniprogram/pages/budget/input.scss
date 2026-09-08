@@ -1,0 +1,19 @@
+@import '../../styles/v12-theme.scss';
+
+.budget-page { min-height: 100vh; padding: 32rpx 30rpx 150rpx; }
+.budget-page > v12-navbar { margin: -32rpx -30rpx 0; }
+.auto-note { min-height: 90rpx; margin-top: 18rpx; padding: 0 28rpx; border-radius: 16rpx; background: #fff3dc; display: flex; align-items: center; gap: 15rpx; color: #b87407; font-size: 25rpx; }
+.auto-note span { margin-left: auto; padding: 7rpx 17rpx; border: 1rpx solid #dab57a; border-radius: 28rpx; }
+.budget-form { margin-top: 28rpx; padding: 18rpx 34rpx; }
+.form-row { min-height: 110rpx; display: flex; align-items: center; justify-content: space-between; border-bottom: 1rpx solid $v12-divider; box-sizing: border-box; font-size: 29rpx; }
+.form-row:last-child { border: 0; }
+.form-row > span { display: flex; align-items: center; gap: 12rpx; }
+.standard-row > view { height: 58rpx; display: flex; border: 1rpx solid #8a4a1a; border-radius: 8rpx; overflow: hidden; }
+.standard-row > view span { width: 104rpx; display: flex; align-items: center; justify-content: center; color: #8a4a1a; font-size: 24rpx; }
+.standard-row > view span.active { color: #fff; background: #8a4a1a; }
+.explain { margin-top: 28rpx; padding: 35rpx; display: flex; align-items: center; gap: 26rpx; }
+.document { width: 70rpx; height: 70rpx; border-radius: 50%; background: #f6eee5; display: flex; align-items: center; justify-content: center; }
+.explain text { display: block; font-size: 28rpx; font-weight: 600; }
+.explain text + text { margin-top: 10rpx; color: $v12-secondary-text; font-size: 23rpx; font-weight: 400; }
+.generate-budget { position: fixed; left: 42rpx; right: 42rpx; bottom: calc(50rpx + env(safe-area-inset-bottom)); }
+.area-input { width: 140rpx; text-align: right; font-size: 29rpx; }

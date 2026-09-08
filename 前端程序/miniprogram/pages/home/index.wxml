@@ -1,0 +1,32 @@
+<view class="v12-page">
+  <v12-navbar show-notice />
+  <view class="v12-content v12-content--tab home-content">
+    <view class="v12-card hero">
+      <image class="hero-art" src="/assets/v12/home-hero-scene.png" mode="aspectFill" />
+      <view class="hero-copy">
+        <text class="hero-title">一句话，\n生成你的乡墅方案</text>
+        <text class="hero-subtitle">从家庭需求到平面、立面与预算参考</text>
+        <view class="hero-actions">
+          <view class="v12-primary-button" bindtap="openAi">开始AI设计</view>
+          <view class="v12-secondary-button" bindtap="openLibrary">浏览户型库</view>
+        </view>
+      </view>
+    </view>
+    <view class="shortcut-row">
+      <view class="v12-card shortcut" bindtap="openLibrary">
+        <view class="shortcut-icon"><t-icon name="home" size="30px" color="#9a6d39" /></view>
+        <view><text class="shortcut-title">户型库</text><text class="shortcut-copy">从优秀方案找灵感</text></view>
+        <t-icon name="chevron-right" size="16px" color="#2f2925" />
+      </view>
+      <view class="v12-card shortcut" bindtap="openBudget">
+        <view class="shortcut-icon"><t-icon name="calculator" size="30px" color="#9a6d39" /></view>
+        <view><text class="shortcut-title">快速预算</text><text class="shortcut-copy">快速估算建造投入</text></view>
+        <t-icon name="chevron-right" size="16px" color="#2f2925" />
+      </view>
+    </view>
+    <view class="section-heading"><text class="v12-section-title">精选户型</text><view bindtap="openLibrary">查看全部 <t-icon name="chevron-right" size="15px" color="#6a3b1b" /></view></view>
+    <view class="featured-row">
+      <view class="v12-card featured" wx:for="{{featuredCases}}" wx:key="title" data-id="{{item.id}}" bindtap="openDetail"><image src="{{item.image}}" mode="aspectFill" /><view><view class="featured-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view><t-icon name="chevron-right" size="16px" color="#6a3b1b" /></view></view>
+    </view>
+  </view>
+</view>

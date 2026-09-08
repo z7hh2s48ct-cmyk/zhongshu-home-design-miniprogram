@@ -1,0 +1,13 @@
+<view class="v12-page publish-page" wx:if="{{accessReady}}">
+  <v12-navbar title="发布到户型库" show-back show-brand="{{false}}" />
+  <view class="v12-card publish-summary"><image src="/assets/v12/elevation-b.png" mode="aspectFill" /><view><text>AI设计方案投稿</text><text>平面与立面已选定</text><text>案例来源：AI案例 <t-icon name="lock-on" size="15px" color="#777" /></text></view></view>
+  <view class="v12-card audit-card"><view class="audit-title"><text>发布参数校核</text><span><b>{{missing ? 8 : 9}}</b>/9 已完成</span></view>
+    <view class="audit-row" wx:for="{{[{name:'结果版本',value:versionReady ? '已选定' : '未完成'},{name:'案例来源',value:'AI案例'},{name:'封面图片',value:'已选择'},{name:'平面与立面文件',value:'共3项'}]}}" wx:key="name"><t-icon name="check-circle-filled" size="21px" color="#4da05b" /><text>{{item.name}}</text><span>{{item.value}}</span><t-icon name="chevron-right" size="16px" color="#777" /></view>
+    <view class="audit-row {{note ? '' : 'missing'}}"><t-icon name="{{note ? 'check-circle-filled' : 'error-circle-filled'}}" size="21px" color="{{note ? '#4da05b' : '#b93b2e'}}" /><text>方案说明</text><span>{{note ? '已填写' : '未填写\n必填项'}}</span><button wx:if="{{!note}}" bindtap="completeDescription">去补充</button><t-icon name="chevron-right" size="16px" color="#777" /></view>
+  </view>
+  <view wx:if="{{validation && validation.message}}" class="review-note"><t-icon name="info-circle" size="17px" color="#777" /> {{validation.message}}</view>
+  <view class="review-note" wx:else><t-icon name="info-circle" size="17px" color="#777" /> 提交后进入后台审核，审核通过后展示在AI案例中</view>
+  <view class="v12-card reference-switch"><text>允许作为生成参考 <t-icon name="info-circle" size="15px" color="#777" /></text><switch checked="{{allowReference}}" color="#7b5532" bindchange="toggleReference" /></view>
+  <view wx:if="{{missing}}" class="missing-note"><t-icon name="error-circle" size="17px" color="#b93b2e" /> 仍有必填参数未完成</view>
+  <view class="{{missing || !versionReady ? 'v12-disabled-button' : 'v12-primary-button'}}" bindtap="submit">{{missing || !versionReady ? '请补全后提交' : '提交审核'}}</view>
+</view>

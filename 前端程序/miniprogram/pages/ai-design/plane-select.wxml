@@ -1,0 +1,12 @@
+<view class="v12-page select-page" wx:if="{{accessReady}}">
+  <v12-navbar title="选择平面方案" show-back show-brand="{{false}}" />
+  <view class="steps"><view class="active">步骤1 ✓</view><text>平面方案</text><i></i><view>步骤2</view><text>立面方案</text></view>
+  <view class="v12-card select-card"><text class="select-title">请选择一个平面方案</text><text class="select-subtitle">已为你生成{{candidates.length}}个方案，可查看大图后选择</text>
+    <view wx:if="{{loading}}" class="select-empty">候选方案加载中…</view>
+    <view class="plan-option {{selected === index ? 'selected' : ''}}" wx:for="{{candidates}}" wx:key="id" data-index="{{index}}" bindtap="select">
+      <view class="badge">{{item.letter}}</view><view class="plan-images"><image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFit" /><text wx:else class="plan-placeholder">效果图加载中</text></view><view class="plan-copy"><text>{{item.name}}</text><b>候选 {{item.slot}}</b><i>查看大图 〉</i></view><view class="radio"><view></view></view>
+    </view>
+  </view>
+  <view class="consume"><t-icon name="lightbulb" size="18px" color="#8a4a1a" /> 重新生成将消耗10设计点</view>
+  <view class="select-actions"><view class="v12-secondary-button" bindtap="regenerate">重新生成</view><view class="v12-primary-button" bindtap="confirm">选定并生成立面</view></view>
+</view>

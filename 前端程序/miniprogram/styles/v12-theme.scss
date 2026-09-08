@@ -1,0 +1,92 @@
+@import './v12-tokens.scss';
+
+page {
+  min-height: 100%;
+  background: $v12-page-beige;
+  color: $v12-deep-coffee;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+.v12-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: $v12-page-beige;
+  color: $v12-deep-coffee;
+}
+
+.v12-content {
+  padding: 0 32rpx 48rpx;
+  box-sizing: border-box;
+}
+
+.v12-content--tab {
+  padding-bottom: calc(148rpx + env(safe-area-inset-bottom));
+}
+
+.v12-card {
+  box-sizing: border-box;
+  border: 1rpx solid rgba(232, 222, 209, 0.72);
+  border-radius: 24rpx;
+  background: $v12-surface;
+  box-shadow: 0 10rpx 30rpx rgba(72, 49, 32, 0.07);
+}
+
+.v12-primary-button,
+.v12-secondary-button,
+.v12-disabled-button {
+  height: 92rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 32rpx;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.v12-primary-button {
+  color: #ffffff;
+  background: linear-gradient(100deg, #8b4818, $v12-primary-brown);
+  box-shadow: 0 10rpx 24rpx rgba(106, 59, 27, 0.14);
+}
+
+.v12-secondary-button {
+  color: $v12-brand-brown;
+  border: 2rpx solid $v12-brand-brown;
+  background: $v12-surface;
+}
+
+.v12-disabled-button {
+  color: #ffffff;
+  background: #cfcfce;
+}
+
+.v12-section-title {
+  display: block;
+  color: $v12-deep-coffee;
+  font-size: 34rpx;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.v12-muted { color: $v12-secondary-text; }
+
+.v12-fixed-action {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: rgba(255, 253, 248, 0.98);
+  border-top: 1rpx solid $v12-divider;
+}
+
+.v12-safe-bottom { height: env(safe-area-inset-bottom); }
+
+@media (max-width: 350px) {
+  .v12-content { padding-left: 24rpx; padding-right: 24rpx; }
+  .v12-primary-button, .v12-secondary-button { font-size: 30rpx; }
+}

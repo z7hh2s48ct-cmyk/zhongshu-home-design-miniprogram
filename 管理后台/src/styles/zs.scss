@@ -1,0 +1,148 @@
+/** 众墅之家管理后台共享样式：页面骨架 / 统计卡 / 主按钮（对照效果图采样） */
+.zs-page {
+  padding: 24px 32px;
+  background: #fbf7f2;
+  min-height: calc(100vh - var(--top-tool-height, 60px) - var(--tags-view-height, 35px));
+
+  .zs-page-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #282728;
+    margin: 0;
+  }
+
+  .zs-page-subtitle {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #9b9b9b;
+  }
+
+  .zs-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .zs-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .zs-stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+
+    .zs-stat-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 12px rgb(113 67 32 / 5%);
+
+      .zs-stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        background: #f5eee7;
+        color: #714320;
+      }
+
+      .zs-stat-label {
+        font-size: 13px;
+        color: #6f6f6f;
+      }
+
+      .zs-stat-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #282728;
+        line-height: 1.2;
+      }
+    }
+  }
+
+  .zs-table-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgb(113 67 32 / 5%);
+  }
+
+  .zs-btn-primary {
+    background: #714320;
+    border-color: #714320;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+      background: #82522f;
+      border-color: #82522f;
+      color: #fff;
+    }
+  }
+
+  .zs-link {
+    color: #714320;
+    cursor: pointer;
+
+    &:hover {
+      color: #8a5a34;
+    }
+  }
+
+  .zs-link-danger {
+    color: #d0342c;
+    cursor: pointer;
+
+    &:hover {
+      color: #e05a52;
+    }
+  }
+
+  .zs-link-success {
+    color: #3f9e56;
+    cursor: pointer;
+  }
+}
+
+// 表格状态 tag 配色（对照效果图：未使用=蓝、已绑定=绿、已过期=灰、已停用=红）
+.zs-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+
+  &.zs-tag--blue {
+    color: #2d68c4;
+    background: #e8f1fc;
+  }
+
+  &.zs-tag--green {
+    color: #3f9e56;
+    background: #e9f6ec;
+  }
+
+  &.zs-tag--gray {
+    color: #8a8a8a;
+    background: #f0f0f0;
+  }
+
+  &.zs-tag--red {
+    color: #d0342c;
+    background: #fceceb;
+  }
+
+  &.zs-tag--orange {
+    color: #c07a1f;
+    background: #faf1e2;
+  }
+}

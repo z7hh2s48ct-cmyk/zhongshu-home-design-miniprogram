@@ -1,0 +1,9 @@
+### /promotion/bargain-record/create 创建砍价助力
+POST {{appApi}}/promotion/bargain-help/create
+Authorization: Bearer REPLACE_ME
+Content-Type: application/json
+tenant-id: {{appTenantId}}
+
+{
+  "recordId": 26
+}

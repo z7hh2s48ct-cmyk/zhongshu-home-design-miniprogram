@@ -1,0 +1,14 @@
+<view class="v12-page budget-page" wx:if="{{accessReady}}">
+  <v12-navbar title="快速预算" show-back show-brand="{{false}}" />
+  <view class="auto-note"><t-icon name="info-circle-filled" size="17px" color="#bf7d0e" /><text>已从AI设计方案自动带入基础参数</text><span>方案B</span></view>
+  <view class="v12-card budget-form">
+    <view class="form-row"><text>建筑面积</text><span><input class="area-input" type="digit" value="{{buildingArea}}" bindinput="onAreaInput" /> m²</span></view>
+    <view class="form-row"><text>层数</text><span>2层 <t-icon name="chevron-down" size="16px" color="#777" /></span></view>
+    <view class="form-row"><text>建造地区</text><span>福建 · 泉州 <t-icon name="chevron-right" size="16px" color="#777" /></span></view>
+    <view class="form-row" bindtap="chooseStructure"><text>结构形式</text><span>{{structure.label}} <t-icon name="chevron-right" size="16px" color="#777" /></span></view>
+    <view class="form-row standard-row"><text>建造标准</text><view><span wx:for="{{['经济','标准','品质']}}" wx:key="*this" class="{{standard === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectStandard">{{item}}</span></view></view>
+    <view class="form-row"><text>包含室内基础装修</text><switch checked="{{interior}}" color="#8a4a1a" bindchange="toggleInterior" /></view>
+  </view>
+  <view class="v12-card explain"><view class="document"><t-icon name="file" size="30px" color="#7b5532" /></view><view><text>测算说明</text><text>结果根据地区参考单价、建筑面积和建造标准估算</text></view></view>
+  <view class="v12-primary-button generate-budget" bindtap="generate">生成参考预算</view>
+</view>

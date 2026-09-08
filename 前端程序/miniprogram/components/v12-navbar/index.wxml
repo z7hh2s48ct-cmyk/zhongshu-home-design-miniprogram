@@ -1,0 +1,17 @@
+<view class="navbar-spacer" style="height: {{navigationHeight}}px;">
+  <view class="navbar" style="padding-top: {{statusBarHeight}}px; height: {{navigationHeight}}px;">
+    <view class="navbar-main" style="height: {{menuHeight}}px;">
+      <view class="navbar-left">
+        <view wx:if="{{showBack}}" class="back-button" bindtap="goBack" aria-label="返回">
+          <t-icon name="chevron-left" size="25px" color="#161616" />
+        </view>
+        <image wx:elif="{{showBrand}}" class="brand-logo" src="/assets/v12/brand-logo.png" mode="widthFix" />
+      </view>
+      <text wx:if="{{title}}" class="navbar-title">{{title}}</text>
+      <view wx:if="{{showNotice}}" class="notice-button" bindtap="openMessages" aria-label="消息">
+        <t-icon name="notification" size="23px" color="#2f2925" />
+        <view class="notice-dot"></view>
+      </view>
+    </view>
+  </view>
+</view>

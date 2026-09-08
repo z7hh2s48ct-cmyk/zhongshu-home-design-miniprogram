@@ -1,0 +1,143 @@
+'use strict';
+
+const api = require('./api');
+
+const HOME = '/pages/home/index';
+const AUTH = '/pages/auth/index';
+const PUBLIC_PAGES = [HOME, '/pages/profile/index'];
+const TAB_PAGES = [...PUBLIC_PAGES, '/pages/library/index', '/pages/ai-design/index'];
+const BUSINESS_PAGES = [
+  '/pages/library/index', '/pages/library/detail', '/pages/ai-design/index',
+  '/pages/ai-design/generating', '/pages/ai-design/plane-select',
+  '/pages/ai-design/elevation-setup', '/pages/ai-design/elevation-select',
+  '/pages/ai-design/result', '/pages/ai-design/publish',
+  '/pages/budget/input', '/pages/budget/result', '/pages/wallet/recharge',
+  '/pages/payment/success', '/pages/messagecenter/messagecenter'
+];
+let prompting = false;
+
+function navigationFailed() {
+  wx.showToast({ title: '页面打开失败，请重试', icon: 'none' });
+}
+
+// 授权判定以服务端 GET /access-grant 为准（refreshFromServer 启动/兑换后刷新），
+// 本地缓存只是两次刷新之间的同步快照，判权本身不产生网络等待。
+function isAuthorized() {
+  try {
+    return wx.getStorageSync('v12Authorized') === true;
+  } catch (error) {
+    console.warn('[access] 无法读取授权状态', error);
+    return false;
+  }
+}
+
+function setAuthorized(value) {
+  try { wx.setStorageSync('v12Authorized', value === true); } catch (error) { /* 存储不可用时判权保持保守 */ }
+}
+
+// 启动、兑换成功后调用；测试环境无 wx.request 时静默跳过。
+function refreshFromServer() {
+  if (typeof wx.request !== 'function') return Promise.resolve();
+  return api.getAccessGrant()
+    .then((grant) => setAuthorized(!!grant && grant.status === 'ACTIVE'))
+    .catch(() => { /* 刷新失败保持现有快照，待下次进入页面重试 */ });
+}
+
+function safeTarget(value) {
+  const target = typeof value === 'string' ? value : HOME;
+  const route = target.split('?')[0];
+  if (![...PUBLIC_PAGES, ...BUSINESS_PAGES].includes(route)) return HOME;
+  return TAB_PAGES.includes(route) ? route : target;
+}
+
+function navigate(url, replace = false) {
+  const method = TAB_PAGES.includes(url.split('?')[0]) ? 'switchTab' : replace ? 'redirectTo' : 'navigateTo';
+  wx[method]({ url, fail: navigationFailed });
+}
+
+function openActivation(target = HOME) {
+  wx.navigateTo({ url: `${AUTH}?redirect=${encodeURIComponent(safeTarget(target))}`, fail: navigationFailed });
+}
+
+function promptActivation(target) {
+  if (prompting) return;
+  prompting = true;
+  wx.showModal({
+    title: '激活后使用此功能',
+    content: '首页可继续浏览，使用此功能需要先激活。',
+    cancelText: '继续浏览',
+    confirmText: '去激活',
+    confirmColor: '#7b5532',
+    success(result) {
+      if (result.confirm) openActivation(target);
+    },
+    fail: navigationFailed,
+    complete() { prompting = false; }
+  });
+}
+
+function leaveRestrictedPage(page, target) {
+  page.setData({ accessReady: false });
+  if (page._returningHome) return;
+  page._returningHome = true;
+  wx.switchTab({
+    url: HOME,
+    success() { if (target) promptActivation(target); },
+    fail() { page._returningHome = false; navigationFailed(); }
+  });
+}
+
+function requireActivation(action, target = HOME) {
+  if (isAuthorized()) { action(); return; }
+  const pages = getCurrentPages();
+  const current = pages[pages.length - 1];
+  if (current?.route === 'pages/profile/index') current.setData({ authorized: false });
+  if (current && BUSINESS_PAGES.includes(`/${current.route}`)) leaveRestrictedPage(current, target);
+  else promptActivation(target);
+}
+
+function openFeature(target) {
+  const url = safeTarget(target);
+  if (PUBLIC_PAGES.includes(url)) navigate(url);
+  else requireActivation(() => navigate(url), url);
+}
+
+function returnHome() {
+  wx.switchTab({ url: HOME, fail: navigationFailed });
+}
+
+function checkPage(page, fromAction = false) {
+  const allowed = getApp().homeSeen && isAuthorized();
+  if (allowed) {
+    page.setData({ accessReady: true });
+    page._returningHome = false;
+  } else {
+    const query = Object.entries(page.options || {}).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+    const target = `/${page.route}${query ? `?${query}` : ''}`;
+    leaveRestrictedPage(page, fromAction ? target : null);
+  }
+  return allowed;
+}
+
+// 入口、直达链接、回到前台和业务点击共享检查，避免漏掉某一条路径。
+function protectedPage(definition) {
+  const guarded = { ...definition, data: { ...definition.data, accessReady: false } };
+  for (const [name, handler] of Object.entries(definition)) {
+    if (typeof handler !== 'function' || ['onLoad', 'onShow', 'onHide', 'onUnload'].includes(name)) continue;
+    guarded[name] = function (...args) {
+      if (checkPage(this, true)) return handler.apply(this, args);
+    };
+  }
+  guarded.onLoad = function (options) {
+    if (checkPage(this) && definition.onLoad) definition.onLoad.call(this, options);
+  };
+  guarded.onShow = function () {
+    if (checkPage(this) && definition.onShow) definition.onShow.call(this);
+  };
+  Page(guarded);
+}
+
+module.exports = {
+  isAuthorized, setAuthorized, refreshFromServer,
+  safeTarget, navigate, openActivation, requireActivation, openFeature, returnHome, protectedPage
+};

@@ -1,0 +1,32 @@
+@import '../../styles/v12-theme.scss';
+
+.home-content { padding-top: 30rpx; padding-left: 24rpx; padding-right: 24rpx; }
+.hero { position: relative; height: 548rpx; overflow: hidden; background: linear-gradient(120deg, #fffdf8 0%, #fbf6ed 48%, #eef2f3 100%); }
+.hero::after { content: ''; position: absolute; right: -1rpx; top: -1rpx; width: 86rpx; height: 64rpx; border-radius: 0 0 0 26rpx; background: $v12-page-beige; }
+.hero-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hero-copy { position: relative; z-index: 1; padding: 122rpx 44rpx 0; box-sizing: border-box; }
+.hero-title { display: block; white-space: pre-line; font-family: "Songti SC", STSong, serif; font-size: 40rpx; line-height: 1.35; font-weight: 600; }
+.hero-subtitle { display: block; margin-top: 12rpx; color: $v12-deep-coffee; font-size: 20rpx; line-height: 1.45; white-space: nowrap; }
+.hero-actions { width: 214rpx; margin-top: 68rpx; display: grid; gap: 18rpx; }
+.hero-actions > view { height: 64rpx; border-radius: 13rpx; font-size: 25rpx; }
+.shortcut-row, .featured-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
+.shortcut-row { margin-top: 26rpx; }
+.shortcut { min-height: 152rpx; padding: 24rpx 18rpx; display: flex; align-items: center; gap: 14rpx; }
+.shortcut-icon { width: 58rpx; flex: 0 0 58rpx; }
+.shortcut > view:nth-child(2) { min-width: 0; flex: 1; }
+.shortcut-title, .shortcut-copy { display: block; }
+.shortcut-title { font-size: 27rpx; font-weight: 600; }
+.shortcut-copy { margin-top: 8rpx; font-size: 20rpx; color: $v12-secondary-text; white-space: nowrap; }
+.section-heading { margin: 38rpx 4rpx 22rpx; display: flex; justify-content: space-between; align-items: center; }
+.section-heading > view { display: flex; align-items: center; color: $v12-brand-brown; font-size: 24rpx; }
+.featured { overflow: hidden; }
+.featured image { width: 100%; height: 304rpx; display: block; }
+.featured > view { padding: 20rpx 24rpx 26rpx; display: flex; align-items: center; gap: 8rpx; }
+.featured-copy { min-width: 0; flex: 1; }
+.featured text { display: block; font-size: 27rpx; font-weight: 600; }
+.featured text + text { margin-top: 9rpx; font-size: 20rpx; font-weight: 400; color: $v12-secondary-text; white-space: nowrap; }
+@media (max-width: 350px) {
+  .hero-copy { padding-left: 36rpx; }
+  .hero-title { font-size: 36rpx; }
+  .shortcut-copy, .featured text + text { font-size: 18rpx; }
+}

@@ -1,0 +1,61 @@
+--- #################### 众墅专项 PostgreSQL 基线（P1B 冻结）####################
+# 启用方式：--spring.profiles.active=local,pg
+# 部署形态：整库 PostgreSQL（唯一关系数据库，架构 D-08）。
+# 注意：底座数据源由 dynamic-datasource 接管，必须覆盖 spring.datasource.dynamic.datasource.master.*；
+# Flyway 必须显式给 spring.flyway.url，否则会回退到路由数据源（= master）。
+# 边界：底座 system/infra 在 PG 上的初始化与回归属于平台阶段 1A/1B 门禁（见 T00 登记 §4）；
+# 本 profile 当前承载业务库基线与 CI，完整服务器 PG 启动验收在平台门禁通过后补证。
+spring:
+  flyway:
+    enabled: true
+    url: ${ZS_PG_URL:jdbc:postgresql://127.0.0.1:5432/zhongshu_design}
+    user: ${ZS_PG_USERNAME:zhongshu}
+    password: ${ZS_PG_PASSWORD:zhongshu}
+    # 各业务包拥有自己的迁移目录；platform 为平台/工程级（Outbox、审计、示例基线等）
+    locations: classpath:db/migration/platform,classpath:db/migration/identity,classpath:db/migration/design,classpath:db/migration/commerce,classpath:db/migration/ai-orchestration
+    # 底座 system/infra 表由 sql/postgresql 基线 dump 先行建好（全新环境引导顺序：dump → Flyway），
+    # schema 非空且无 Flyway 历史时必须允许建基线，否则首次启动直接被 non-empty schema 守卫拦截。
+    # baseline-version 取 20260905.000（低于全部真实迁移），保证基线不吞掉任何业务迁移。
+    baseline-on-migrate: true
+    baseline-version: "20260905.000"
+    # 段位命名（platform=0xx / identity=1xx / design=2xx / commerce=3xx / ai-orchestration=4xx）
+    # 下，后补低段位迁移（如 platform 004 晚于 commerce 402 落地）必然全局乱序，必须允许。
+    # 各段表集零交叉依赖，乱序仅影响 history 排序，不影响正确性。
+    out-of-order: true
+    table: flyway_schema_history
+  datasource:
+    dynamic:
+      druid: # 覆盖 local profile 的 MySQL 校验语句（PG 无 DUAL 表）
+        validation-query: SELECT 1
+        validation-query-timeout: 5
+        # PG 下必须关闭 Druid PreparedStatement 缓存：PSCache 会跨事务复用语句对象，
+        # 与 PG JDBC（事务中止后语句失效）+ MyBatis-Plus 3.5.17 cursor 版 selectOne
+        # 组合会拿到已关闭的 statement（日志特征：getMaxRows error / statement 已被关闭）。
+        pool-prepared-statements: false
+        max-pool-prepared-statement-per-connection-size: 0
+      datasource:
+        master:
+          url: ${ZS_PG_URL:jdbc:postgresql://127.0.0.1:5432/zhongshu_design}
+          username: ${ZS_PG_USERNAME:zhongshu}
+          password: ${ZS_PG_PASSWORD:zhongshu}
+          driver-class-name: org.postgresql.Driver
+
+# 安全基线：本 profile 不携带任何密钥默认值，也不打开开发便利开关。
+# 密钥缺失时兑换/发码接口按合同快速失败（AccessCodeCipher.requirePepper），不得静默降级为公开值。
+# 本机联调请追加 zsdev profile：--spring.profiles.active=local,pg,zsdev
+zhongshu:
+  ai:
+    # C6：internal-api 服务签名密钥——生产必须配置，空值时 internal 端点全部拒绝（快速失败）
+    internal-secret: ${ZS_INTERNAL_SECRET:}
+    internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+  identity:
+    wechat-appid: ${ZS_WX_APPID:}
+    access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:}
+    access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
+    access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:}
+  design:
+    seed-dev-data: ${ZS_SEED_DEV_DATA:false}
+    # 生产默认关（驱动器在 P4D 前会“无 Runtime 产出”判 FAILED 全退；接 P4D 后按 Provider 限额决定开启策略）
+    driver-enabled: ${ZS_DRIVER_ENABLED:false}
+    asset:
+      dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:false}

@@ -1,0 +1,55 @@
+@import '../../styles/v12-theme.scss';
+
+.generating-page { padding: 30rpx 30rpx 42rpx; }
+.generating-page > v12-navbar { margin: -30rpx -30rpx 0; }
+.steps { height: 100rpx; display: flex; align-items: center; justify-content: center; gap: 14rpx; }
+.steps view { padding: 8rpx 18rpx; border-radius: 26rpx; background: #aaa; color: #fff; font-size: 23rpx; display: flex; align-items: center; gap: 5rpx; }
+.steps view.active { background: linear-gradient(100deg,#8b4818,#7b5532); }
+.steps text { font-size: 27rpx; color: #8c8c8c; }
+.steps .active + text, .steps .done + text { color: #7b3f17; font-weight: 500; }
+.steps i { width: 120rpx; border-top: 2rpx dashed #aaa; }
+.generate-card { padding: 30rpx 26rpx; }
+.generate-title, .percent, .generating-copy { display: block; text-align: center; }
+.generate-title { font-size: 29rpx; font-weight: 500; }
+.percent { margin-top: 12rpx; color: #8a4a1a; font-size: 42rpx; font-weight: 600; }
+.progress { height: 12rpx; border-radius: 10rpx; background: #e8e4df; overflow: hidden; }
+.plane-card > .progress { margin: 20rpx 30rpx 0; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg,#8b4818,#9e5f2b); }
+.generating-copy { margin-top: 24rpx; color: #878787; font-size: 23rpx; }
+.plan-preview { height: 350rpx; margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
+.plan-preview image { width: 100%; height: 100%; opacity: .68; border: 1rpx solid #e5ded6; border-radius: 10rpx; }
+.task-list { margin: 24rpx -26rpx -30rpx; padding: 18rpx 24rpx; border-top: 1rpx solid $v12-divider; }
+.task-list > view { min-height: 72rpx; display: flex; align-items: center; gap: 18rpx; }
+.task-list b { width: 42rpx; height: 42rpx; border-radius: 50%; background: #8a4a1a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22rpx; }
+.task-list b.waiting { color: #8a4a1a; border: 1rpx solid #c9b9a8; background: #fff; }
+.task-copy { flex: 1; display: grid; grid-template-columns: 170rpx 1fr; align-items: center; gap: 18rpx; }
+.task-copy text { font-size: 26rpx; }
+.task-copy text + text { color: #858585; font-size: 21rpx; }
+.task-list i { color: #777; font-style: normal; font-size: 22rpx; }
+.task-list i.working { color: #8a4a1a; }
+.elevation-card { padding: 30rpx 24rpx; }
+.elevation-visual { display: grid; grid-template-columns: 1fr 58rpx 1.25fr; align-items: center; gap: 10rpx; }
+.elevation-visual > view > text { display: block; margin-bottom: 22rpx; text-align: center; font-size: 26rpx; }
+.elevation-visual image { width: 100%; height: 190rpx; display: block; border-radius: 10rpx; }
+.locked-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 8rpx; }
+.locked-plans image { height: 190rpx; }
+.elevation-visual > view:last-child image { height: 155rpx; margin-top: 15rpx; }
+.arrow { text-align: center; color: #8a4a1a; font-size: 50rpx; }
+.elevation-card > .generate-title { margin-top: 40rpx; }
+.progress-line { margin: 22rpx 52rpx 0; display: flex; align-items: center; gap: 20rpx; }
+.progress-line .progress { flex: 1; }
+.progress-line text { color: #8a4a1a; font-size: 30rpx; }
+.horizontal-tasks { margin: 34rpx -24rpx 0; padding: 28rpx 16rpx 0; border-top: 1rpx solid $v12-divider; display: flex; align-items: flex-start; }
+.horizontal-tasks > view { width: 120rpx; text-align: center; }
+.horizontal-tasks > i { flex: 1; margin-top: 23rpx; border-top: 2rpx dashed #777; }
+.horizontal-tasks b { width: 46rpx; height: 46rpx; margin: 0 auto 14rpx; border: 2rpx solid #8a4a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #8a4a1a; }
+.horizontal-tasks b.active { color: #fff; background: #8a4a1a; }
+.horizontal-tasks text, .horizontal-tasks span { display: block; font-size: 21rpx; line-height: 1.4; }
+.horizontal-tasks span { margin-top: 8rpx; color: #858585; }
+.horizontal-tasks view:nth-of-type(3) span { color: #8a4a1a; }
+.lock-note { margin-top: 34rpx; padding: 20rpx; border-radius: 10rpx; background: #fff9f1; display: flex; align-items: center; gap: 18rpx; font-size: 23rpx; }
+.stage-tip { margin-top: 24rpx; padding: 20rpx; border: 1rpx solid #ecd1ac; border-radius: 16rpx; background: #fff8ef; display: flex; align-items: center; gap: 18rpx; }
+.stage-tip text { display: block; font-size: 26rpx; }
+.stage-tip text + text { margin-top: 8rpx; color: $v12-secondary-text; font-size: 22rpx; }
+.generate-actions { margin-top: 28rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 26rpx; }
+.preview-link { margin-top: 20rpx; text-align: center; color: $v12-secondary-text; font-size: 21rpx; }

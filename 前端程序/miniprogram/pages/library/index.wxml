@@ -1,0 +1,21 @@
+<view class="v12-page" wx:if="{{accessReady}}">
+  <v12-navbar />
+  <view class="v12-content v12-content--tab library-content">
+    <text class="page-title">户型库</text>
+    <text class="page-subtitle">发现适合中国家庭的乡墅方案</text>
+    <view class="search"><t-icon name="search" size="18px" color="#8a8178" /><input placeholder="搜索户型名称、风格或面积" value="{{keyword}}" bindinput="onSearch" /></view>
+    <view class="source-tabs"><view class="{{source === 0 ? 'active' : ''}}" data-index="0" bindtap="selectSource">公司案例</view><view class="{{source === 1 ? 'active' : ''}}" data-index="1" bindtap="selectSource">AI案例</view></view>
+    <view class="v12-card filters">
+      <view><text>建筑风格</text><view class="filter-pills"><text wx:for="{{styleOptions}}" wx:key="code" class="{{filters.styleCode === item.code ? 'selected' : ''}}" data-key="styleCode" data-value="{{item.code}}" bindtap="onFilterChange">{{item.label}}</text></view></view>
+      <view><text>建筑层数</text><view class="filter-pills"><text wx:for="{{floorOptions}}" wx:key="label" class="{{filters.floorCount === item.count ? 'selected' : ''}}" data-key="floorCount" data-value="{{item.count}}" bindtap="onFilterChange">{{item.label}}</text></view></view>
+    </view>
+    <view class="sort-row"><text>共 {{visibleCases.length}} 套方案</text><view>面积从小到大 <t-icon name="chevron-down" size="15px" color="#786858" /></view></view>
+    <view class="case-grid">
+      <view class="v12-card case-card" wx:for="{{visibleCases}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+        <view class="image-wrap"><image src="{{item.image}}" mode="aspectFill" /><text>{{item.tag}}</text></view>
+        <view class="case-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view>
+      </view>
+      <view wx:if="{{!loading && !visibleCases.length}}" class="empty-tip">没有符合筛选条件的方案，换个筛选看看</view>
+    </view>
+  </view>
+</view>

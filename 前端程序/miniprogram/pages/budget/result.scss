@@ -1,0 +1,23 @@
+@import '../../styles/v12-theme.scss';
+
+.budget-result-page { padding: 30rpx 32rpx 54rpx; }
+.budget-result-page > v12-navbar { margin: -30rpx -32rpx 0; }
+.estimate-card { position: relative; min-height: 250rpx; margin-top: 18rpx; padding: 35rpx 40rpx; box-sizing: border-box; border: 1rpx solid #ecd4af; border-radius: 22rpx; background: linear-gradient(105deg,#fff8ec,#f5e6cf); overflow: hidden; }
+.estimate-card > text { position: relative; z-index: 1; display: block; font-size: 29rpx; color: #7b3f17; }
+.estimate-card > view { position: relative; z-index: 1; margin: 18rpx 0; display: flex; align-items: baseline; gap: 17rpx; }
+.estimate-card b { color: #6d330f; font-size: 70rpx; font-weight: 600; }
+.estimate-card span { color: #6d330f; font-size: 28rpx; }
+.estimate-card > text:last-of-type { color: #6d330f; font-size: 24rpx; }
+.estimate-card image { position: absolute; right: 4rpx; bottom: 0; width: 340rpx; height: 240rpx; opacity: .82; }
+.costs, .basis { margin-top: 28rpx; padding: 28rpx 34rpx; }
+.costs > text, .basis > text { display: block; margin-bottom: 10rpx; font-size: 31rpx; font-weight: 600; }
+.costs > view { height: 92rpx; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
+.costs > view:last-child { border: 0; }
+.costs > view > text { flex: 1; font-size: 28rpx; }
+.costs span { font-size: 27rpx; }
+.cost-icon { width: 58rpx; height: 58rpx; border-radius: 50%; background: #f5eee5; display: flex; align-items: center; justify-content: center; }
+.basis > view { height: 76rpx; display: flex; align-items: center; justify-content: space-between; border-bottom: 1rpx solid $v12-divider; font-size: 25rpx; }
+.basis > view:last-child { border: 0; }
+.basis > view > text { color: $v12-secondary-text; }
+.warning { margin: 26rpx 0; padding: 21rpx 28rpx; border: 1rpx solid #efd8b7; border-radius: 15rpx; background: #fff7eb; color: #a75b00; display: flex; align-items: center; gap: 12rpx; font-size: 23rpx; }
+.adjust { height: 76rpx; display: flex; align-items: center; justify-content: center; color: #7b3f17; font-size: 28rpx; }
