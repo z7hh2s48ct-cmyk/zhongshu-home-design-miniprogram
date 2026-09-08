@@ -1,0 +1,89 @@
+name: 三端基线验证
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mini:
+    name: 小程序测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: 执行小程序验证
+        run: node scripts/verify.mjs mini
+
+  admin:
+    name: 管理端检查与构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js、pnpm 与冻结依赖
+        uses: pnpm/setup@v2
+        with:
+          version: 11.19.0
+          runtime: node@24.19.0
+          working-directory: 管理后台
+          cache: true
+          require-lockfile: true
+
+      - name: 执行管理端验证
+        run: node scripts/verify.mjs admin
+
+  backend:
+    name: 后端合同测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: 安装 JDK 17 并缓存 Maven 依赖
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version-file: 后端程序/.java-version
+          cache: maven
+          cache-dependency-path: 后端程序/**/pom.xml
+
+      - name: 执行众墅后端合同测试
+        run: node scripts/verify.mjs backend
+
+      - name: 上传 Surefire 测试报告
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-surefire-reports-${{ github.run_attempt }}
+          path: 后端程序/**/target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 14

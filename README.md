@@ -1,5 +1,7 @@
 # 众墅之家设计小程序
 
+[![三端基线验证](https://github.com/phlong026/zhongshu-home-design-miniprogram/actions/workflows/verify.yml/badge.svg)](https://github.com/phlong026/zhongshu-home-design-miniprogram/actions/workflows/verify.yml)
+
 本仓库归档“众墅之家设计小程序”当前三端源码，作为后续协作、联调和版本管理的统一入口。
 
 ## 目录
@@ -43,6 +45,8 @@ node scripts/verify.mjs all
 `all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 17 个后端众墅合同测试文件”执行；后端合同测试使用 Testcontainers，需要 JDK 17 和可用的 Docker daemon。失败摘要会标明具体端与阶段。也可用 `mini`、`admin`、`backend` 参数单独复跑。
 
 环境自检只输出敏感变量的“已设置/未设置”状态，不打印变量值。CI 与本地复用这组命令。
+
+根级 GitHub Actions 在 `main` 的 push、面向 `main` 的 pull request 及手动触发时运行三个独立检查：`mini`、`admin`、`backend`。后端 Surefire 报告无论成功或失败都会保留 14 天。工作流首次在远端全绿后，应按 `CONTRIBUTING.md` 启用分支保护。
 
 ## 项目治理
 

@@ -62,7 +62,19 @@ P0 changes require review by the technical owner and the relevant QA/security ro
 - Backend: JDK 17 build, targeted tests, Flyway/Testcontainers contract tests when schema or persistence changes.
 - Cross-end changes: repeatable E2E coverage with fixtures and cleanup.
 
-The root verification command and CI jobs will become mandatory after T02 is complete.
+The root verification command and CI jobs are mandatory. Run `node scripts/verify.mjs all` before requesting review; use the stage argument to reproduce a failed CI job.
+
+## Required branch protection
+
+For `main`, enable a ruleset or branch protection rule with these settings after the first reachable workflow run:
+
+- require a pull request and at least one non-author approval;
+- dismiss stale approvals when new commits are pushed;
+- require conversation resolution and a branch that is up to date;
+- require the three stable checks `小程序测试`、`管理端检查与构建`、`后端合同测试`;
+- block force pushes and deletion; allow bypass only for the named repository administrators responsible for incident recovery.
+
+Do not select a required check until it has run once on the repository. Changing a job name requires updating the ruleset in the same release window.
 
 ## Secrets and environments
 
