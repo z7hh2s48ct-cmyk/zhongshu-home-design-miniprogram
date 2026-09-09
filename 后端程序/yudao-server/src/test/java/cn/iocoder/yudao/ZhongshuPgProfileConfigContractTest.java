@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -97,6 +98,39 @@ class ZhongshuPgProfileConfigContractTest {
         assertThat(locations).isNotBlank();
         for (String module : List.of("platform", "identity", "design", "commerce", "ai-orchestration")) {
             assertThat(locations).as("迁移 locations 必须包含 " + module).contains("classpath:db/migration/" + module);
+        }
+    }
+
+    /**
+     * 安全守卫（T13-01）：pg 是生产安全基线，绝不把任何端口 provider 默认成开发替身（stub/local），
+     * 否则「生产禁止 Stub」合同会退化为静默装配替身。生产 provider 只允许留空（缺失即启动守卫快速失败）
+     * 或显式真实值；开发默认值只放 zsdev profile。
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void pgProfileMustNotDefaultAnyPortToStubProvider() throws Exception {
+        Map<String, Object> zhongshu = (Map<String, Object>) loadPgProfile().get("zhongshu");
+        List<String> stubProviders = new ArrayList<>();
+        collectStubProviders(zhongshu, "zhongshu", stubProviders);
+        assertThat(stubProviders)
+                .as("pg profile 不得把任何 provider 设为开发替身（stub/local）")
+                .isEmpty();
+    }
+
+    private void collectStubProviders(Object node, String path, List<String> out) {
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                String childPath = path + "." + key;
+                Object value = e.getValue();
+                if ("provider".equals(key) && value != null) {
+                    String v = String.valueOf(value).trim();
+                    if (v.equals("stub") || v.equals("local")) {
+                        out.add(childPath + "=" + v);
+                    }
+                }
+                collectStubProviders(value, childPath, out);
+            }
         }
     }
 

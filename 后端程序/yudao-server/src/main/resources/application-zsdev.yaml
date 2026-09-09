@@ -3,7 +3,9 @@
 #
 # ⚠️ 本文件内的密钥是公开的占位值，仅用于本机联调，严禁用于任何共享或生产环境。
 # 生产只启用 local,pg（或 prod,pg），需注册真实外部服务适配器并从环境注入密钥。
-# Stub/本地存储仅在 zsdev 且不含 prod/production 时装配；只填写密钥不会切换为真实实现。
+# T13-01：真实/Stub 由各端口 provider 键选择——本 profile 默认全部 stub/local（字面值，便于 @ConditionalOnProperty 直接判定）；
+# 逐项联调用环境变量覆盖对应端口（松散绑定，优先级高于本文件），如 ZHONGSHU_IDENTITY_WECHAT_PROVIDER=real；
+# 只填密钥不会切换实现。生产启用 stub/local 会被启动守卫 ZhongshuWiringEnvironmentPostProcessor 拒绝。
 #
 # 与 pg profile 的分工：
 # - pg     = 数据库基线 + 生产安全默认（无密钥、不播种、不开内容端点）
@@ -14,11 +16,18 @@ zhongshu:
     internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
   identity:
-    # 此 profile 始终使用 Stub 身份适配器；真实 AppID 不会自动切换实现
+    # 填真实 AppID 不会自动切换实现；需同时把下方 wechat.provider 设为 real（B1 就绪后）
     wechat-appid: ${ZS_WX_APPID:stub-appid}
+    wechat:
+      # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B1 真实 code2session
+      provider: stub
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:ZGV2LW9ubHktYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzISEh}
+  commerce:
+    payment:
+      # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B4 微信支付
+      provider: stub
   design:
     # 启动时写入计价规则/充值方案/预算规则/示例案例/测试授权码；已存在则跳过
     seed-dev-data: ${ZS_SEED_DEV_DATA:true}
@@ -29,6 +38,12 @@ zhongshu:
     cancel-grace-minutes: ${ZS_CANCEL_GRACE_MINUTES:10}
     no-runtime-grace-minutes: ${ZS_NO_RUNTIME_GRACE_MINUTES:30}
     asset:
+      storage:
+        # T13-01 实现选择：local=本地文件（本 profile 默认）；cos=B2 腾讯云 COS 私有桶
+        provider: local
+      moderation:
+        # T13-01 实现选择：stub=直通（内容审核 B3 后置，本期不接真实审核）；real=后续批次真实审核
+        provider: stub
       # 本地存储的 local:// URL 无法被小程序 image 组件加载，开发期凭一次性票据流式输出字节；
       # 切 COS 后关闭，由 COS 签名 URL 取代
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:true}

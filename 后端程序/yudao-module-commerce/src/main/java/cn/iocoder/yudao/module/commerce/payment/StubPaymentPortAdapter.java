@@ -3,8 +3,8 @@ package cn.iocoder.yudao.module.commerce.payment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
 import java.util.Map;
@@ -19,7 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *   「已创建预支付的订单查单返回 SUCCEEDED、退款返回 SUCCEEDED」。
  */
 @Component
-@Profile("zsdev & !prod & !production")
+// T13-01 装配条件：zhongshu.commerce.payment.provider=stub；真实微信支付由 B4 的 real 实现替换。
+// 生产禁止 stub，由 ZhongshuWiringEnvironmentPostProcessor 启动守卫强制。
+@ConditionalOnProperty(prefix = "zhongshu.commerce.payment", name = "provider", havingValue = "stub")
 public class StubPaymentPortAdapter implements PaymentPort {
 
     private static final ObjectMapper JSON = new ObjectMapper();

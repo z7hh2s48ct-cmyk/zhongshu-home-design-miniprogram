@@ -47,6 +47,9 @@ spring:
 # 安全基线：本 profile 不携带任何密钥默认值，也不打开开发便利开关。
 # 密钥缺失时兑换/发码接口按合同快速失败（AccessCodeCipher.requirePepper），不得静默降级为公开值。
 # 本机联调请追加 zsdev profile：--spring.profiles.active=local,pg,zsdev
+# T13-01：本 profile 刻意不声明各端口 provider（真实/Stub 选择）。生产必须显式配置为真实实现
+# （环境变量 ZHONGSHU_*_PROVIDER 或 -Dzhongshu.*.provider=real/cos）；缺失即被启动守卫快速失败，
+# 避免生产误装配 Stub 或静默无实现。开发默认值放在 zsdev profile。
 zhongshu:
   ai:
     # C6：internal-api 服务签名密钥——生产必须配置，空值时 internal 端点全部拒绝（快速失败）
