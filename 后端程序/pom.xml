@@ -40,6 +40,10 @@
         <spring.boot.version>3.5.15</spring.boot.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- T13-03：真实验收测试门禁。默认排除 real-acceptance 标签，使「真实检查默认不运行」（不触发真实
+             微信/COS/支付消费）。显式开启：-Dzs.test.excludedGroups=（置空即不排除任何组），并按
+             《T13-03 无真实消费测试基线与手工验收清单》注入受限凭据后，方可运行真实验收用例。 -->
+        <zs.test.excludedGroups>real-acceptance</zs.test.excludedGroups>
     </properties>
 
     <dependencyManagement>
@@ -63,6 +67,12 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <!-- T13-03：默认排除 real-acceptance 标签的测试，确保「真实检查默认不运行」。
+                             覆盖方式：-Dzs.test.excludedGroups=（空值 → 不排除任何组）。真实验收用例还须
+                             自带 @EnabledIfEnvironmentVariable 凭据开关作为第二层门禁（防御纵深）。 -->
+                        <excludedGroups>${zs.test.excludedGroups}</excludedGroups>
+                    </configuration>
                 </plugin>
                 <!-- maven-compiler-plugin 插件，解决 spring-boot-configuration-processor + Lombok + MapStruct 组合 -->
                 <!-- https://stackoverflow.com/questions/33483697/re-run-spring-boot-configuration-annotation-processor-to-update-generated-metada -->
