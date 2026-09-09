@@ -117,6 +117,27 @@ class ZhongshuPgProfileConfigContractTest {
                 .isEmpty();
     }
 
+    /**
+     * 安全守卫（T13-02）：pg 生产安全基线必须把 Actuator env/configprops 的值回显显式设为安全默认 NEVER，
+     * 使「管理端不回显密钥」不依赖框架默认（Boot 3.5 默认 never）。本测试锁定该 profile 级默认值；
+     * 更高优先级来源（命令行/环境变量）仍可覆盖，生产须配合 actuator 访问控制（T13-34），此处不承诺不可覆盖。
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void pgProfileMustHardenActuatorSecretEcho() throws Exception {
+        Map<String, Object> management = (Map<String, Object>) loadPgProfile().get("management");
+        assertThat(management).as("pg profile 必须包含 management 配置块").isNotNull();
+        Map<String, Object> endpoint = (Map<String, Object>) management.get("endpoint");
+        assertThat(endpoint).as("management.endpoint 必须存在").isNotNull();
+        for (String ep : List.of("env", "configprops")) {
+            Map<String, Object> node = (Map<String, Object>) endpoint.get(ep);
+            assertThat(node).as("management.endpoint." + ep + " 必须存在").isNotNull();
+            assertThat(String.valueOf(node.get("show-values")))
+                    .as("management.endpoint." + ep + ".show-values 必须为 NEVER（不回显密钥值）")
+                    .isEqualToIgnoringCase("NEVER");
+        }
+    }
+
     private void collectStubProviders(Object node, String path, List<String> out) {
         if (node instanceof Map<?, ?> map) {
             for (Map.Entry<?, ?> e : map.entrySet()) {

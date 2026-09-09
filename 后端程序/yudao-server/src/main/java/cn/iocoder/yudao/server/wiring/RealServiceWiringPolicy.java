@@ -20,6 +20,16 @@ import java.util.function.Function;
  * {@link ZhongshuWiringEnvironmentPostProcessor} 调用。任一端口 provider 缺失/非法，
  * 或生产 profile 下选择了开发替身（stub/local），立即抛出 {@link IllegalStateException} 令应用快速失败，
  * 杜绝「生产静默装配 Stub」与「缺失实现导致难以定位的 no-bean 报错」。
+ *
+ * <p>T13-02 在此之上补充「配置校验与脱敏」的校验侧：
+ * <ul>
+ *   <li>生产禁止启用开发便利 profile {@code zsdev}（携带公开占位密钥/种子数据/开发端点，对应 T12 B05）；</li>
+ *   <li>生产必须提供已被消费的核心机密（激活码 pepper/制品密钥、Runtime 内部签名密钥），缺失即启动期快速失败，
+ *       早于运行期 {@code AccessCodeCipher.requirePepper} 等使用处失败；</li>
+ *   <li>「启用真实服务才要求相应密钥」：某端口选择真实实现时才校验其依赖的配置（当前微信 real 需要 appid）。</li>
+ * </ul>
+ * 所有违例消息<b>只回显配置键名与环境变量名，绝不回显密钥值</b>，与「日志/管理端不泄露密钥」保持一致。
+ * B2（COS）、B4（微信支付）真实适配器落地时，在 {@link #REAL_MODE_REQUIREMENTS} 登记各自密钥键即可复用本校验。
  */
 public final class RealServiceWiringPolicy {
 
@@ -36,6 +46,28 @@ public final class RealServiceWiringPolicy {
                     List.of("local", "cos"), List.of("local"), "B2"),
             new PortProvider("zhongshu.design.asset.moderation.provider",
                     List.of("stub", "real"), List.of("stub"), "后续审核批次"));
+
+    /** 生产禁止启用的开发便利 profile：携带公开占位密钥、种子数据与开发端点（对应 T12 B05「生产不得启用 zsdev」）。 */
+    private static final List<String> PRODUCTION_FORBIDDEN_PROFILES = List.of("zsdev");
+
+    /**
+     * 生产必须提供、且当前已被代码消费的核心机密（值属机密，校验只回显键名/环境变量名，绝不回显值）。
+     * 这些机密在 stub 与 real 模式下均被消费（激活码加密、Runtime 内部签名与 provider 无关），
+     * 而生产必然运行真实服务，故生产必须齐备。B1/B2/B4 新增真实凭据键时在此登记。
+     */
+    private static final List<RequiredSecret> PRODUCTION_REQUIRED_SECRETS = List.of(
+            new RequiredSecret("zhongshu.identity.access-code-pepper", "激活码 HMAC 派生（AccessCodeCipher）"),
+            new RequiredSecret("zhongshu.identity.access-code-artifact-key", "激活码交付制品 AES-256-GCM 加密（AccessCodeCipher）"),
+            new RequiredSecret("zhongshu.ai.internal-secret", "AI Runtime 内部接口签名（InternalSignatureVerifier）"));
+
+    /**
+     * 「启用真实实现才要求相应配置/密钥」的登记（T13-02 验收核心）。当前仅微信身份 real 需要 appid
+     * （已被 AppAuthController 消费）；此处只登记<b>已被消费</b>的键，不发明未消费变量（T12 约束）。
+     * B2（COS secret-id/secret-key/region/bucket）、B4（商户号/API v3 密钥/商户私钥）真实适配器落地时在此追加。
+     */
+    private static final List<RealModeRequirement> REAL_MODE_REQUIREMENTS = List.of(
+            new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
+                    "zhongshu.identity.wechat-appid", "stub-appid", "B1"));
 
     private RealServiceWiringPolicy() {
     }
@@ -68,9 +100,56 @@ public final class RealServiceWiringPolicy {
                         effectiveProfiles, port.propertyKey(), raw, realValues(port), port.realBatchHint()));
             }
         }
+
+        // (2) 生产禁止开发便利 profile：zsdev 携带公开占位密钥/种子数据/开发端点，生产启用即等于用公开值冒充正式配置。
+        if (production) {
+            for (String forbidden : PRODUCTION_FORBIDDEN_PROFILES) {
+                if (effectiveProfiles.contains(forbidden)) {
+                    violations.add(String.format(
+                            "生产环境（生效 profile=%s）禁止启用开发便利 profile '%s'：它携带公开占位密钥、种子数据与开发端点。"
+                                    + "请移除 '%s'，改由密钥托管/环境变量提供正式配置。",
+                            effectiveProfiles, forbidden, forbidden));
+                }
+            }
+        }
+
+        // (3) 生产必须齐备已消费的核心机密：缺失即在启动期快速失败，早于运行期使用处（如 AccessCodeCipher.requirePepper）。
+        //     用 isBlank() 判定，与消费端（AccessCodeCipher / InternalSignatureVerifier 均用 isBlank）保持一致，
+        //     令全角空白等 Unicode 空白也在启动期失败，避免「守卫放行但运行期仍拒绝」的不一致（codex 评审 [P2]）。
+        //     只回显键名与环境变量名，绝不回显密钥值（与「日志/管理端不泄露密钥」一致）。
+        if (production) {
+            for (RequiredSecret secret : PRODUCTION_REQUIRED_SECRETS) {
+                String value = propertyResolver.apply(secret.propertyKey());
+                if (value == null || value.isBlank()) {
+                    violations.add(String.format(
+                            "生产环境缺少必需机密 %s（用途：%s）：必须由密钥托管/环境变量 %s 提供非空值（本校验不回显密钥值）。",
+                            secret.propertyKey(), secret.purpose(), envName(secret.propertyKey())));
+                }
+            }
+        }
+
+        // (4) 启用真实服务才要求相应密钥/配置：仅当端口 provider=真实值时校验其依赖键。
+        //     appid 非机密，占位值 stub-appid 可回显以助定位；真实机密一律不回显值。
+        for (RealModeRequirement req : REAL_MODE_REQUIREMENTS) {
+            if (!req.realValue().equals(propertyResolver.apply(req.providerKey()))) {
+                continue;
+            }
+            String value = propertyResolver.apply(req.requiredKey());
+            if (value == null || value.isBlank()) {
+                violations.add(String.format(
+                        "%s=%s（真实实现，%s 就绪）要求配置 %s：请由环境变量 %s 提供非空值。",
+                        req.providerKey(), req.realValue(), req.batchHint(), req.requiredKey(), envName(req.requiredKey())));
+            } else if (value.equals(req.placeholderValue())) {
+                violations.add(String.format(
+                        "%s=%s（真实实现，%s 就绪）要求真实的 %s：当前仍为开发占位值 '%s'，请通过环境变量 %s 替换为正式配置。",
+                        req.providerKey(), req.realValue(), req.batchHint(), req.requiredKey(),
+                        req.placeholderValue(), envName(req.requiredKey())));
+            }
+        }
+
         if (!violations.isEmpty()) {
             throw new IllegalStateException(
-                    "众墅真实/Stub 实现选择配置校验失败（T13-01）：\n - " + String.join("\n - ", violations));
+                    "众墅真实/Stub 实现选择与密钥配置校验失败（T13-01/T13-02）：\n - " + String.join("\n - ", violations));
         }
     }
 
@@ -85,5 +164,14 @@ public final class RealServiceWiringPolicy {
 
     private record PortProvider(String propertyKey, List<String> allowedValues,
                                 List<String> devOnlyValues, String realBatchHint) {
+    }
+
+    /** 生产必须提供的已消费机密：配置键 + 用途说明（用于错误消息，不含值）。 */
+    private record RequiredSecret(String propertyKey, String purpose) {
+    }
+
+    /** 真实实现依赖的配置要求：端口 provider 键、其真实值、要求的配置键、该键的开发占位值、就绪批次提示。 */
+    private record RealModeRequirement(String providerKey, String realValue, String requiredKey,
+                                       String placeholderValue, String batchHint) {
     }
 }

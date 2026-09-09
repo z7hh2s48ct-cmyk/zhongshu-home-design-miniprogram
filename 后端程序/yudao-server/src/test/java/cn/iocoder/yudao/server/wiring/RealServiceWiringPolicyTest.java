@@ -17,6 +17,7 @@ class RealServiceWiringPolicyTest {
 
     private static final List<String> DEV = List.of("local", "pg", "zsdev");
     private static final List<String> PROD = List.of("local", "pg", "prod");
+    private static final String PEPPER_VALUE = "test-pepper-0123456789abcdef-0123456789";
 
     /** 全部端口选择开发替身。 */
     private Map<String, String> allStub() {
@@ -28,13 +29,18 @@ class RealServiceWiringPolicyTest {
         return p;
     }
 
-    /** 全部端口选择真实实现。 */
+    /** 全部端口选择真实实现，并齐备真实实现所需的核心机密与 appid（生产放行的完整正确配置）。 */
     private Map<String, String> allReal() {
         Map<String, String> p = new HashMap<>();
         p.put("zhongshu.identity.wechat.provider", "real");
         p.put("zhongshu.commerce.payment.provider", "real");
         p.put("zhongshu.design.asset.storage.provider", "cos");
         p.put("zhongshu.design.asset.moderation.provider", "real");
+        // T13-02：真实实现所需的已消费机密与 appid（值仅测试用虚构凭据，非真实密钥）
+        p.put("zhongshu.identity.access-code-pepper", PEPPER_VALUE);
+        p.put("zhongshu.identity.access-code-artifact-key", "test-artifact-key-base64-32bytes!!!!!!");
+        p.put("zhongshu.ai.internal-secret", "test-internal-secret-0123456789abcdef");
+        p.put("zhongshu.identity.wechat-appid", "wx-test-real-appid");
         return p;
     }
 
@@ -117,5 +123,87 @@ class RealServiceWiringPolicyTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("非法")
                 .hasMessageContaining("zhongshu.identity.wechat.provider");
+    }
+
+    // ===== T13-02：配置校验（生产禁 zsdev、生产必需机密、真实实现依赖 appid、消息不回显密钥值） =====
+
+    @Test
+    void prodWithZsdevProfileFails() {
+        // 生产启用开发便利 profile zsdev（携带公开占位密钥/种子数据）必须被拒绝（T12 B05）
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(List.of("prod", "pg", "zsdev"), allReal()::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zsdev")
+                .hasMessageContaining("生产");
+    }
+
+    @Test
+    void prodMissingCoreSecretFails() {
+        Map<String, String> p = allReal();
+        p.remove("zhongshu.identity.access-code-pepper");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.access-code-pepper")
+                .hasMessageContaining("生产");
+    }
+
+    @Test
+    void prodBlankCoreSecretFails() {
+        Map<String, String> p = allReal();
+        p.put("zhongshu.ai.internal-secret", "   "); // 空白等同缺失
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.ai.internal-secret");
+    }
+
+    @Test
+    void prodUnicodeWhitespaceSecretFails() {
+        // codex 评审 [P2]：全角空白（\u3000）isBlank()=true，应与消费端 InternalSignatureVerifier.isBlank() 一致地在启动期失败（trim() 会漏掉）
+        Map<String, String> p = allReal();
+        p.put("zhongshu.ai.internal-secret", "\u3000");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.ai.internal-secret");
+    }
+
+    @Test
+    void errorMessageNeverEchoesSecretValue() {
+        // 缺失某机密时，聚合消息只回显键名，绝不回显其它已配置机密的值
+        Map<String, String> p = allReal();
+        p.put("zhongshu.identity.access-code-pepper", PEPPER_VALUE);
+        p.put("zhongshu.identity.access-code-artifact-key", ""); // 触发违例
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.access-code-artifact-key")
+                .hasMessageNotContaining(PEPPER_VALUE);
+    }
+
+    @Test
+    void realWechatProviderRequiresAppid() {
+        // 启用真实微信身份才要求 appid（任意 profile 均适用；开发环境同样需要真实 appid）
+        Map<String, String> p = allStub();
+        p.put("zhongshu.identity.wechat.provider", "real");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.wechat-appid");
+    }
+
+    @Test
+    void realWechatProviderRejectsPlaceholderAppid() {
+        Map<String, String> p = allStub();
+        p.put("zhongshu.identity.wechat.provider", "real");
+        p.put("zhongshu.identity.wechat-appid", "stub-appid"); // 开发占位值
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.wechat-appid")
+                .hasMessageContaining("stub-appid");
+    }
+
+    @Test
+    void devRealWechatWithAppidPasses() {
+        // 开发环境启用真实微信身份并给出非占位 appid，其余端口仍用开发替身：放行
+        Map<String, String> p = allStub();
+        p.put("zhongshu.identity.wechat.provider", "real");
+        p.put("zhongshu.identity.wechat-appid", "wx-dev-real-appid");
+        assertThatCode(() -> RealServiceWiringPolicy.validate(DEV, p::get)).doesNotThrowAnyException();
     }
 }

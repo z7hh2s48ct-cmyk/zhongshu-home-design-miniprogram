@@ -66,3 +66,14 @@ zhongshu:
     driver-enabled: ${ZS_DRIVER_ENABLED:false}
     asset:
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:false}
+
+# T13-02：管理端不得回显密钥——将 Actuator env/configprops 端点的值回显显式设为安全默认值 NEVER。
+# Spring Boot 3.5 默认即 never（值以 ****** 呈现），此处在生产安全基线显式声明，令「不回显密钥」不依赖框架默认。
+# 注意：这是 profile 级默认值，更高优先级来源（命令行 --management.endpoint.env.show-values=ALWAYS、环境变量）仍可覆盖；
+# 生产部署须同时确保 actuator 端点受访问控制/不公网暴露（属 T13-34 部署安全范围）。仅收敛「值回显」，不改动 local/dev 的端点暴露范围（不影响本地联调）。
+management:
+  endpoint:
+    env:
+      show-values: NEVER
+    configprops:
+      show-values: NEVER
