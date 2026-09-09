@@ -1,12 +1,17 @@
 <view class="v12-page result-page" wx:if="{{accessReady}}">
   <v12-navbar title="方案结果" show-back show-brand="{{false}}" />
+  <view wx:if="{{loading}}" class="v12-card result-main">正在读取方案…</view>
+  <view wx:elif="{{error}}" class="v12-card result-main"><text>{{error}}</text><button bindtap="loadVersions">重试</button></view>
+  <block wx:elif="{{latest}}">
   <view class="v12-card success-banner"><t-icon name="check-circle-filled" size="25px" color="#4da05b" /><text>AI设计方案已完成</text><span>{{versionLabel || '版本确认中'}}</span></view>
-  <view class="result-tabs"><view wx:for="{{['立面','一层','二层']}}" wx:key="*this" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item}}</view></view>
+  <view class="result-tabs"><view wx:for="{{['立面','平面']}}" wx:key="*this" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item}}</view></view>
   <view class="v12-card result-main">
-    <view class="image-wrap"><image wx:if="{{tab === 0 && imageUrl}}" src="{{imageUrl}}" mode="aspectFill" /><image wx:elif="{{tab !== 0 && flatImageUrl}}" src="{{flatImageUrl}}" mode="aspectFit" /><text wx:if="{{tab === 0 && imageUrl}}">AI生成</text><text wx:if="{{!imageUrl && !flatImageUrl}}" class="plan-placeholder">方案图加载中</text></view>
+    <view class="image-wrap"><image wx:if="{{tab === 0 && imageUrl}}" src="{{imageUrl}}" mode="aspectFit" /><image wx:elif="{{tab !== 0 && flatImageUrl}}" src="{{flatImageUrl}}" mode="aspectFit" /><text wx:if="{{tab === 0 && imageUrl}}">AI生成</text><text wx:if="{{tab === 0 ? !imageUrl : !flatImageUrl}}" class="plan-placeholder">{{imageError ? '本版本图片暂不可用' : '方案图加载中'}}</text></view>
     <view class="result-copy"><text>{{elevationLabel || '立面方案'}} · 平面已选定</text><text>第 {{latest ? latest.version : '—'}} 版结果 · 历史版本只读可回看</text></view>
   </view>
-  <view class="result-actions"><view class="v12-secondary-button" bindtap="adjust">继续调整</view><view class="v12-primary-button" bindtap="budget">生成预算</view></view>
-  <view class="tool-row"><view bindtap="save"><t-icon name="bookmark" size="23px" color="#7b3f17" /><text>保存方案</text></view><view bindtap="publish"><t-icon name="home" size="23px" color="#7b3f17" /><text>发布到户型库</text></view><view bindtap="regenerate"><t-icon name="refresh" size="23px" color="#111" /><text>重新生成</text></view></view>
+  <view wx:if="{{imageError}}" class="v12-card result-main"><text>{{imageError}}</text><button bindtap="loadImages">重试图片</button></view>
+  <view class="result-actions"><view wx:if="{{!readOnly}}" class="v12-secondary-button" bindtap="adjust">继续调整</view><view class="v12-primary-button" bindtap="budget">生成预算</view></view>
+  <view class="tool-row"><view bindtap="save"><t-icon name="bookmark" size="23px" color="#7b3f17" /><text>我的方案</text></view><view wx:if="{{!readOnly}}" bindtap="publish"><t-icon name="home" size="23px" color="#7b3f17" /><text>投稿到户型库</text></view><view wx:if="{{!readOnly}}" bindtap="regenerate"><t-icon name="refresh" size="23px" color="#111" /><text>重新生成</text></view></view>
   <view class="publish-note"><t-icon name="secured" size="16px" color="#888" /> 发布前将校核户型库必填参数</view>
+  </block>
 </view>

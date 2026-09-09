@@ -43,10 +43,10 @@ public class AppMessageController {
             @RequestParam(value = "limit", defaultValue = "20") Integer limit,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
-        List<AppMessageRespVO> list = messageService.list(userId, limit).stream()
+        var page = messageService.listPage(userId, cursor, limit == null ? 20 : limit);
+        List<AppMessageRespVO> list = page.list().stream()
                 .map(this::toVo).toList();
-        // 消息按 id 降序全量返回当前页，服务端暂不分页续拉（单用户消息量级小）
-        return success(new CursorPageResult<>(list, null));
+        return success(new CursorPageResult<>(list, page.nextCursor()));
     }
 
     @GetMapping("/unread-count")

@@ -25,14 +25,15 @@
         </el-form-item>
       </el-form>
 
+      <el-alert v-if="error" type="error" :closable="false" :title="error" />
       <el-alert
-        v-if="!jobs.length"
+        v-if="!jobs.length && !error && !loading"
         type="info"
         :closable="false"
-        title="暂无导出任务；创建后自动轮询状态，完成后可直接下载"
+        title="您尚无导出记录；创建后自动刷新状态，关闭重进仍可找回"
       />
 
-      <el-table v-else :data="jobs" v-loading="loading" stripe>
+      <el-table :data="jobs" v-loading="loading" stripe>
         <el-table-column label="任务号" prop="exportJobId" width="200" />
         <el-table-column label="类型" width="180">
           <template #default="{ row }">{{ typeText(row.jobType) }}</template>
@@ -44,7 +45,12 @@
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="失效时间" prop="expiresAt" min-width="170" />
+        <el-table-column label="创建时间（北京）" min-width="170"
+          ><template #default="{ row }">{{ displayTime(row.createdAt) }}</template></el-table-column
+        >
+        <el-table-column label="失效时间（北京）" min-width="170"
+          ><template #default="{ row }">{{ displayTime(row.expiresAt) }}</template></el-table-column
+        >
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button
@@ -70,6 +76,14 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        v-model:current-page="query.pageNo"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        layout="total, sizes, prev, pager, next"
+        @size-change="search"
+        @current-change="refreshAll"
+      />
 
       <div class="zs-footnote">
         安全规则：导出文件下载需一次性票据（600 秒有效、单次消费、留审计）；文件本体 24 小时后过期。
@@ -87,6 +101,16 @@ defineOptions({ name: 'ZsExport' })
 const loading = ref(false)
 const creating = ref(false)
 const jobs = ref<any[]>([])
+const error = ref('')
+const total = ref(0)
+const query = reactive({ pageNo: 1, pageSize: 20 })
+let closed = false
+let requestSequence = 0
+let timer: ReturnType<typeof setTimeout> | undefined
+const displayTime = (value: string) =>
+  value
+    ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+    : '—'
 
 const form = reactive({ jobType: 'POINT_LEDGER' })
 
@@ -108,45 +132,63 @@ const statusClass = (s: string) =>
   })[s] || ''
 
 const create = async () => {
+  if (creating.value) return
   creating.value = true
   try {
-    const res = await ZsApi.createExportJob({ jobType: form.jobType })
-    jobs.value.unshift({ ...res, jobType: form.jobType, downloading: false })
+    await ZsApi.createExportJob({ jobType: form.jobType })
+    if (closed) return
     ElMessage.success('任务已创建，后台生成中')
-    poll(res.exportJobId)
+    await search()
+  } catch {
+    ElMessage.error('创建失败，请重试')
   } finally {
     creating.value = false
   }
 }
 
 const refresh = async (job: any) => {
-  const res = await ZsApi.getExportJob(job.exportJobId)
-  if (res) {
+  try {
+    const res = await ZsApi.getExportJob(job.exportJobId)
+    if (!res || closed) return
     Object.assign(job, res)
     if (job.status === 'COMPLETED') ElMessage.success('导出完成，可下载')
+  } catch {
+    ElMessage.error('状态刷新失败，请重试')
   }
 }
 
 const refreshAll = async () => {
+  const sequence = ++requestSequence
+  clearTimeout(timer)
   loading.value = true
+  error.value = ''
   try {
-    await Promise.all(jobs.value.filter((j) => j.status !== 'COMPLETED').map((j) => refresh(j)))
+    const res = await ZsApi.getExportJobPage({ ...query })
+    if (closed || sequence !== requestSequence) return
+    jobs.value = res.list || []
+    total.value = Number(res.total || 0)
+    if (jobs.value.some((j) => ['PENDING', 'RUNNING'].includes(j.status)))
+      timer = setTimeout(refreshAll, 3000)
+  } catch {
+    if (!closed && sequence === requestSequence)
+      error.value = '导出记录加载失败，请点击刷新列表重试'
   } finally {
-    loading.value = false
+    if (!closed && sequence === requestSequence) loading.value = false
   }
 }
-
-const poll = async (exportJobId: string, times = 20) => {
-  const job = jobs.value.find((j) => j.exportJobId === exportJobId)
-  if (!job) return
-  for (let i = 0; i < times; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-    await refresh(job)
-    if (job.status === 'COMPLETED' || job.status === 'FAILED') return
-  }
+const search = () => {
+  query.pageNo = 1
+  return refreshAll()
 }
+onMounted(refreshAll)
+onBeforeUnmount(() => {
+  closed = true
+  requestSequence++
+  clearTimeout(timer)
+})
 
 const download = async (job: any) => {
+  if (job.downloading) return
   job.downloading = true
   try {
     const ticketRes = await ZsApi.createExportDownloadTicket(job.exportJobId)
@@ -161,6 +203,8 @@ const download = async (job: any) => {
     link.download = `export-${job.exportJobId}.csv`
     link.click()
     URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败或文件已过期，请刷新状态后重试；重试会签发新票据')
   } finally {
     job.downloading = false
   }

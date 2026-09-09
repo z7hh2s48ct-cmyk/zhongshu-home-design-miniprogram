@@ -35,6 +35,58 @@ public class CaseAdminController {
     @Resource
     private CaseCatalogService caseCatalogService;
 
+    @Resource
+    private cn.iocoder.yudao.module.design.asset.AssetService assetService;
+
+    @Resource
+    private cn.iocoder.yudao.module.design.catalog.CompanyCaseImageService companyCaseImageService;
+
+    @PostMapping(value = "/{caseId}/images", consumes = "multipart/form-data")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_WRITE + "')")
+    public CommonResult<cn.iocoder.yudao.module.design.catalog.CompanyCaseImageService.Uploaded> uploadImage(
+            @PathVariable("caseId") long caseId, @RequestParam("version") long version,
+            @RequestParam("role") String role, @RequestParam(value="floorNo", required=false) Integer floorNo,
+            @RequestParam("publicDisplay") boolean publicDisplay,
+            @RequestParam(value="generationReference", defaultValue="false") boolean generationReference,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        if (file.getSize() > cn.iocoder.yudao.module.design.asset.AssetTypePolicy.CASE_IMAGE.maxBytes())
+            throw new IllegalArgumentException("图片不能超过20MB");
+        return success(companyCaseImageService.upload(caseId, SecurityFrameworkUtils.getLoginUserId(), version,
+                role, floorNo, file.getContentType(), file.getBytes(), publicDisplay, generationReference));
+    }
+
+    @GetMapping("/{caseId}")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_READ + "')")
+    public CommonResult<Map<String, Object>> getCase(@PathVariable("caseId") long caseId) {
+        var detail = caseCatalogService.getAdminCase(caseId).orElseThrow(() -> exception(ZhongshuErrorCodeConstants.RESOURCE_FORBIDDEN));
+        var view = new java.util.LinkedHashMap<String, Object>();
+        view.put("caseId", String.valueOf(detail.caseId()));
+        view.put("title", detail.title()); view.put("description", detail.description());
+        view.put("sourceType", detail.sourceType()); view.put("publicationStatus", detail.publicationStatus());
+        view.put("version", detail.version()); view.put("styleCode", detail.styleCode());
+        view.put("floorCount", detail.floorCount()); view.put("buildingArea", detail.buildingArea());
+        view.put("faceWidth", detail.faceWidth()); view.put("depth", detail.depth());
+        view.put("coverAssetId", detail.coverAssetId()); view.put("elevationAssetId", detail.elevationAssetId());
+        view.put("floorPlans", caseCatalogService.getFloorPlans(caseId));
+        return success(view);
+    }
+
+    @PostMapping("/{caseId}/assets/{assetId}/preview-tickets")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_READ + "')")
+    public CommonResult<Map<String, Object>> previewTicket(@PathVariable("caseId") long caseId, @PathVariable("assetId") long assetId) {
+        return success(Map.of("ticket", assetService.requestCasePreviewTicket(SecurityFrameworkUtils.getLoginUserId(), caseId, assetId).getToken()));
+    }
+
+    @GetMapping("/{caseId}/assets/{assetId}/content")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_READ + "')")
+    public org.springframework.http.ResponseEntity<byte[]> previewContent(@PathVariable("caseId") long caseId,
+            @PathVariable("assetId") long assetId, @RequestParam("ticket") String ticket) {
+        var content = assetService.readCasePreviewTicket(SecurityFrameworkUtils.getLoginUserId(), caseId, assetId, ticket);
+        return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .contentType(org.springframework.http.MediaType.parseMediaType(content.mimeType()))
+                .header("X-Content-Type-Options", "nosniff").body(content.content());
+    }
+
     @GetMapping
     @Operation(summary = "案例分页查询（公司/AI 来源、状态筛选）")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_READ + "')")
@@ -80,7 +132,9 @@ public class CaseAdminController {
                                                     @RequestBody Map<String, Object> body) {
         long admin = SecurityFrameworkUtils.getLoginUserId();
         long expectedVersion = ((Number) body.get("version")).longValue();
-        long newVersion = caseCatalogService.updateCase(Long.parseLong(caseId), admin, expectedVersion,
+        var current = caseCatalogService.getAdminCase(Long.parseLong(caseId))
+                .orElseThrow(() -> exception(ZhongshuErrorCodeConstants.RESOURCE_FORBIDDEN));
+        caseCatalogService.updateCase(Long.parseLong(caseId), admin, expectedVersion,
                 (String) body.getOrDefault("title", ""),
                 (String) body.get("description"),
                 (String) body.getOrDefault("styleCode", "MODERN"),
@@ -88,10 +142,10 @@ public class CaseAdminController {
                 ((Number) body.getOrDefault("buildingArea", 100)).intValue(),
                 body.get("faceWidth") == null ? null : ((Number) body.get("faceWidth")).intValue(),
                 body.get("depth") == null ? null : ((Number) body.get("depth")).intValue(),
-                null, null);
+                current.rooms(), current.tags());
         AdminCaseRespVO vo = new AdminCaseRespVO();
         vo.setCaseId(caseId);
-        vo.setVersion(newVersion);
+        vo.setVersion(expectedVersion + 1);
         return success(vo);
     }
 
@@ -118,11 +172,11 @@ public class CaseAdminController {
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.CASE_PUBLISH + "')")
     public CommonResult<AdminBulkActionResultRespVO> bulkActions(@RequestBody Map<String, Object> command) {
         @SuppressWarnings("unchecked")
-        List<Number> caseIds = (List<Number>) command.get("caseIds");
+        List<Object> caseIds = (List<Object>) command.get("caseIds");
         boolean publish = Boolean.TRUE.equals(command.get("publish"));
         String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
         var items = caseCatalogService.bulkPublicationAction(
-                caseIds.stream().map(Number::longValue).toList(), publish,
+                caseIds.stream().map(id -> Long.parseLong(String.valueOf(id))).toList(), publish,
                 (String) command.get("reason"), operator);
         AdminBulkActionResultRespVO vo = new AdminBulkActionResultRespVO();
         vo.setItems(items.stream().map(item -> {

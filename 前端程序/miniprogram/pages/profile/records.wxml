@@ -1,0 +1,14 @@
+<view class="v12-page" wx:if="{{accessReady}}">
+  <v12-navbar title="{{title}}" show-back show-brand="{{false}}" />
+  <view class="records-content">
+    <view class="records-heading"><text>记录会自动保存到当前账号</text><button class="record-button" bindtap="reload" disabled="{{loading}}">刷新</button></view>
+    <view wx:for="{{rows}}" wx:key="id" class="v12-card record-card" role="button" aria-label="{{item.title + '，' + item.status}}" data-id="{{item.id}}" bindtap="open">
+      <view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="18px" color="#8d8178" /></view>
+      <text class="record-hint">{{item.hint}}</text>
+      <view class="record-bottom"><text class="record-status">{{item.status}}</text><text>{{item.time}}</text></view>
+    </view>
+    <view wx:if="{{error}}" class="v12-card record-empty"><text>{{error}}</text><button class="record-button" bindtap="retry" disabled="{{loading}}">重试</button></view>
+    <view wx:elif="{{!loading && !rows.length}}" class="v12-card record-empty"><t-icon name="file" size="36px" color="#9a6d39" /><text>{{emptyText}}</text></view>
+    <view class="record-footer"><text wx:if="{{loading}}">正在读取…</text><button wx:elif="{{hasMore && !error}}" class="record-button" bindtap="more">加载更多</button><text wx:elif="{{rows.length && !error}}">已显示全部记录</text></view>
+  </view>
+</view>

@@ -89,7 +89,7 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: 三端全链 E2E（37 检查点）
+    name: 三端全链 E2E（54 检查点）
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -128,13 +128,13 @@ jobs:
             > artifacts/e2e/backend.log 2>&1 &
           echo $! > artifacts/e2e/backend.pid
           for attempt in {1..90}; do
-            curl --fail --silent http://127.0.0.1:48080/actuator/health && exit 0
+            curl --fail --silent --header 'tenant-id: 1' http://127.0.0.1:48080/app-api/design/v1/home | grep --quiet '"code":0' && exit 0
             sleep 2
           done
           tail -n 100 artifacts/e2e/backend.log
           exit 1
 
-      - name: 执行 37 检查点全链回归
+      - name: 执行 54 检查点全链回归
         env:
           ZS_E2E_ASSET_ROOT: ${{ github.workspace }}/artifacts/e2e/assets
         run: node scripts/verify.mjs e2e
@@ -153,7 +153,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-37-checkpoints-${{ github.run_attempt }}
+          name: e2e-54-checkpoints-${{ github.run_attempt }}
           path: |
             artifacts/e2e/latest.json
             artifacts/e2e/latest.md

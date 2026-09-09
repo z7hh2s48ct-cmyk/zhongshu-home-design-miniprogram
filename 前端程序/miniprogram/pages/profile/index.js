@@ -2,6 +2,9 @@
 
 const { isAuthorized, openFeature, openActivation } = require('../../utils/access');
 const api = require('../../utils/api');
+const unread = require('../../utils/unread-count');
+const http = require('../../utils/request');
+const assets = require('../../utils/assets');
 
 // 「我的」是公开基础页：未激活展示访客态，不虚构余额与统计；
 // 业务动作（充值/消息）走统一门禁，激活管理在本页完成。
@@ -9,14 +12,24 @@ Page({
   data: {
     nickname: '', avatar: '', authorized: false,
     availablePoints: 0, reservedPoints: 0,
-    projectCount: 0, publishedCount: 0
+    projectCount: 0, publishedCount: 0, unreadCount: 0
   },
   onShow() { this.load(); },
+  onUnload() { this._loadId = (this._loadId || 0) + 1; },
   load() {
     // 本地授权快照先行渲染，服务端状态回来后纠正
-    this.setData({ authorized: isAuthorized() });
+    this.setData({ authorized: isAuthorized(), unreadCount: unread.getUnreadCount() });
+    this.loadUnreadCount();
     const self = this;
+    const token = http.getToken();
+    const loadId = this._loadId = (this._loadId || 0) + 1;
+    const current = () => self._loadId === loadId && (http.isSameSession ? http.isSameSession(token) : http.getToken() === token);
+    if (!token) {
+      this.setData({ nickname: '', avatar: '', availablePoints: 0, reservedPoints: 0, projectCount: 0, publishedCount: 0 });
+      return;
+    }
     api.getProfile().then(function (p) {
+      if (!current()) return;
       self.setData({
         nickname: p.nickname || '用户',
         avatar: p.avatar || '',
@@ -24,10 +37,19 @@ Page({
         projectCount: (p.stats && p.stats.projectCount) || 0,
         publishedCount: (p.stats && p.stats.publishedCount) || 0
       });
+      if (p.avatarAssetId) assets.fetchProfileAvatar(p.avatarAssetId).then(avatar => {
+        if (current()) self.setData({ avatar });
+      }).catch(() => {});
     }).catch(function () { /* 静默：保留本地快照 */ });
     api.getPointAccount().then(function (a) {
+      if (!current()) return;
       self.setData({ availablePoints: a.availablePoints || 0, reservedPoints: a.reservedPoints || 0 });
     }).catch(function () { /* 静默 */ });
+  },
+  loadUnreadCount() {
+    unread.refreshUnreadCount()
+      .then((count) => this.setData({ unreadCount: count }))
+      .catch(function () { /* 静默：保留最近一次已知数量 */ });
   },
   openAuthorization() {
     if (this.data.authorized) {
@@ -41,6 +63,11 @@ Page({
   },
   openRecharge() { openFeature('/pages/wallet/recharge'); },
   openMessages() { openFeature('/pages/messagecenter/messagecenter'); },
-  showPlaceholder() { wx.showToast({ title: '功能建设中，敬请期待', icon: 'none' }); },
+  openEdit() { openFeature('/pages/profile/edit'); },
+  openServices() { openFeature('/pages/profile/services'); },
+  openRecords(event) {
+    const type = event.currentTarget.dataset.type;
+    if (['projects', 'submissions', 'favorites', 'orders'].includes(type)) openFeature('/pages/profile/records?type=' + type);
+  },
   contact() { wx.showToast({ title: '请联系授权管理员开通', icon: 'none' }); }
 });

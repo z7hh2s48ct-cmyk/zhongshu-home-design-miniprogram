@@ -1,6 +1,8 @@
 <view class="v12-page payment-page" wx:if="{{accessReady}}">
   <v12-navbar title="支付结果" show-back show-brand="{{false}}" />
-  <view class="success-mark"><view>✓</view><text>{{paymentState === 'SUCCEEDED' ? '支付成功' : paymentState === 'FAILED' ? '支付失败' : '支付处理中'}}</text><span>{{paymentState === 'SUCCEEDED' ? total + '设计点已到账' : '到账结果以服务端确认为准'}}</span></view>
+  <view class="success-mark"><t-icon name="{{paymentState === 'SUCCEEDED' && fulfillmentState === 'CREDITED' ? 'check-circle-filled' : 'time'}}" size="64px" color="#7b5532" /><text>{{paymentTitle}}</text><span>{{paymentHint}}</span></view>
+  <view wx:if="{{error}}" class="v12-card receipt"><text>{{error}}</text></view>
   <view class="v12-card receipt"><view><text>支付金额</text><span>¥{{price}}</span></view><view><text>基础设计点</text><span>{{base}}</span></view><view class="bonus"><text>赠送设计点</text><span>{{bonus}}</span></view><view class="total"><text>到账设计点</text><span>{{total}}</span></view><view><text>支付方式</text><span>微信支付</span></view><view><text>订单状态</text><span class="done">{{paymentStateText}}</span></view></view>
   <view class="v12-primary-button" bindtap="backAi">返回AI设计</view><view class="v12-secondary-button" bindtap="viewPoints">查看设计点</view><text class="foot-note">如余额未更新，可稍后刷新或联系客服</text>
+  <button class="v12-secondary-button" bindtap="refresh" disabled="{{polling}}">{{polling ? '正在确认订单…' : '刷新订单状态'}}</button><button class="v12-secondary-button" bindtap="records">充值记录</button>
 </view>

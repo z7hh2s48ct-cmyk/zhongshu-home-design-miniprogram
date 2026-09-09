@@ -1,0 +1,352 @@
+[access] 无法读取授权状态 Error: storage unavailable
+    at env.wx.getStorageSync (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\tests\activation-gate.test.js:162:41)
+    at isAuthorized (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\miniprogram\utils\access.js:31:15)
+    at requireActivation (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\miniprogram\utils\access.js:95:7)
+    at openFeature (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\miniprogram\utils\access.js:106:8)
+    at Object.openAi (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\miniprogram\pages\home\index.js:51:14)
+    at TestContext.<anonymous> (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\tests\activation-gate.test.js:163:32)
+    at Test.runInAsyncScope (node:async_hooks:227:14)
+    at Test.run (node:internal/test_runner/test:1382:25)
+    at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+    at Test.postRun (node:internal/test_runner/test:1522:19)
+✔ 正常启动以首页为入口，不主动弹出激活窗口 (11.5775ms)
+✔ 首页功能入口先提示，取消保留首页，确认才打开二级激活页 (13.4283ms)
+✔ 连续点击只显示一个激活弹窗 (4.4731ms)
+✔ 所有底部入口遵守相同门禁，我的基础页可打开 (7.0592ms)
+✔ “我的”页面消息入口同样需要激活 (3.0963ms)
+✔ 未读消息数量在消息页与“我的”Tab之间共享并防止重复请求 (3.19ms)
+✔ 已激活用户点击直接进入原功能 (2.5392ms)
+✔ 非布尔有效状态和读取失败不能放行业务，但首页仍能显示 (15.213ms)
+✔ 未激活直达任何业务页时不展示页面，也不初始化业务 (63.2854ms)
+✔ 授权失效后页面隐藏，点击不能继续生成或支付 (6.1354ms)
+✔ 受限页中的底部导航清除失效内容并引导激活 (3.3676ms)
+✔ 读取消息后无需 Tab 生命周期事件也同步缓存角标，访客清零 (1.7798ms)
+✔ 激活往返只解码外层导航参数，原目标的编码参数保持原样 (2.9058ms)
+✔ 激活页默认空码，服务端确认激活后回到原功能并保留查询参数 (5.1047ms)
+✔ 激活写入失败留在授权页，非法回跳回到首页 (15.3913ms)
+✔ 演示码也必须由服务端兑换，失败、空结果或未激活状态不放行业务 (11.573ms)
+✔ 兑换处理中防重复，失败保留授权码，可重试成功 (2.7382ms)
+✔ 未激活的我的基础页不虚构身份和余额，激活状态切换可即时刷新 (2.7478ms)
+✔ 冷启动直达功能或授权页也先落首页，普通前后台切换不打断操作 (4.1169ms)
+✔ 预算参数导入保留大整数ID，并仅在指定方案时添加查询参数 (2.1619ms)
+✔ 预算参数请求编码路径与查询值，失败向调用页面传播而不伪造默认数据 (1.619ms)
+✔ 预算地区和选项读取复用请求层，地区编码不拼入其他查询条件 (0.7346ms)
+✔ 新预算创建与保存透传同一幂等键，不在客户端附加价格或重算 (0.6565ms)
+✔ 新旧预算读取共用原路径，历史查询显式分页并编码全部ID (0.6489ms)
+✔ 正式报价列表与详情只按编码后的项目和报价ID读取 (0.5547ms)
+✔ 生成与保存失败原样传播，不返回假成功 (0.5481ms)
+✔ 请求层和资产直传旁路统一携带租户标识 (1.4357ms)
+✔ budget buttons override native default width without changing global buttons (1.0771ms)
+✔ 预算草稿只接纳公开字段及字符串ID，不带内部工程量、单价或备注 (2.7233ms)
+✔ 面积按四位定点数精确推导，独立建筑面积保留并提示复核，不猜屋顶 (1.7293ms)
+✔ 返回与重进保留修改，恢复的是原导入快照，并按项目和方案隔离 (1.9257ms)
+✔ 拒绝负数、科学计数、超精度、越界及失效地区，零不代替缺失面积 (2.4513ms)
+✔ 无项目不请求参数、不伪造方案B、不自动发起AI任务 (4.3006ms)
+✔ 快速页按真实项目和方案请求参数；打开编辑页保持大整数上下文 (5.2806ms)
+✔ 参数页编辑、保存和恢复不改原方案；保存失败不返回或误报成功 (3.6054ms)
+✔ 断网、地区空目录与跨项目拒绝均显示真实状态，不以草稿绕过服务端 (5.0042ms)
+✔ 新参数响应不覆盖已导入草稿，恢复值不会漂移到后来项目数据 (2.5703ms)
+✔ 无效方案编号不能通过重试降级为项目级预算参数 (2.7442ms)
+✔ 重试固定首次方案上下文，包括项目级null，并保留用户编辑 (6.6509ms)
+✔ 预算草稿按凭证隔离且不复制原token，缺登录不读写、旧无归属草稿不迁移 (1.6158ms)
+✔ 两页返回时换账号先清除旧参数，项目归属拒绝后不恢复另一账号缓存 (6.3346ms)
+✔ 切换会话后的旧响应不写草稿、不覆盖新请求状态，旧页点击也不能保存 (5.6697ms)
+✔ 两页不显示内部工程量或默认金额，生成绑定真实动作，旧版保留字符串ID (1.8185ms)
+✔ 金额按整数分展示：万元半入、精确两位、免费零及缺价不混淆 (3.6359ms)
+✔ 结果展示仅取公开字段，内部工程量价格规则不进入页面 (2.0273ms)
+✔ 结果按URL预算和修订ID从后端读取，不依赖全局临时结果 (8.4122ms)
+✔ 业主端只显示当前已发布的同预算报价，并沿用服务端公开预览字段 (4.1056ms)
+✔ 撤回的最新报价不回退显示旧报价，非法或跨项目报价不进入页面 (6.9553ms)
+✔ 非法、大整数数值和不匹配预算修订不读取或展示他人结果 (13.6389ms)
+✔ 待补预算只显示已计价小计和公开待补项，不伪装完整总额 (2.5576ms)
+✔ 结果数据非法或分类和总数不一致时明确报错而不显示假结果 (9.1755ms)
+✔ 主体与外装明细保留预算修订，支持展开子项和精确零金额 (3.9066ms)
+✔ 后台公开自定义项按类别保留，缺量子项显示待补而不是零元 (1.549ms)
+✔ 保存阻止双击，失败后同键重试，只有服务端确认才显示已保存 (3.0414ms)
+✔ 重新进入读取持久化saved状态，错误保存回应不能触发成功提示 (5.5714ms)
+✔ 账户切换清旧结果，过期读取与保存响应不能污染新会话 (6.7164ms)
+✔ 真实激活守卫拒绝直达读取，卸载后异步响应不再更新页面 (3.924ms)
+✔ 旧区间按服务端原值展示，不伪造分项、中值或可保存状态 (3.3577ms)
+✔ 旧区间金额不受新分项上限限制，但新分项仍拒绝超出边界 (2.2895ms)
+✔ 项目历史默认已保存、支持新旧分页与按字符串ID去重 (3.6636ms)
+✔ 历史筛选竞态丢弃旧响应，分页失败保留当前列表并可原游标重试 (3.023ms)
+✔ 历史账户切换、无权项目和非法游标不得显示越权记录 (7.3515ms)
+✔ 预算页面动态图标均来自本地交付图标库 (1.8624ms)
+✔ 空目录仍保留3+7标准行且没有假选项，公共自定义独立补充且无内部字段 (5.408ms)
+✔ 同项同选择组互斥，门窗双组齐全才完成，缺价与选择完成分离 (2.557ms)
+✔ 灯具可多组组合且任选一组完成；防水防雷必须两组，取消不会误删另一组 (2.4051ms)
+✔ 地区变更清空配置并提示；返回重载保留选择，失效选项明确移除 (2.0199ms)
+✔ 生成请求白名单、字符串ID及持久幂等键：同体复用，参数或选择改变换键 (2.4258ms)
+✔ 主体/外装页动态选项可编辑保存返回，缺价可选，禁用标准项不伪造 (7.3896ms)
+✔ 配置页无效路由重试仍拒绝，断网可重试，换账号旧回包不显示或写入 (9.6521ms)
+✔ 配置直接点选无空选项，单组保存即关闭，重选保持互斥及缺价提示 (3.6983ms)
+✔ 直接点选拒绝空ID及错组，存储失败不关闭，换会话不写旧选择 (2.7504ms)
+✔ 真实生成动作同体失败重试复用键、防双击，成功只凭budgetId跳结果 (7.0142ms)
+✔ 生成失败后改参数换键，换会话丢弃迟到生成响应；无地区禁止生成 (6.5116ms)
+✔ 目录停用移除选择后不重复计费，私有或错误目录不能产生公开选项 (1.6589ms)
+✔ 参数版本冲突后确认重导入，仅重建当前草稿并使用新快照成功生成，方案版本不漂移 (6.4379ms)
+✔ 主动重导入取消不请求；断网、无权限、错误上下文或存储失败均保留原草稿及修改 (18.5926ms)
+✔ 重导入确认和异步回包均校验会话及页面生命周期，处理中阻止并发生成与草稿改写 (9.045ms)
+✔ 首页使用接近主视觉容器比例的完整场景，避免窄图被再次放大裁切 (1.326ms)
+✔ 首页取消右上消息入口后，主视觉完整铺满容器 (0.1834ms)
+✔ 精选户型保留效果图的近方形图片与独立信息区，接口数据按位覆盖内置占位 (0.1998ms)
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: V1.2 页面不得出现旧术语或已取消功能
+    at Object.<anonymous> (E:\众墅之家设计平台\zhongshu-home-design-miniprogram\前端程序\tests\native-project-structure.test.js:122:8)
+    at Module._compile (node:internal/modules/cjs/loader:1872:14)
+    at Object..js (node:internal/modules/cjs/loader:2003:10)
+    at Module.load (node:internal/modules/cjs/loader:1594:32)
+    at Module._load (node:internal/modules/cjs/loader:1396:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "'use strict';\r\n" +
+    '\r\n' +
+    "const { openFeature } = require('../../utils/access');\r\n" +
+    "const api = require('../../utils/api');\r\n" +
+    "const assets = require('../../utils/assets');\r\n" +
+    "const format = require('../../utils/format');\r\n" +
+    '\r\n' +
+    '// 精选卡片内置默认占位（接口失败/未返回时兜底），接口数据回来后按位覆盖\r\n' +
+    'const DEFAULT_FEATURED = [\r\n' +
+    "  { id: null, title: '云栖雅院', meta: '建面 168㎡ · 2层 · 新中式', image: '/assets/v12/villa-classic.jpg' },\r\n" +
+    "  { id: null, title: '清和小筑', meta: '建面 136㎡ · 2层 · 现代', image: '/assets/v12/villa-modern.jpg' }\r\n" +
+    '];\r\n' +
+    '\r\n' +
+    'Page({\r\n' +
+    '  data: {\r\n' +
+    '    featuredCases: DEFAULT_FEATURED,\r\n' +
+    '    unreadCount: 0,\r\n' +
+    "    accessGrantStatus: 'ANONYMOUS'\r\n" +
+    '  },\r\n' +
+    '  onShow() {\r\n' +
+    '    getApp().homeSeen = true;\r\n' +
+    '    this.loadHome();\r\n' +
+    '  },\r\n' +
+    '  loadHome() {\r\n' +
+    '    const self = this;\r\n' +
+    '    api.getHome().then(function (data) {\r\n' +
+    '      if (!data) return;\r\n' +
+    '      self.setData({\r\n' +
+    '        unreadCount: data.unreadCount || 0,\r\n' +
+    "        accessGrantStatus: data.accessGrantStatus || 'ANONYMOUS'\r\n" +
+    '      });\r\n' +
+    '      const featured = (data.featuredCases || []).slice(0, DEFAULT_FEATURED.length);\r\n' +
+    '      featured.forEach(function (c, index) {\r\n' +
+    '        self.setData({\r\n' +
+    "          ['featuredCases[' + index + ']']: {\r\n" +
+    '            id: c.caseId,\r\n' +
+    '            title: c.title,\r\n' +
+    "            meta: '建面 ' + (c.buildingArea || '—') + '㎡ · ' + (c.floorCount || '—') + '层 · ' + format.styleLabel(c.styleCode),\r\n" +
+    '            image: assets.cachedAssetDataUrl(c.coverAssetId) || self.data.featuredCases[index].image,\r\n' +
+    '            coverAssetId: c.coverAssetId\r\n' +
+    '          }\r\n' +
+    '        });\r\n' +
+    '        if (c.coverAssetId) {\r\n' +
+    '          assets.fetchAssetDataUrl(c.coverAssetId).then(function (url) {\r\n' +
+    "            self.setData({ ['featuredCases[' + index + '].image']: url });\r\n" +
+    '          }).catch(function () { /* 保留占位图 */ });\r\n' +
+    '        }\r\n' +
+    '      });\r\n' +
+    '    }).catch(function () { /* 首页容错：保留默认精选 */ });\r\n' +
+    '  },\r\n' +
+    "  openAi() { openFeature('/pages/ai-design/index'); },\r\n" +
+    "  openLibrary() { openFeature('/pages/library/index'); },\r\n" +
+    '  openDetail(e) {\r\n' +
+    '    const id = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.id : null;\r\n' +
+    "    openFeature('/pages/library/detail' + (id ? '?id=' + id : ''));\r\n" +
+    '  },\r\n' +
+    "  openBudget() { openFeature('/pages/budget/input'); }\r\n" +
+    '});\r\n' +
+    '\n' +
+    '<view class="v12-page">\r\n' +
+    '  <v12-navbar />\n' +
+    '  <view class="v12-content v12-content--tab home-content">\r\n' +
+    '    <view class="v12-card hero">\r\n' +
+    '      <image class="hero-art" src="/assets/v12/home-hero-scene.png" mode="aspectFill" />\r\n' +
+    '      <view class="hero-copy">\r\n' +
+    '        <text class="hero-title">一句话，\\n生成你的乡墅方案</text>\r\n' +
+    '        <text class="hero-subtitle">从家庭需求到平面、立面与预算参考</text>\r\n' +
+    '        <view class="hero-actions">\r\n' +
+    '          <view class="v12-primary-button" bindtap="openAi">开始AI设计</view>\r\n' +
+    '          <view class="v12-secondary-button" bindtap="openLibrary">浏览户型库</view>\r\n' +
+    '        </view>\r\n' +
+    '      </view>\r\n' +
+    '    </view>\r\n' +
+    '    <view class="shortcut-row">\r\n' +
+    '      <view class="v12-card shortcut" bindtap="openLibrary">\r\n' +
+    '        <view class="shortcut-icon"><t-icon name="home" size="30px" color="#9a6d39" /></view>\r\n' +
+    '        <view><text class="shortcut-title">户型库</text><text class="shortcut-copy">从优秀方案找灵感</text></view>\r\n' +
+    '        <t-icon name="chevron-right" size="16px" color="#2f2925" />\r\n' +
+    '      </view>\r\n' +
+    '      <view class="v12-card shortcut" bindtap="openBudget">\r\n' +
+    '        <view class="shortcut-icon"><t-icon name="calculator" size="30px" color="#9a6d39" /></view>\r\n' +
+    '        <view><text class="shortcut-title">快速预算</text><text class="shortcut-copy">快速估算建造投入</text></view>\r\n' +
+    '        <t-icon name="chevron-right" size="16px" color="#2f2925" />\r\n' +
+    '      </view>\r\n' +
+    '    </view>\r\n' +
+    '    <view class="section-heading"><text class="v12-section-title">精选户型</text><view bindtap="openLibrary">查看全部 <t-icon name="chevron-right" size="15px" color="#6a3b1b" /></view></view>\r\n' +
+    '    <view class="featured-row">\r\n' +
+    '      <view class="v12-card featured" wx:for="{{featuredCases}}" wx:key="title" data-id="{{item.id}}" bindtap="openDetail"><image src="{{item.image}}" mode="aspectFill" /><view><view class="featured-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view><t-icon name="chevron-right" size="16px" color="#6a3b1b" /></view></view>\r\n' +
+    '    </view>\r\n' +
+    '  </view>\r\n' +
+    '</view>\r\n' +
+    '\n' +
+    "'use strict';\r\n" +
+    '\r\n' +
+    "const { openFeature, protectedPage } = require('../../utils/access');\r\n" +
+    "const api = require('../../utils/api');\r\n" +
+    "const assets = require('../../utils/assets');\r\n" +
+    "const format = require('../../utils/format');\r\n" +
+    '\r\n' +
+    'protectedPage({\r\n' +
+    '  data: {\r\n' +
+    '    cases: [], visibleCases: [], cursor: null, hasMore: true, loading: false,\r\n' +
+    "    keyword: '', source: 0,\r\n" +
+    "    filters: { sourceType: 'COMPANY', styleCode: '', floorCount: null },\r\n" +
+    '    styleOptions: [\r\n' +
+    "      { label: '全部', code: '' },\r\n" +
+    "      { label: '新中式', code: 'NEW_CHINESE' },\r\n" +
+    "      { label: '现代', code: 'MODERN' },\r\n" +
+    "      { label: '中式', code: 'CHINESE' }\r\n" +
+    '    ],\r\n' +
+    '    floorOptions: [\r\n' +
+    "      { label: '全部', count: null },\r\n" +
+    "      { label: '一层', count: 1 },\r\n" +
+    "      { label: '二层', count: 2 },\r\n" +
+    "      { label: '三层', count: 3 }\r\n" +
+    '    ]\r\n' +
+    '  },\r\n' +
+    '  onLoad() { this.loadPage(true); },\r\n' +
+    '  onReachBottom() { if (this.data.hasMore && !this.data.loading) this.loadPage(false); },\r\n' +
+    '  loadPage(reset) {\r\n' +
+    '    if (this.data.loading) return;\r\n' +
+    '    const self = this;\r\n' +
+    '    const cursor = reset ? null : this.data.cursor;\r\n' +
+    '    self.setData({ loading: true });\r\n' +
+    '    const filters = this.data.filters;\r\n' +
+    '    const params = {\r\n' +
+    '      cursor: cursor, limit: 10,\r\n' +
+    '      sourceType: filters.sourceType || undefined,\r\n' +
+    '      styleCode: filters.styleCode || undefined,\r\n' +
+    '      floorCount: filters.floorCount || undefined\r\n' +
+    '    };\r\n' +
+    '    api.listCases(params).then(function (page) {\r\n' +
+    '      const startIndex = reset ? 0 : self.data.cases.length;\r\n' +
+    '      const newCases = (page.list || []).map(function (c) {\r\n' +
+    '        const tag = format.styleLabel(c.styleCode);\r\n' +
+    '        return {\r\n' +
+    '          id: c.caseId, title: c.title, area: c.buildingArea,\r\n' +
+    '          floors: c.floorCount, style: c.styleCode, tag: tag,\r\n' +
+    "          coverAssetId: c.coverAssetId, image: '',\r\n" +
+    "          meta: (c.buildingArea ? c.buildingArea + '㎡' : '') + (c.floorCount ? ' · ' + c.floorCount + '层' : '') + (tag ? ' · ' + tag : '')\r\n" +
+    '        };\r\n' +
+    '      });\r\n' +
+    '      self.setData({\r\n' +
+    '        cases: reset ? newCases : self.data.cases.concat(newCases),\r\n' +
+    '        cursor: page.nextCursor,\r\n' +
+    '        hasMore: !!page.nextCursor,\r\n' +
+    '        loading: false\r\n' +
+    '      });\r\n' +
+    '      self.refreshVisible();\r\n' +
+    '      newCases.forEach(function (item, i) {\r\n' +
+    '        if (!item.coverAssetId) return;\r\n' +
+    '        assets.fetchAssetDataUrl(item.coverAssetId).then(function (url) {\r\n' +
+    '          // 回调期间可能已切换筛选/翻页：仅在索引仍有效且同一封面时回写\r\n' +
+    '          const current = self.data.cases[startIndex + i];\r\n' +
+    '          if (!current || current.coverAssetId !== item.coverAssetId) return;\r\n' +
+    '          const update = {};\r\n' +
+    "          update['cases[' + (startIndex + i) + '].image'] = url;\r\n" +
+    '          self.setData(update);\r\n' +
+    '          self.refreshVisible();\r\n' +
+    '        }).catch(function () { /* 封面加载失败保留空态 */ });\r\n' +
+    '      });\r\n' +
+    '    }).catch(function () {\r\n' +
+    '      self.setData({ loading: false });\r\n' +
+    "      wx.showToast({ title: '加载失败', icon: 'none' });\r\n" +
+    '    });\r\n' +
+    '  },\r\n' +
+    '  refreshVisible() {\r\n' +
+    "    const keyword = (this.data.keyword || '').trim();\r\n" +
+    '    const visible = !keyword ? this.data.cases : this.data.cases.filter(function (c) {\r\n' +
+    "      return (c.title || '').indexOf(keyword) >= 0\r\n" +
+    "        || (c.tag || '').indexOf(keyword) >= 0\r\n" +
+    "        || String(c.area || '').indexOf(keyword) >= 0;\r\n" +
+    '    });\r\n' +
+    '    this.setData({ visibleCases: visible });\r\n' +
+    '  },\r\n' +
+    '  onSearch(e) {\r\n' +
+    '    this.setData({ keyword: e.detail.value });\r\n' +
+    '    this.refreshVisible();\r\n' +
+    '  },\r\n' +
+    '  selectSource(e) {\r\n' +
+    '    const index = Number(e.currentTarget.dataset.index);\r\n' +
+    '    if (index === this.data.source) return;\r\n' +
+    '    this.setData({\r\n' +
+    '      source: index,\r\n' +
+    "      filters: Object.assign({}, this.data.filters, { sourceType: index === 1 ? 'AI' : 'COMPANY' }),\r\n" +
+    '      cases: [], cursor: null, hasMore: true\r\n' +
+    '    });\r\n' +
+    '    this.loadPage(true);\r\n' +
+    '  },\r\n' +
+    '  onFilterChange(e) {\r\n' +
+    '    const key = e.currentTarget.dataset.key;\r\n' +
+    '    const value = e.currentTarget.dataset.value;\r\n' +
+    '    if (value === undefined || this.data.filters[key] === value) return;\r\n' +
+    "    // styleCode 用 ''、floorCount 用 null 表示「全部」，与选项数组严格相等以维持选中态\r\n" +
+    '    this.setData({\r\n' +
+    '      filters: Object.assign({}, this.data.filters, { [key]: value }),\r\n' +
+    '      cases: [], cursor: null, hasMore: true\r\n' +
+    '    });\r\n' +
+    '    this.loadPage(true);\r\n' +
+    '  },\r\n' +
+    "  openDetail(e) { openFeature('/pages/library/detail?id=' + e.currentTarget.dataset.id); }\r\n" +
+    '});\r\n' +
+    '\n' +
+    '<view class="v12-page" wx:if="{{accessReady}}">\r\n' +
+    '  <v12-navbar />\r\n' +
+    '  <view class="v12-content v12-content--tab library-content">\r\n' +
+    '    <text class="page-title">户型库</text>\r\n' +
+    '    <text class="page-subtitle">发现适合中国家庭的乡墅方案</text>\r\n' +
+    '    <view class="search"><t-icon name="search" size="18px" color="#8a8178" /><input placeholder="搜索户型名称、风格或面积" value="{{keyword}}" bindinput="onSearch" /></view>\r\n' +
+    `    <view class="source-tabs"><view class="{{source === 0 ? 'active' : ''}}" data-index="0" bindtap="selectSource">公司案例</view><view class="{{source === 1 ? 'active' : ''}}" data-index="1" bindtap="selectSource">AI案例</view></view>\r\n` +
+    '    <view class="v12-card filters">\r\n' +
+    `      <view><text>建筑风格</text><view class="filter-pills"><text wx:for="{{styleOptions}}" wx:key="code" class="{{filters.styleCode === item.code ? 'selected' : ''}}" data-key="styleCode" data-value="{{item.code}}" bindtap="onFilterChange">{{item.label}}</text></view></view>\r\n` +
+    `      <view><text>建筑层数</text><view class="filter-pills"><text wx:for="{{floorOptions}}" wx:key="label" class="{{filters.floorCount === item.count ? 'selected' : ''}}" data-key="floorCount" data-value="{{item.count}}" bindtap="onFilterChange">{{item.label}}</text></view></view>\r\n` +
+    '    </view>\r\n' +
+    '    <view class="sort-row"><text>共 {{visibleCases.length}} 套方案</text><view>面积从小到大 <t-icon name="chevron-down" size="15px" color="#786858" /></view></view>\r\n' +
+    '    <view class="case-grid">\r\n' +
+    '      <view class="v12-card case-card" wx:for="{{visibleCases}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">\r\n' +
+    '        <view class="image-wrap"><image src="{{item.image}}" mode="aspectFill" /><text>{{item.tag}}</text></vie'... 140809 more characters,
+  expected: /AI户型|参考户型|自由生成|会员中心|开通会员|用户注册/,
+  operator: 'doesNotMatch',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
+✖ tests\native-project-structure.test.js (42.4029ms)
+✔ 我的首页按创作、账户、服务分类直接展示，只有设置详情进入二级页 (0.9782ms)
+✔ 昵称按表单最新值保存，纯昵称修改不上传图片 (1.7997ms)
+✔ 头像选择不立即上传，保存失败保留草稿，重试复用已校验资产 (1.4716ms)
+✔ 非法昵称与微信校验失败不保存，身份改变或页面关闭不接受旧响应 (1.3663ms)
+✔ 资料保存未确认成功时不显示成功、不返回，重复点击只有一次请求 (0.7418ms)
+✔ 头像上传校验大小类型、复用票据与SHA，外部签名PUT不携带应用令牌 (1.7384ms)
+ℹ tests 88
+ℹ suites 0
+ℹ pass 87
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 233.3153
+
+✖ failing tests:
+
+test at tests\native-project-structure.test.js:1:1
+✖ tests\native-project-structure.test.js (42.4029ms)
+  'test failed'

@@ -8,7 +8,7 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="load">
+      <el-tabs v-model="activeTab" @tab-change="search">
         <el-tab-pane label="全部" name="ALL" />
         <el-tab-pane label="支付成功未到账" name="PAID_NO_CREDIT" />
         <el-tab-pane label="待支付" name="PENDING" />
@@ -40,6 +40,14 @@
         <el-table-column label="创建时间" width="168">
           <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
         </el-table-column>
+        <el-table-column label="退款状态" width="110">
+          <template #default="{ row }">{{
+            row.refundState ? refundText(row.refundState) : '无退款'
+          }}</template>
+        </el-table-column>
+        <el-table-column label="冲正状态" width="110">
+          <template #default="{ row }">{{ reversalText(row.pointReversalState) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <span class="zs-link" @click="openDetail(row)">详情</span>
@@ -58,7 +66,13 @@
 
       <el-table v-else :data="list" v-loading="loading" stripe>
         <el-table-column label="退款单号" prop="refundNo" width="180" />
-        <el-table-column label="订单号" prop="orderNo" width="165" />
+        <el-table-column label="订单号" width="165">
+          <template #default="{ row }"
+            ><el-button link type="primary" @click="openDetail(row)">{{
+              row.orderNo || row.orderId
+            }}</el-button></template
+          >
+        </el-table-column>
         <el-table-column label="用户" prop="userId" width="100" />
         <el-table-column label="退款金额(元)" width="120">
           <template #default="{ row }">{{
@@ -76,6 +90,9 @@
           </template>
         </el-table-column>
         <el-table-column label="原因" prop="reason" min-width="160" show-overflow-tooltip />
+        <el-table-column label="设计点冲正" width="120">
+          <template #default="{ row }">{{ reversalText(row.pointReversalState) }}</template>
+        </el-table-column>
         <el-table-column label="创建时间" width="168">
           <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
         </el-table-column>
@@ -85,7 +102,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -100,7 +118,7 @@
         <el-descriptions-item label="金额(元)">{{
           ((detail.data.amountCents || 0) / 100).toFixed(2)
         }}</el-descriptions-item>
-        <el-descriptions-item label="到账设计点">{{
+        <el-descriptions-item label="方案设计点（快照）">{{
           (detail.data.basePoints || 0) + (detail.data.bonusPoints || 0)
         }}</el-descriptions-item>
         <el-descriptions-item label="支付状态">{{
@@ -115,8 +133,20 @@
         <el-descriptions-item label="创建时间">{{
           fmtTime(detail.data.createdAt)
         }}</el-descriptions-item>
-        <el-descriptions-item label="可执行动作" :span="2">{{
-          (detail.data.allowedActions || []).join('、') || '—'
+        <el-descriptions-item label="退款状态">{{
+          detail.data.refund ? refundText(detail.data.refund.channelState) : '无退款'
+        }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.data.refund" label="退款金额"
+          >¥{{ (detail.data.refund.amountCents / 100).toFixed(2) }}</el-descriptions-item
+        >
+        <el-descriptions-item v-if="detail.data.refund" label="退款编号">{{
+          detail.data.refund.refundId
+        }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.data.refund" label="设计点冲正">{{
+          reversalText(detail.data.refund.pointReversalState)
+        }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.data.refund" label="退款原因" :span="2">{{
+          detail.data.refund.reason || '未填写'
         }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -162,7 +192,17 @@ const refundText = (s: string) =>
   })[s] || s
 
 const canRefund = (row: any) =>
-  row.paymentState === 'SUCCEEDED' && row.fulfillmentState === 'CREDITED'
+  row.paymentState === 'SUCCEEDED' &&
+  row.fulfillmentState === 'CREDITED' &&
+  (!row.refundState || row.refundState === 'FAILED')
+
+const reversalText = (s?: string) =>
+  ({ RESERVED: '已预留', REVERSED: '已冲正', RELEASED: '已释放' })[s || ''] || '—'
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true
@@ -176,15 +216,12 @@ const load = async () => {
     const params: any = { ...query }
     if (activeTab.value === 'PAID_NO_CREDIT') {
       params.paymentState = 'SUCCEEDED'
+      params.paidNoCredit = true
     } else if (activeTab.value === 'PENDING') {
       params.paymentState = 'PENDING'
     }
     const res = await ZsApi.getOrderPage(params)
-    let items = res?.list || []
-    if (activeTab.value === 'PAID_NO_CREDIT') {
-      items = items.filter((o: any) => o.fulfillmentState !== 'CREDITED')
-    }
-    list.value = items
+    list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
     list.value = []
@@ -220,8 +257,4 @@ const doRefund = async (row: any) => {
 }
 
 onMounted(load)
-watch(activeTab, () => {
-  query.pageNo = 1
-  load()
-})
 </script>

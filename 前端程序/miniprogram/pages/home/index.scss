@@ -2,7 +2,6 @@
 
 .home-content { padding-top: 30rpx; padding-left: 24rpx; padding-right: 24rpx; }
 .hero { position: relative; height: 548rpx; overflow: hidden; background: linear-gradient(120deg, #fffdf8 0%, #fbf6ed 48%, #eef2f3 100%); }
-.hero::after { content: ''; position: absolute; right: -1rpx; top: -1rpx; width: 86rpx; height: 64rpx; border-radius: 0 0 0 26rpx; background: $v12-page-beige; }
 .hero-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hero-copy { position: relative; z-index: 1; padding: 122rpx 44rpx 0; box-sizing: border-box; }
 .hero-title { display: block; white-space: pre-line; font-family: "Songti SC", STSong, serif; font-size: 40rpx; line-height: 1.35; font-weight: 600; }

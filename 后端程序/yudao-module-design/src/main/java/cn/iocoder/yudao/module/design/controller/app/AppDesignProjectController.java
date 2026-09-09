@@ -10,6 +10,7 @@ import cn.iocoder.yudao.module.design.controller.app.vo.AppResultVersionRespVO;
 import cn.iocoder.yudao.module.design.controller.app.vo.AppRevisionRequestReqVO;
 import cn.iocoder.yudao.module.design.controller.app.vo.AppSelectionCreateReqVO;
 import cn.iocoder.yudao.module.design.project.DesignProjectService;
+import cn.iocoder.yudao.module.design.budget.BudgetInputs;
 import cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -147,7 +148,7 @@ public class AppDesignProjectController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
         var created = designProjectService.createFlatJob(userId, Long.parseLong(projectId),
-                reqVO.getCount(), idempotencyKey);
+                reqVO.getCount(), idempotencyKey, reqVO.getPriceConfirmation());
         return success(jobAcceptedVo(projectId, created.jobId()));
     }
 
@@ -173,7 +174,7 @@ public class AppDesignProjectController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
         var created = designProjectService.createElevationJob(userId, Long.parseLong(projectId),
-                reqVO.getCount(), idempotencyKey, elevationConfig(reqVO));
+                reqVO.getCount(), idempotencyKey, elevationConfig(reqVO), reqVO.getPriceConfirmation());
         return success(jobAcceptedVo(projectId, created.jobId()));
     }
 
@@ -245,6 +246,7 @@ public class AppDesignProjectController {
         vo.setJobId(jobId);
         Long flat = designProjectService.activeSelectionCandidateId(project.projectId(), "FLAT");
         Long elevation = designProjectService.activeSelectionCandidateId(project.projectId(), "ELEVATION");
+        if (flat != null) vo.setStage("ELEVATION");
         vo.setSelectedFlatCandidateId(flat == null ? null : String.valueOf(flat));
         vo.setSelectedElevationCandidateId(elevation == null ? null : String.valueOf(elevation));
         Long versionId = designProjectService.latestResultVersionId(project.projectId());
@@ -260,6 +262,23 @@ public class AppDesignProjectController {
             }).toList());
         }
         vo.setAllowedActions(allowedActions(flat, elevation));
+        var currentJob = designProjectService.latestJob(project).orElse(null);
+        if (currentJob != null) {
+            if (jobId == null) vo.setJobId(String.valueOf(currentJob.jobId()));
+            vo.setJobStatus(currentJob.status());
+            vo.setRequestedCount(currentJob.requestedCount());
+        }
+        Long flatAsset = designProjectService.selectedFlatAssetId(project.projectId());
+        vo.setSelectedFlatAssetId(flatAsset == null ? null : String.valueOf(flatAsset));
+        String action;
+        if (elevation != null) action = "VIEW_RESULT";
+        else if (currentJob != null && !List.of("SUCCEEDED", "PARTIALLY_SUCCEEDED", "FAILED", "CANCELLED").contains(currentJob.status())) {
+            action = "POLL_JOB";
+            vo.setAllowedActions(List.of("POLL_JOB", "CANCEL_JOB"));
+        } else if (currentJob != null && List.of("SUCCEEDED", "PARTIALLY_SUCCEEDED").contains(currentJob.status())) {
+            action = flat == null ? "SELECT_FLAT" : "SELECT_ELEVATION";
+        } else action = flat == null ? "CREATE_FLAT_JOB" : "CREATE_ELEVATION_JOB";
+        vo.setResumeAction(action);
         return vo;
     }
 
@@ -281,7 +300,11 @@ public class AppDesignProjectController {
         vo.setFlatCandidateIds((String) row.get("flat_candidate_ids"));
         vo.setElevationCandidateId(row.get("elevation_candidate_id") == null ? null
                 : String.valueOf(row.get("elevation_candidate_id")));
-        vo.setConfigSnapshot((String) row.get("config_snapshot"));
+        vo.setConfigSnapshot(BudgetInputs.publicConfigJson((String) row.get("config_snapshot")));
+        vo.setSelectedFlatAssetId(row.get("selected_flat_asset_id") == null ? null
+                : String.valueOf(row.get("selected_flat_asset_id")));
+        vo.setSelectedElevationAssetId(row.get("selected_elevation_asset_id") == null ? null
+                : String.valueOf(row.get("selected_elevation_asset_id")));
         vo.setSuperseded((Boolean) row.get("superseded"));
         Object createTime = row.get("create_time");
         vo.setCreatedAt(createTime instanceof Timestamp ts ? ts.toLocalDateTime() : null);

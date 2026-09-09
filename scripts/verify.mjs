@@ -207,6 +207,19 @@ function verifyMiniProgram() {
 }
 
 function verifyAdmin() {
+  const testsDirectory = join(adminDirectory, "tests");
+  const testFiles = readdirSync(testsDirectory)
+    .filter((name) => name.endsWith(".test.js"))
+    .sort()
+    .map((name) => join(testsDirectory, name));
+  if (testFiles.length === 0) fail("admin", "未找到 tests/*.test.js");
+  runStep(
+    "admin",
+    `${testFiles.length} 个表单/API/组件逻辑测试文件`,
+    process.execPath,
+    ["--test", ...testFiles],
+    adminDirectory,
+  );
   const pnpm = nativeCommand("pnpm");
   runStep("admin", "TypeScript 类型检查", pnpm, ["ts:check"], adminDirectory);
   runStep(
@@ -220,16 +233,24 @@ function verifyAdmin() {
 }
 
 function verifyBackend() {
+  runStep(
+    "inventory",
+    "测试资产口径漂移检查",
+    process.execPath,
+    ["scripts/test-inventory.mjs", "--check"],
+    repositoryDirectory,
+  );
   const wrapper = join(backendDirectory, isWindows ? "mvnw.cmd" : "mvnw");
   const modules = [
     "yudao-module-identity",
     "yudao-module-commerce",
     "yudao-module-ai-orchestration",
     "yudao-module-design",
+    "yudao-server",
   ].join(",");
   runStep(
     "backend",
-    "17 个众墅合同测试文件",
+    "众墅后端合同测试（*ContractTest）",
     wrapper,
     [
       "-B",
@@ -247,7 +268,7 @@ function verifyBackend() {
 function verifyE2E() {
   runStep(
     "e2e",
-    "37 个三端全链检查点",
+    "54 个三端全链检查点",
     process.execPath,
     ["e2e/zs-e2e.mjs"],
     repositoryDirectory,

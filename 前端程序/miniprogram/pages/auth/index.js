@@ -4,9 +4,6 @@ const { safeTarget, navigate, returnHome, refreshFromServer } = require('../../u
 const http = require('../../utils/request');
 const api = require('../../utils/api');
 
-// 演示白名单：后端不可用时体验全流程；正式环境一律走微信登录 + 授权码兑换。
-const DEMO_CODES = ['DEMO-ONLY'];
-
 Page({
   data: { code: '', accessReady: false, loading: false },
   onLoad(options) {
@@ -46,12 +43,14 @@ Page({
     if (!this.data.accessReady || this.data.loading) return;
     const code = this.data.code;
     if (!code) { wx.showToast({ title: '请输入授权码', icon: 'none' }); return; }
-    if (DEMO_CODES.indexOf(code) >= 0) { this.activate(this.target); return; }
     const self = this;
     self.setData({ loading: true });
-    self.ensureLoggedIn()
+    return self.ensureLoggedIn()
       .then(function () { return api.redeemAccessCode(code); })
-      .then(function () { self.activate(self.target); })
+      .then(function (grant) {
+        if (!grant || grant.status !== 'ACTIVE') throw { msg: '授权未生效，请重试或联系管理员' };
+        self.activate(self.target);
+      })
       .catch(function (err) {
         wx.showToast({ title: (err && err.msg) || '兑换失败', icon: 'none' });
       })

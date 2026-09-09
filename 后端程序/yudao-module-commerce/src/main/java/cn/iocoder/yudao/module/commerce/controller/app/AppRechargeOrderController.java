@@ -101,10 +101,11 @@ public class AppRechargeOrderController {
         vo.setBonusPoints((int) order.bonusPoints());
         vo.setPaymentState(order.paymentState());
         vo.setFulfillmentState(order.fulfillmentState());
+        vo.setRefund(order.refund());
         vo.setCreatedAt(order.createdAt() == null ? null
-                : LocalDateTime.ofInstant(order.createdAt(), ZoneId.systemDefault()));
+                : LocalDateTime.ofInstant(order.createdAt(), ZoneId.of("Asia/Shanghai")));
         vo.setPaidAt(order.paidAt() == null ? null
-                : LocalDateTime.ofInstant(order.paidAt(), ZoneId.systemDefault()));
+                : LocalDateTime.ofInstant(order.paidAt(), ZoneId.of("Asia/Shanghai")));
         vo.setAllowedActions(allowedActions(order));
         return vo;
     }

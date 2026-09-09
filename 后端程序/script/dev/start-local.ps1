@@ -87,7 +87,7 @@ $backendProcess = Start-Process `
     -PassThru
 
 Set-Content -LiteralPath $pidFile -Value $backendProcess.Id -Encoding ascii
-$healthUrl = 'http://127.0.0.1:48080/actuator/health'
+$healthUrl = 'http://127.0.0.1:48080/app-api/design/v1/home'
 $deadline = [DateTime]::UtcNow.AddSeconds($HealthTimeoutSeconds)
 $isHealthy = $false
 
@@ -103,8 +103,8 @@ try {
         }
 
         try {
-            $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 5
-            if ($health.status -eq 'UP') {
+            $health = Invoke-RestMethod -Uri $healthUrl -Headers @{ 'tenant-id' = '1' } -TimeoutSec 5
+            if ($health.code -eq 0 -and $null -ne $health.data) {
                 $isHealthy = $true
                 break
             }

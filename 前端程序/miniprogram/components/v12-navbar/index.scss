@@ -51,25 +51,3 @@
   align-items: center;
   justify-content: center;
 }
-
-.notice-button {
-  position: absolute;
-  right: 34rpx;
-  bottom: -70rpx;
-  width: 64rpx;
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.notice-dot {
-  position: absolute;
-  right: 4rpx;
-  top: 4rpx;
-  width: 13rpx;
-  height: 13rpx;
-  border: 3rpx solid $v12-page-beige;
-  border-radius: 50%;
-  background: #e44545;
-}

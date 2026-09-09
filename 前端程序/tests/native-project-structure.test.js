@@ -26,6 +26,20 @@ function walk(relativeDirectory, extension) {
 const projectConfig = JSON.parse(read('project.config.json'));
 assert.strictEqual(projectConfig.miniprogramRoot, 'miniprogram/', '微信开发者工具应把前端程序作为独立原生小程序打开');
 
+// 页面、导航栏和自定义 tabBar 交付的是 SCSS，不是预编译 WXSS。
+// 微信工具也可能以 miniprogram/ 为导入根；检查实际存在的两种配置及本机覆盖。
+for (const configPath of ['project.config.json', 'miniprogram/project.config.json']) {
+  if (!exists(configPath)) continue;
+  const config = JSON.parse(read(configPath));
+  const privatePath = configPath.replace('project.config.json', 'project.private.config.json');
+  const privateConfig = exists(privatePath) ? JSON.parse(read(privatePath)) : {};
+  const settings = { ...config.setting, ...privateConfig.setting };
+  assert.ok(
+    Array.isArray(settings.useCompilerPlugins) && settings.useCompilerPlugins.includes('sass'),
+    `${configPath} 必须启用 sass 编译，否则 app/页面/导航/tabBar 的 SCSS 不会成为可用样式`,
+  );
+}
+
 const appConfig = JSON.parse(read('miniprogram/app.json'));
 const entryPages = [
   'pages/home/index',
@@ -43,14 +57,25 @@ const flowPages = [
   'pages/ai-design/result',
   'pages/ai-design/publish',
   'pages/budget/input',
+  'pages/budget/parameters',
+  'pages/budget/body',
+  'pages/budget/exterior',
+  'pages/budget/legacy',
   'pages/budget/result',
+  'pages/budget/body-detail',
+  'pages/budget/exterior-detail',
+  'pages/budget/history',
   'pages/wallet/recharge',
   'pages/payment/success',
   'pages/messagecenter/messagecenter',
+  'pages/profile/services',
+  'pages/profile/edit',
+  'pages/profile/records',
+  'pages/profile/record',
 ];
 const expectedPages = [...entryPages, ...flowPages];
 
-assert.deepStrictEqual(appConfig.pages, expectedPages, 'V1.2 应只注册 18 张效果图对应的页面状态和消息辅助页');
+assert.deepStrictEqual(appConfig.pages, expectedPages, '应保留原生页面并显式登记 T10 预算参数及旧预算兼容路由');
 assert.deepStrictEqual(
   appConfig.tabBar.list.map(({ pagePath, text }) => [pagePath, text]),
   [
@@ -164,15 +189,20 @@ const homeMarkup = read('miniprogram/pages/home/index.wxml');
 assert.match(homeMarkup, /class="hero-art"/, '首页主视觉应使用拆分后的房屋素材并保留文字叠加结构');
 
 const detailMarkup = read('miniprogram/pages/library/detail.wxml');
-assert.match(detailMarkup, /src="\/assets\/v12\/villa-detail\.png"/, '户型详情应使用从 V1.2 详情效果图拆分的精确头图');
-for (const copy of ['立面效果', '一层平面', '二层平面', '设计说明']) {
-  assert.match(detailMarkup, new RegExp(copy), `户型详情应包含效果图中的“${copy}”结构`);
-}
+assert.match(detailMarkup, /src="{{hero.url}}"/, '户型详情必须展示当前案例真实封面');
+assert.doesNotMatch(detailMarkup, /\/assets\/v12\/(villa-detail|front-elevation|plan-b)/, '缺图不能以固定示例图冒充');
+assert.match(detailMarkup, /wx:for="{{drawings}}"/, '图纸标签按实际资产动态生成');
+assert.match(detailMarkup, /设计说明/, '保留设计说明结构');
 assert.doesNotMatch(detailMarkup, /class="stats"/, '户型详情不应保留效果图中不存在的四列统计模块');
 
 const aiDesignMarkup = read('miniprogram/pages/ai-design/index.wxml');
-assert.match(aiDesignMarkup, /<v12-navbar show-notice\s*\/>/, 'AI 设计页品牌栏不应把页面标题挤到微信胶囊同一行');
-assert.match(aiDesignMarkup, /class="ai-page-title">AI设计<\/view>/, 'AI 设计页标题应与消息铃铛位于品牌栏下一行');
+assert.doesNotMatch(registeredSource, /show-notice/, '消息入口迁移到“我的”后，各页右上角不应再显示铃铛');
+assert.doesNotMatch(read('miniprogram/components/v12-navbar/index.wxml'), /notice-button|notification/, '统一导航栏不应保留消息入口');
+assert.match(aiDesignMarkup, /class="ai-page-title">AI设计<\/view>/, 'AI 设计页标题应位于品牌栏下一行');
+const profileMarkup = read('miniprogram/pages/profile/index.wxml');
+assert.match(profileMarkup, /bindtap="openMessages"[^>]*>[\s\S]*?消息中心/, '“我的”页面应提供消息中心入口');
+assert.match(profileMarkup, /class="message-count"/, '“我的”页面应展示未读消息数量');
+assert.match(read('miniprogram/custom-tab-bar/index.wxml'), /class="tabbar-badge"/, '“我的”Tab 应在有未读消息时展示角标');
 const aiDesignStyles = read('miniprogram/pages/ai-design/index.scss');
 assert.match(aiDesignStyles, /@media \(max-width: 350px\)[\s\S]*\.step-intro[^}]*flex-wrap:\s*wrap/, '小屏设备上的 AI 步骤说明应允许换行');
 assert.match(aiDesignStyles, /@media \(max-width: 350px\)[\s\S]*\.points[^}]*flex-wrap:\s*wrap/, '小屏设备上的设计点信息应允许换行');

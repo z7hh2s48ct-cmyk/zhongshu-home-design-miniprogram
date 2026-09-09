@@ -2,6 +2,8 @@
 
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const http = require('../../utils/request');
+const view = require('../../utils/record-view');
 
 protectedPage({
   data: {
@@ -10,30 +12,35 @@ protectedPage({
   },
   onLoad() {
     const global = getApp().globalData;
-    const ready = !!(global.projectId && global.resultVersionId);
+    this._projectId = view.id(global.projectId); this._versionId = view.id(global.resultVersionId);
+    this._token = http.getToken(); this._closed = false;
+    const ready = !!(this._projectId && this._versionId && this._token);
     this.setData({ versionReady: ready });
     if (ready) this.validate();
     else wx.showToast({ title: '请先完成方案设计', icon: 'none' });
   },
+  onUnload() { this._closed = true; },
+  current() { return !this._closed && !!this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken()); },
   validate() {
     const self = this;
-    const global = getApp().globalData;
-    if (!global.resultVersionId) {
+    if (!this.current() || !this._versionId) {
       this.setData({ validation: null, missing: true });
       return;
     }
     // 校核与提交同构：以将要提交的载荷为准（服务端按载荷判缺失项）
     const payload = {
-      resultVersionId: String(global.resultVersionId),
+      resultVersionId: this._versionId,
       publicDisplayGranted: true,
       generationReferenceGranted: this.data.allowReference
     };
-    api.validatePublication(global.projectId, payload).then(function (validation) {
+    return api.validatePublication(this._projectId, payload).then(function (validation) {
+      if (!self.current()) return;
       self.setData({
         validation: validation,
         missing: !validation || validation.valid !== true
       });
     }).catch(function (err) {
+      if (!self.current()) return;
       self.setData({ missing: true });
       wx.showToast({ title: (err && err.msg) || '发布校核失败', icon: 'none' });
     });
@@ -52,21 +59,26 @@ protectedPage({
     });
   },
   submit() {
-    if (this.data.missing || this.data.submitting || !this.data.versionReady) return;
+    if (!this.current() || this.data.missing || this.data.submitting || !this.data.versionReady) return;
     const self = this;
-    const global = getApp().globalData;
     self.setData({ submitting: true });
-    const idemKey = 'submission-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-    api.submitForPublication(global.projectId, {
-      resultVersionId: String(global.resultVersionId),
+    const payload = {
+      resultVersionId: this._versionId,
       publicDisplayGranted: true,
       generationReferenceGranted: this.data.allowReference,
       note: this.data.note || undefined
-    }, idemKey).then(function () {
+    };
+    const signature = JSON.stringify(payload);
+    if (signature !== this._submissionBody) { this._submissionBody = signature; this._submissionKey = 'submission-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10); }
+    return api.submitForPublication(this._projectId, payload, this._submissionKey).then(function (saved) {
+      if (!self.current()) return;
+      if (!saved || !view.id(saved.submissionId)) throw Error('投稿未确认保存，请重试');
       wx.showToast({ title: '已提交审核', icon: 'success' });
-      setTimeout(function () { wx.navigateBack(); }, 1200);
+      wx.redirectTo({ url: '/pages/profile/record?type=submissions&id=' + saved.submissionId,
+        fail: function () { self.setData({ submitting: false }); wx.showToast({ title: '投稿已保存，可在「我的投稿」查看', icon: 'none' }); } });
     }).catch(function (err) {
-      wx.showToast({ title: (err && err.msg) || '提交失败，请重试', icon: 'none' });
+      if (!self.current()) return;
+      wx.showToast({ title: (err && (err.msg || err.message)) || '提交失败，请重试', icon: 'none' });
       self.setData({ submitting: false });
     });
   }

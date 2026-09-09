@@ -18,11 +18,13 @@ const walk = (dir, suffix) =>
   });
 
 const miniFiles = walk(join(root, "前端程序", "tests"), ".test.js");
+const adminFiles = walk(join(root, "管理后台", "tests"), ".test.js");
 const modules = [
   "yudao-module-identity",
   "yudao-module-commerce",
   "yudao-module-ai-orchestration",
   "yudao-module-design",
+  "yudao-server",
 ];
 const backendFiles = modules.flatMap((module) =>
   walk(join(root, "后端程序", module, "src", "test"), "ContractTest.java"),
@@ -47,6 +49,13 @@ const actual = {
     ),
     parameterizedMethods: backendFiles.reduce(
       (n, p) => n + count(text(p), /@ParameterizedTest\b/g),
+      0,
+    ),
+  },
+  admin: {
+    executableFiles: adminFiles.length,
+    declaredTestCalls: adminFiles.reduce(
+      (n, p) => n + count(text(p), /\btest\s*\(/g),
       0,
     ),
   },

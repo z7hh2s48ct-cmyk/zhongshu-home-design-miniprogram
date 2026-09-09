@@ -13,10 +13,21 @@
     "pages/ai-design/result",
     "pages/ai-design/publish",
     "pages/budget/input",
+    "pages/budget/parameters",
+    "pages/budget/body",
+    "pages/budget/exterior",
+    "pages/budget/legacy",
     "pages/budget/result",
+    "pages/budget/body-detail",
+    "pages/budget/exterior-detail",
+    "pages/budget/history",
     "pages/wallet/recharge",
     "pages/payment/success",
-    "pages/messagecenter/messagecenter"
+    "pages/messagecenter/messagecenter",
+    "pages/profile/services",
+    "pages/profile/edit",
+    "pages/profile/records",
+    "pages/profile/record"
   ],
   "usingComponents": {
     "t-icon": "/components/tdesign-miniprogram/icon/icon"

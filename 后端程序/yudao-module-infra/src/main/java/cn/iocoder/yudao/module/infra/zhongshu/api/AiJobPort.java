@@ -15,7 +15,17 @@ public interface AiJobPort {
     /** 创建立面任务并同事务扣点；须引用已选平面任务（projectRef 携带项目上下文） */
     long createElevationJob(long userId, int count, String idempotencyKey, String projectRef);
 
+    default long createFlatJob(long userId, int count, String key, String projectRef, PricingPort.PriceConfirmation price) {
+        return createFlatJob(userId, count, key, projectRef);
+    }
+
+    default long createElevationJob(long userId, int count, String key, String projectRef, PricingPort.PriceConfirmation price) {
+        return createElevationJob(userId, count, key, projectRef);
+    }
+
     Optional<JobView> getJob(long jobId);
+
+    default Optional<JobView> latestJob(long userId, long projectId, String phase) { return Optional.empty(); }
 
     /** 已接受的有效候选（仅 ACCEPTED） */
     List<CandidateView> listAcceptedResults(long jobId);

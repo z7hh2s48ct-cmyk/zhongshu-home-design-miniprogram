@@ -31,7 +31,8 @@ public class UserSessionService {
     public record AccessContext(long accountId, String appid, String openid, boolean restricted) {
     }
 
-    public record IssuedTokens(long sessionId, String accessToken, String refreshToken, Instant expiresAt) {
+    public record IssuedTokens(long sessionId, String accessToken, String refreshToken, Instant expiresAt,
+                               boolean restricted) {
     }
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -54,15 +55,16 @@ public class UserSessionService {
             long id = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO user_session (id, account_id, appid, openid, token_hash, refresh_token_hash, "
-                            + "device_digest, restricted, expires_at) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, now() + (? * interval '1 second'))",
+                            + "device_digest, restricted, expires_at, refresh_expires_at) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, now() + (? * interval '1 second'), "
+                            + "now() + (? * interval '1 second'))",
                     id, accountId, appid, openid,
                     sha256Hex(accessToken), sha256Hex(refreshToken), deviceDigest, restricted,
-                    ACCESS_TOKEN_TTL_SECONDS);
+                    ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_SECONDS);
             return id;
         });
         return new IssuedTokens(sessionId, accessToken, refreshToken,
-                Instant.now().plusSeconds(ACCESS_TOKEN_TTL_SECONDS));
+                Instant.now().plusSeconds(ACCESS_TOKEN_TTL_SECONDS), restricted);
     }
 
     /** 校验 access token：未过期、未吊销、账号 ACTIVE；restricted 按当前授权实时判定 */
@@ -77,7 +79,7 @@ public class UserSessionService {
                         + "JOIN account a ON a.id = s.account_id AND a.status = 'ACTIVE' AND a.deleted = FALSE "
                         + "LEFT JOIN design_access_grant g ON g.account_id = s.account_id "
                         + "  AND g.status = 'ACTIVE' AND g.deleted = FALSE "
-                        + "WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > now()",
+                        + "WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.deleted = FALSE AND s.expires_at > now()",
                 (rs, i) -> new AccessContext(rs.getLong("account_id"), rs.getString("appid"),
                         rs.getString("openid"), !rs.getBoolean("granted")),
                 sha256Hex(token));
@@ -86,27 +88,32 @@ public class UserSessionService {
 
     /** 刷新会话（审查 H3）：旧 access+refresh 吊销、新对签发；grant 状态实时重判 */
     public Optional<IssuedTokens> refresh(String refreshToken) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT s.id, s.account_id, s.appid, s.openid, s.revoked_at, a.status AS account_status "
-                        + "FROM user_session s JOIN account a ON a.id = s.account_id "
-                        + "AND a.status = 'ACTIVE' AND a.deleted = FALSE "
-                        + "WHERE s.refresh_token_hash = ? AND s.revoked_at IS NULL "
-                        + "AND s.expires_at > now()",
-                sha256Hex(refreshToken));
-        if (rows.isEmpty()) {
+        if (refreshToken == null || refreshToken.isBlank()) {
             return Optional.empty();
         }
-        Map<String, Object> row = rows.get(0);
-        long accountId = ((Number) row.get("account_id")).longValue();
-        String appid = (String) row.get("appid");
-        String openid = (String) row.get("openid");
-        return Optional.of(txTemplate.execute(status -> {
+        return txTemplate.execute(status -> {
+            // Lock before reading/revoking. A concurrent refresh must observe the
+            // revoked row after waiting, rather than issuing a second token pair.
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "SELECT s.id, s.account_id, s.appid, s.openid "
+                            + "FROM user_session s JOIN account a ON a.id = s.account_id "
+                            + "AND a.status = 'ACTIVE' AND a.deleted = FALSE "
+                            + "WHERE s.refresh_token_hash = ? AND s.revoked_at IS NULL "
+                            + "AND s.refresh_expires_at > now() AND s.deleted = FALSE FOR UPDATE OF s",
+                    sha256Hex(refreshToken));
+            if (rows.isEmpty()) {
+                return Optional.empty();
+            }
+            Map<String, Object> row = rows.get(0);
+            long accountId = ((Number) row.get("account_id")).longValue();
+            String appid = (String) row.get("appid");
+            String openid = (String) row.get("openid");
             jdbcTemplate.update(
                     "UPDATE user_session SET revoked_at = now(), update_time = now() "
-                            + "WHERE id = ?", row.get("id"));
+                            + "WHERE id = ? AND revoked_at IS NULL", row.get("id"));
             boolean granted = hasActiveGrant(accountId);
-            return issue(accountId, appid, openid, !granted, null);
-        }));
+            return Optional.of(issue(accountId, appid, openid, !granted, null));
+        });
     }
 
     private boolean hasActiveGrant(long accountId) {
@@ -130,11 +137,12 @@ public class UserSessionService {
     }
 
     public Optional<Instant> refreshExpiresAt(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) return Optional.empty();
         List<Timestamp> rows = jdbcTemplate.query(
-                "SELECT expires_at FROM user_session WHERE refresh_token_hash = ? AND revoked_at IS NULL",
-                (rs, i) -> rs.getTimestamp("expires_at"), sha256Hex(refreshToken));
+                "SELECT refresh_expires_at FROM user_session WHERE refresh_token_hash = ? AND revoked_at IS NULL",
+                (rs, i) -> rs.getTimestamp("refresh_expires_at"), sha256Hex(refreshToken));
         return rows.isEmpty() ? Optional.empty()
-                : Optional.of(rows.get(0).toInstant().plusSeconds(REFRESH_TOKEN_TTL_SECONDS));
+                : Optional.of(rows.get(0).toInstant());
     }
 
     private static String randomToken() {

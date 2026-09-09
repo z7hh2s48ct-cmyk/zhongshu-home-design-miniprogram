@@ -64,6 +64,7 @@ public class AppCaseController {
         vo.setSourceType(detail.sourceType());
         vo.setCoverAssetId(detail.coverAssetId());
         vo.setFloorPlanAssetIds(detail.floorPlanAssetIds());
+        vo.setFloorPlans(caseCatalogService.getFloorPlans(detail.caseId()));
         vo.setElevationAssetId(detail.elevationAssetId());
         vo.setPdfAssetId(detail.pdfAssetId());
         vo.setVersion(detail.version());
@@ -73,7 +74,9 @@ public class AppCaseController {
                 "buildingArea", detail.buildingArea(),
                 "faceWidth", detail.faceWidth() == null ? 0 : detail.faceWidth(),
                 "depth", detail.depth() == null ? 0 : detail.depth()));
-        vo.setAllowedActions(List.of("FAVORITE", "DESIGN_WITH"));
+        boolean canDesign = caseCatalogService.canUseForGeneration(detail.caseId());
+        vo.setAllowedActions(canDesign ? List.of("FAVORITE", "DESIGN_WITH") : List.of("FAVORITE"));
+        vo.setDesignUnavailableReason(canDesign ? null : "该案例暂无有效的设计参考授权，可浏览和收藏");
         return success(vo);
     }
 
@@ -117,7 +120,8 @@ public class AppCaseController {
         vo.setFloorCount(summary.floorCount());
         vo.setBuildingArea(summary.buildingArea());
         vo.setCoverAssetId(summary.coverAssetId());
-        vo.setAllowedActions(List.of("FAVORITE", "DESIGN_WITH"));
+        vo.setAllowedActions(caseCatalogService.canUseForGeneration(summary.caseId())
+                ? List.of("FAVORITE", "DESIGN_WITH") : List.of("FAVORITE"));
         return vo;
     }
 

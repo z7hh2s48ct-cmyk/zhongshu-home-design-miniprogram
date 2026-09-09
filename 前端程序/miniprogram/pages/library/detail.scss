@@ -6,8 +6,8 @@
 .detail-title { display: block; font-size: 42rpx; font-weight: 600; }
 .detail-source { display: block; width: fit-content; margin-top: 13rpx; padding: 6rpx 13rpx; border-radius: 7rpx; color: #7b3f17; background: #faead7; font-size: 22rpx; }
 .detail-meta { display: block; margin-top: 24rpx; font-size: 25rpx; }
-.detail-tabs { height: 92rpx; margin: 0 22rpx; padding: 0 20rpx; display: flex; background: #fffdf8; border: 1rpx solid $v12-divider; border-radius: 20rpx; }
-.detail-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; color: #707070; font-size: 28rpx; position: relative; }
+.detail-tabs { height: 92rpx; width: calc(100% - 44rpx); margin: 0 22rpx; white-space: nowrap; background: #fffdf8; border: 1rpx solid $v12-divider; border-radius: 20rpx; }
+.detail-tabs view { min-width: 180rpx; height: 90rpx; padding: 0 20rpx; display: inline-flex; align-items: center; justify-content: center; color: #707070; font-size: 28rpx; position: relative; }
 .detail-tabs .active { color: #7b3f17; font-weight: 600; }
 .detail-tabs .active::after { content: ''; position: absolute; bottom: 0; width: 68rpx; height: 5rpx; border-radius: 5rpx; background: #7b3f17; }
 .plan-card { margin: 16rpx 22rpx 24rpx; min-height: 454rpx; padding: 20rpx 24rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: 20rpx; background: #fffdf8; box-sizing: border-box; overflow: hidden; }
@@ -19,3 +19,7 @@
 .detail-action { position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; padding: 10rpx 32rpx calc(10rpx + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 180rpx 1fr; gap: 20rpx; background: #fffdf8; border-top: 1rpx solid $v12-divider; }
 .detail-action .v12-primary-button { height: 74rpx; }
 .favorite { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #7b3f17; font-size: 21rpx; }
+.image-state { min-height: 280rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24rpx; color: $v12-secondary-text; background: #f4f0e9; }
+.design-unavailable { margin: 20rpx 32rpx; font-size: 25rpx; color: $v12-secondary-text; }
+.detail-action button { width: 100%; margin: 0; font-size: 28rpx; }
+.detail-action button[disabled] { color: #777; background: #e9e5df; }

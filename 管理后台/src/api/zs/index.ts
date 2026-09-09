@@ -11,8 +11,16 @@ export const getDashboardSummary = () => request.get({ url: `${BASE}/dashboard/s
 
 // ---------- 公司案例 ----------
 export const getCasePage = (params) => request.get({ url: `${BASE}/cases`, params })
+export const getCase = (caseId) => request.get({ url: `${BASE}/cases/${caseId}` })
+export const getCaseAsset = async (caseId, assetId): Promise<Blob> => {
+  const base = `${BASE}/cases/${caseId}/assets/${assetId}`
+  const result = await request.post({ url: `${base}/preview-tickets` })
+  return request.download({ url: `${base}/content`, params: { ticket: result.ticket } })
+}
 export const createCase = (data) => request.post({ url: `${BASE}/cases`, data })
 export const updateCase = (caseId, data) => request.patch({ url: `${BASE}/cases/${caseId}`, data })
+export const uploadCaseImage = (caseId: string, data: FormData) =>
+  request.post({ url: `${BASE}/cases/${encodeURIComponent(caseId)}/images`, data, headersType: 'multipart/form-data', timeout: 120000 })
 export const publishCase = (caseId) => request.post({ url: `${BASE}/cases/${caseId}/publications` })
 export const offlineCase = (caseId, data) =>
   request.post({ url: `${BASE}/cases/${caseId}/withdrawals`, data })
@@ -24,6 +32,13 @@ export const getSubmission = (submissionId) =>
   request.get({ url: `${BASE}/submissions/${submissionId}` })
 export const reviewDecision = (submissionId, data) =>
   request.post({ url: `${BASE}/submissions/${submissionId}/review-decisions`, data })
+export const publishSubmission = (submissionId) =>
+  request.post({ url: `${BASE}/submissions/${submissionId}/publication-commands` })
+export const getSubmissionAsset = async (submissionId, assetId): Promise<Blob> => {
+  const base = `${BASE}/submissions/${submissionId}/assets/${assetId}`
+  const result = await request.post({ url: `${base}/preview-tickets` })
+  return request.download({ url: `${base}/content`, params: { ticket: result.ticket } })
+}
 export const bulkReview = (data) =>
   request.post({ url: `${BASE}/submissions/bulk-review-commands`, data })
 
@@ -75,6 +90,7 @@ export const getAiJob = (jobId) => request.get({ url: `${BASE}/ai-jobs/${jobId}`
 
 // ---------- 导出 / 审计 ----------
 export const createExportJob = (data) => request.post({ url: `${BASE}/export-jobs`, data })
+export const getExportJobPage = (params) => request.get({ url: `${BASE}/export-jobs`, params })
 export const getExportJob = (exportJobId) =>
   request.get({ url: `${BASE}/export-jobs/${exportJobId}` })
 export const createExportDownloadTicket = (exportJobId) =>

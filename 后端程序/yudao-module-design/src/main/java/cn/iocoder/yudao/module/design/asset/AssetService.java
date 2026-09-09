@@ -116,7 +116,15 @@ public class AssetService {
         return new UploadTicket(assetId, storage.presignUploadUrl(objectKey, UPLOAD_TICKET_TTL_SECONDS));
     }
 
-    /** 上传完成：三段式——短事务领取校验（PENDING→VALIDATING）→ 事务外扫描 → 短事务固化终态 */
+    /** 管理端上传复用相同资产策略、私有存储和完整扫描链路，不接受客户端对象地址。 */
+    public long uploadCompanyImage(long adminId, String mime, byte[] content) {
+        var ticket = createUploadTicket(adminId, "CASE_IMAGE", mime, content.length, sha256Hex(content));
+        storage.putObject(load(ticket.assetId()).objectKey(), content);
+        if (!"ACCEPTED".equals(completeUpload(adminId, ticket.assetId()))) throw exception(ASSET_VALIDATION_FAILED);
+        return ticket.assetId();
+    }
+
+    /** 上传完成：短事务领取 → 事务外扫描 → 短事务固化终态。 */
     public String completeUpload(long userId, long assetId) {
         // (a) 短事务：对象级权限 + 领取校验任务
         AssetRow asset = txTemplate.execute(status -> {
@@ -281,6 +289,71 @@ public class AssetService {
     }
 
     public record DownloadContent(byte[] content, String mimeType) {}
+
+    /** 调用端必须具有投稿审核权限；票据绑定管理员和投稿内的冻结资产。 */
+    public IssuedTicket requestReviewTicket(long reviewerId, long submissionId, long assetId) {
+        requireReviewAsset(submissionId, assetId);
+        return deliveryPort.issueDownloadTicket("SUBMISSION_PREVIEW", reviewerId + ":" + submissionId + ":" + assetId, reviewerId, 300);
+    }
+
+    public DownloadContent readReviewTicket(long reviewerId, long submissionId, long assetId, String ticket) {
+        var asset = requireReviewAsset(submissionId, assetId);
+        var consumed = deliveryPort.consumeDownloadTicket(ticket, String.valueOf(reviewerId));
+        if (consumed.getOutcome() != TicketConsumption.Outcome.CONSUMED_NOW
+                || !"SUBMISSION_PREVIEW".equals(consumed.getPurpose())
+                || !(reviewerId + ":" + submissionId + ":" + assetId).equals(consumed.getBizRef())) {
+            throw exception(RESOURCE_FORBIDDEN);
+        }
+        try (InputStream in = storage.getObject(asset.objectKey())) {
+            return new DownloadContent(in.readAllBytes(), asset.declaredMime());
+        } catch (IOException | IllegalStateException e) {
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(
+                    ASSET_VALIDATION_FAILED.getCode(), "图纸文件不可读取，请核对存储后重试");
+        }
+    }
+
+    /** 管理端案例预览只允许当前案例关联的已校验资产，不授予公开访问权。 */
+    public IssuedTicket requestCasePreviewTicket(long adminId, long caseId, long assetId) {
+        requireCaseAsset(caseId, assetId);
+        return deliveryPort.issueDownloadTicket("CASE_PREVIEW", adminId + ":" + caseId + ":" + assetId, adminId, 300);
+    }
+
+    public DownloadContent readCasePreviewTicket(long adminId, long caseId, long assetId, String ticket) {
+        var asset = requireCaseAsset(caseId, assetId);
+        var consumed = deliveryPort.consumeDownloadTicket(ticket, String.valueOf(adminId));
+        if (consumed.getOutcome() != TicketConsumption.Outcome.CONSUMED_NOW
+                || !"CASE_PREVIEW".equals(consumed.getPurpose())
+                || !(adminId + ":" + caseId + ":" + assetId).equals(consumed.getBizRef())) throw exception(RESOURCE_FORBIDDEN);
+        try (InputStream in = storage.getObject(asset.objectKey())) {
+            return new DownloadContent(in.readAllBytes(), asset.declaredMime());
+        } catch (IOException | IllegalStateException e) {
+            throw new ServiceException(ASSET_VALIDATION_FAILED.getCode(), "案例图纸读取失败，请核对存储后重试");
+        }
+    }
+
+    private AssetRow requireCaseAsset(long caseId, long assetId) {
+        Integer linked = jdbcTemplate.queryForObject("SELECT count(*) FROM design_case c "
+                + "JOIN design_case_asset a ON a.case_version_id = c.current_version_id "
+                + "WHERE c.id = ? AND c.deleted = FALSE AND a.deleted = FALSE AND a.asset_id = ?",
+                Integer.class, caseId, assetId);
+        if (linked == null || linked == 0) throw exception(RESOURCE_FORBIDDEN);
+        var asset = load(assetId);
+        requireUsable(asset);
+        return asset;
+    }
+
+    private AssetRow requireReviewAsset(long submissionId, long assetId) {
+        Integer linked = jdbcTemplate.queryForObject("SELECT count(*) FROM case_submission sub "
+                + "JOIN design_result_version v ON v.id=sub.result_version_id AND v.project_id=sub.project_id AND v.deleted=FALSE "
+                + "JOIN design_selection s ON s.id IN(v.flat_selection_id,v.elevation_selection_id) AND s.project_id=v.project_id AND s.deleted=FALSE "
+                + "JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=v.project_id AND c.deleted=FALSE "
+                + "JOIN asset a ON a.id=c.asset_id AND a.owner_user_id=sub.user_id "
+                + "WHERE sub.id=? AND sub.deleted=FALSE AND c.asset_id=?", Integer.class, submissionId, assetId);
+        if (linked == null || linked == 0) throw exception(RESOURCE_FORBIDDEN);
+        var asset = load(assetId);
+        requireUsable(asset);
+        return asset;
+    }
 
     /**
      * 开发/联调直传：本地适配器的 local:// 上传地址无法被小程序 wx.uploadFile 访问，

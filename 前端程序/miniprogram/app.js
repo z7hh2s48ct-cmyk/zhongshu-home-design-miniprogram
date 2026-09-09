@@ -7,7 +7,8 @@ App({
     selectedCandidateId: null, selectedElevationId: null,
     selectedFlatAssetId: null, selectedElevationAssetId: null,
     flatLabel: '', elevationLabel: '', resultVersionId: null,
-    elevationConfig: null, refCase: null, budgetEstimate: null
+    elevationConfig: null, refCase: null, budgetEstimate: null,
+    unreadCount: 0
   },
   onShow(options) {
     // 仅冷启动回首页；相机、支付等返回前台时保留当前操作。

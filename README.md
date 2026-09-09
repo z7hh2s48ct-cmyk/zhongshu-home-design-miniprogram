@@ -43,7 +43,7 @@ node scripts/verify.mjs all
 node scripts/verify.mjs e2e
 ```
 
-`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 17 个后端众墅合同测试文件”执行；`e2e` 在已启动的 `local,pg,zsdev` 后端上执行 37 个三端全链检查点；`full` 依次执行两组验证。后端合同测试和 E2E 都需要 JDK 17 与可用的 Docker daemon。也可用 `mini`、`admin`、`backend` 参数单独复跑，E2E 运行说明见 [`e2e/README.md`](e2e/README.md)。
+`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 25 个后端众墅合同测试文件”执行；`e2e` 在已启动的 `local,pg,zsdev` 后端上执行当前登记的 54 个三端全链检查点；`full` 依次执行两组验证。后端合同测试和 E2E 都需要 JDK 17 与可用的 Docker daemon。也可用 `mini`、`admin`、`backend` 参数单独复跑，E2E 运行说明见 [`e2e/README.md`](e2e/README.md)。
 
 环境自检只输出敏感变量的“已设置/未设置”状态，不打印变量值。CI 与本地复用这组命令。
 
@@ -54,5 +54,8 @@ node scripts/verify.mjs e2e
 - [源码来源与归档完整性](SOURCE_PROVENANCE.md)
 - [T00 仓库基线审计](项目文档/T00-仓库基线审计-2026-09-08.md)
 - [正式任务拆分与执行顺序 V1.0](项目文档/T01-正式任务拆分与执行顺序-V1.0.md)
+- [T10 预算模块最终修改方案](项目文档/T10-预算模块最终修改方案-V1.0.md)
+- [T10 预算工作清单与验收标准](项目文档/T10-预算模块任务清单与验收标准-V1.0.md)
+- [T10 真实三端预算 E2E 验收](项目文档/T10-真实三端预算E2E实现验收-2026-09-08.md)
 - [项目实时状态](项目文档/项目状态看板.md)
 - [贡献与提交规范](CONTRIBUTING.md)

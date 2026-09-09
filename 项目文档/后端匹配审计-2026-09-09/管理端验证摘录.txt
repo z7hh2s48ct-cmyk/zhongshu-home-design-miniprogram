@@ -1,0 +1,11 @@
+[admin] 5 个表单/API/组件逻辑测试文件
+ℹ tests 40
+ℹ pass 40
+ℹ fail 0
+[admin] 5 个表单/API/组件逻辑测试文件 通过（0.8s）
+[admin] TypeScript 类型检查
+[admin] TypeScript 类型检查 通过（3.7s）
+[admin] ESLint / Stylelint / Prettier
+[admin] ESLint / Stylelint / Prettier 通过（6.6s）
+[admin] 生产构建
+[admin] 生产构建 通过（4.6s）

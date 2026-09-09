@@ -127,10 +127,8 @@ public class AppSubmissionController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
-        submissionReviewService.resubmit(userId, Long.parseLong(submissionId),
-                body == null ? null : body.get("note"));
-        return success(toVo(submissionReviewService.getMySubmission(userId, Long.parseLong(submissionId))
-                .orElseThrow()));
+        return success(toVo(submissionReviewService.resubmit(userId, Long.parseLong(submissionId),
+                body == null ? null : body.get("note"), idempotencyKey)));
     }
 
     private long requireAccountId(String authorization) {
@@ -148,9 +146,12 @@ public class AppSubmissionController {
         vo.setStatus(row.status());
         vo.setCurrentRound(row.currentRound());
         vo.setReviewComment(row.reviewComment());
+        vo.setNote(row.note());
+        vo.setPublicDisplayGranted(row.publicDisplayGranted());
+        vo.setGenerationReferenceGranted(row.generationReferenceGranted());
         vo.setSubmittedAt(row.createTime() == null ? null
                 : LocalDateTime.ofInstant(row.createTime(), ZoneId.systemDefault()));
-        vo.setPublicationStatus(row.publishedCaseId() == null ? null : "PUBLISHED");
+        vo.setPublicationStatus(submissionReviewService.publicationStatus(row.publishedCaseId()));
         vo.setAllowedActions("CHANGES_REQUESTED".equals(row.status())
                 ? List.of("RESUBMIT")
                 : ("APPROVED".equals(row.status()) ? List.of("VIEW") : List.of("VIEW")));

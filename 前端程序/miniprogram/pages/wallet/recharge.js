@@ -2,6 +2,7 @@
 
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const view = require('../../utils/record-view');
 
 protectedPage({
   data: {
@@ -42,7 +43,7 @@ protectedPage({
     });
   },
   selectPackage(event) { this.setData({ selected: Number(event.currentTarget.dataset.index) }); },
-  openRecords() { wx.showToast({ title: '充值记录建设中，可在「我的」查看余额', icon: 'none' }); },
+  openRecords() { wx.navigateTo({ url: '/pages/profile/records?type=orders' }); },
   pay() {
     const current = this.data.packages[this.data.selected];
     if (!current || !current.planId) return;
@@ -55,7 +56,7 @@ protectedPage({
       // P8B 真实支付通道下发 payParams 时拉起微信支付；Stub 通道无该字段，直接进入查单页
       if (order && order.payParams && typeof wx.requestPayment === 'function') {
         wx.requestPayment(Object.assign({}, order.payParams, {
-          success: function () { self.toSuccessPage(current, order); },
+          success: function () { self.toSuccessPage(order); },
           fail: function () {
             self.setData({ paying: false });
             wx.showToast({ title: '支付未完成', icon: 'none' });
@@ -63,18 +64,18 @@ protectedPage({
         }));
         return;
       }
-      self.toSuccessPage(current, order);
+      self.toSuccessPage(order);
     }).catch(function (err) {
       wx.showToast({ title: (err && err.msg) || '创建订单失败', icon: 'none' });
       self.setData({ paying: false });
     });
   },
-  toSuccessPage(current, order) {
+  toSuccessPage(order) {
     this.setData({ paying: false });
+    if (!order || !view.id(order.orderId)) { wx.showToast({ title: '订单未确认，请查看充值记录', icon: 'none' }); return; }
     wx.navigateTo({
-      url: '/pages/payment/success?price=' + current.price.toFixed(2)
-        + '&base=' + current.base + '&bonus=' + current.bonus
-        + '&total=' + current.total + '&orderId=' + (order.orderId || '')
+      url: '/pages/payment/success?orderId=' + order.orderId,
+      fail: function () { wx.showToast({ title: '订单已保存，请从充值记录查看', icon: 'none' }); }
     });
   }
 });

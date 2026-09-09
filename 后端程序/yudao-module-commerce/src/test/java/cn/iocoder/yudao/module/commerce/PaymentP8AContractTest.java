@@ -187,6 +187,14 @@ class PaymentP8AContractTest {
 
         Long refundId = payment.requestRefund(order.orderId(), "admin-1", "误充", "rk-1");
         assertThat(refundId).isNotNull();
+        var detail = payment.getOrderDetail(1L, order.orderId()).orElseThrow();
+        assertThat(detail.refund().refundId()).isEqualTo(String.valueOf(refundId));
+        assertThat(detail.refund().channelState()).isEqualTo("SUCCEEDED");
+        assertThat(detail.refund().pointReversalState()).isEqualTo("REVERSED");
+        assertThat(detail.refund().amountCents()).isEqualTo(1000);
+        assertThat(detail.refund().reason()).isEqualTo("误充");
+        assertThat(payment.listOrders(1L, 1, 10).get(0).refund()).isEqualTo(detail.refund());
+        assertThat(payment.getOrderDetail(2L, order.orderId())).isEmpty();
         // 冲正后总余额回到 0：预留 120 被扣减，并留两类冲正流水
         assertThat(available(1L)).isZero();
         assertThat(points.findAccount(1L).orElseThrow().reservedPoints()).isZero();
@@ -207,6 +215,15 @@ class PaymentP8AContractTest {
     }
 
     // ========== 6. 到账后有扣减 → 退款拒绝，不形成负余额 ==========
+
+    @Test
+    void unpaidClosedOrderHasNoRefundFact() {
+        var order = payment.createOrder(1L, seedPlan(1000, 100, 20), "closed-no-refund");
+        jdbc.update("UPDATE recharge_order SET payment_state = 'CLOSED' WHERE id = ?", order.orderId());
+        var detail = payment.getOrderDetail(1L, order.orderId()).orElseThrow();
+        assertThat(detail.paymentState()).isEqualTo("CLOSED");
+        assertThat(detail.refund()).isNull();
+    }
 
     @Test
     void refundRejectedWhenPointsAlreadyUsed() {

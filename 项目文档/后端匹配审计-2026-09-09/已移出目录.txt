@@ -1,0 +1,17 @@
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-ai
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-bpm
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-crm
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-erp
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-fms
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-hrm
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-im
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-iot
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-mall
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-member
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-mes
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-mp
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-pay
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-pms
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-report
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-module-wms
+E:\众墅之家设计平台\zhongshu-home-design-miniprogram\后端程序\yudao-ui

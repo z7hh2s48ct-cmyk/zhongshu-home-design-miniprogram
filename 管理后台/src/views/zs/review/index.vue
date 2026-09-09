@@ -8,7 +8,7 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="load">
+      <el-tabs v-model="activeTab" @tab-change="search">
         <el-tab-pane label="待审核" name="SUBMITTED" />
         <el-tab-pane label="已通过" name="APPROVED" />
         <el-tab-pane label="已退回" name="CHANGES_REQUESTED" />
@@ -140,9 +140,13 @@ const query = reactive({ status: 'SUBMITTED', pageNo: 1, pageSize: 10 })
 const selection = ref<any[]>([])
 const bulkLoading = ref(false)
 
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
+
 const load = async () => {
   query.status = activeTab.value
-  query.pageNo = 1
   selection.value = []
   loading.value = true
   try {
@@ -198,5 +202,4 @@ const doBulkReview = async (decision: string) => {
   }
 }
 onMounted(load)
-watch(activeTab, load)
 </script>

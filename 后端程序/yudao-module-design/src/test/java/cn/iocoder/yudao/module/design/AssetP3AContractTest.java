@@ -56,6 +56,8 @@ class AssetP3AContractTest {
     private LocalObjectStorageAdapter storage;
     private AssetService assetService;
     private RightsGrantService rightsGrantService;
+    private cn.iocoder.yudao.module.design.catalog.CompanyCaseImageService companyImages;
+    private cn.iocoder.yudao.module.design.catalog.CaseCatalogService cases;
 
     @BeforeAll
     void setUp() throws Exception {
@@ -80,14 +82,91 @@ class AssetP3AContractTest {
         assetService = new AssetService(dataSource, txManager, storage,
                 new AssetContentScanner(), new StubContentModerationAdapter(),
                 new JdbcDeliveryPort(dataSource), rightsGrantService);
+        cases = new cn.iocoder.yudao.module.design.catalog.CaseCatalogService(dataSource, txManager);
+        companyImages = new cn.iocoder.yudao.module.design.catalog.CompanyCaseImageService(cases, assetService, rightsGrantService, txManager);
     }
 
     @BeforeEach
     void cleanTables() {
-        jdbc.execute("TRUNCATE asset, asset_scan_result, asset_rights_grant, one_time_download_ticket");
+        jdbc.execute("TRUNCATE asset, asset_scan_result, asset_rights_grant, one_time_download_ticket, design_case, design_case_version, design_case_asset, case_publication");
+    }
+
+    @Test
+    void companyImageUploadScansAssociatesVersionsAndSeparatesRights() throws Exception {
+        long id = cases.createCompanyCase(501, "上传测试", null, "MODERN", 2, 120, null, null, null, null);
+        var cover = companyImages.upload(id, 501, 1, "COVER", null, "image/png", pngBytes(32,32), true, false);
+        assertThat(cases.getAdminCase(id).orElseThrow().coverAssetId()).isEqualTo(cover.assetId());
+        assertThat(cover.version()).isEqualTo(2);
+        assertThat(rightsGrantService.hasEffectiveGrant(Long.parseLong(cover.assetId()), "PUBLIC_DISPLAY")).isTrue();
+        assertThat(rightsGrantService.hasEffectiveGrant(Long.parseLong(cover.assetId()), "GENERATION_REFERENCE")).isFalse();
+        var plan = companyImages.upload(id, 501, 2, "FLOOR_PLAN", 2, "image/png", pngBytes(40,40), true, true);
+        assertThat(cases.getFloorPlans(id).get(0).floorNo()).isEqualTo(2);
+        assertThat(rightsGrantService.hasEffectiveGrant(Long.parseLong(plan.assetId()), "GENERATION_REFERENCE")).isTrue();
+        var replaced = companyImages.upload(id, 501, 3, "COVER", null, "image/png", pngBytes(48,48), true, false);
+        assertThat(cases.getAdminCase(id).orElseThrow().coverAssetId()).isEqualTo(replaced.assetId());
+        assertThat(jdbc.queryForObject("SELECT asset_id FROM design_case_asset a JOIN design_case_version v ON v.id=a.case_version_id "
+                + "WHERE v.case_id=? AND v.version=2 AND a.asset_role='COVER'", Long.class, id)).isEqualTo(Long.parseLong(cover.assetId()));
+        var ticket = assetService.requestCasePreviewTicket(502, id, Long.parseLong(replaced.assetId()));
+        assertThat(assetService.readCasePreviewTicket(502, id, Long.parseLong(replaced.assetId()), ticket.getToken()).content()).isNotEmpty();
+        assertThat(cases.publish(id, "501")).isTrue();
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 4, "COVER", null, "image/png", pngBytes(32,32), true, false)).isInstanceOf(ServiceException.class);
+    }
+
+    @Test
+    void companyUploadRejectsUnconfirmedUnsafeStaleForeignAndAiAssets() throws Exception {
+        long id = cases.createCompanyCase(501, "拒绝测试", null, "MODERN", 1, 100, null, null, null, null);
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 1, "COVER", null, "image/png", pngBytes(32,32), false, false)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 1, "FLOOR_PLAN", 2, "image/png", pngBytes(32,32), true, false)).isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 1, "COVER", null, "image/png", "not an image".getBytes(), true, false)).isInstanceOf(ServiceException.class);
+        assertThat(cases.getAdminCase(id).orElseThrow().version()).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM asset_rights_grant", Integer.class)).isZero();
+        long foreign = assetService.uploadCompanyImage(502, "image/png", pngBytes(32,32));
+        assertThatThrownBy(() -> cases.replaceCompanyImage(id, 501, 1, foreign, "COVER", null)).isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 8, "COVER", null, "image/png", pngBytes(32,32), true, false)).isInstanceOf(ServiceException.class);
+        jdbc.update("UPDATE design_case SET source_type='AI' WHERE id=?", id);
+        assertThatThrownBy(() -> companyImages.upload(id, 501, 1, "COVER", null, "image/png", pngBytes(32,32), true, false)).isInstanceOf(ServiceException.class);
+    }
+
+    @Test
+    void casePreviewBindsAdminCaseAssetAndSingleUseWithoutPublicGrant() throws Exception {
+        long id = uploadAndComplete(USER_A, "USER_SKETCH", "image/png", pngBytes(32, 32));
+        jdbc.update("INSERT INTO design_case(id,source_type,creator_user_id,current_version_id) VALUES(901,'COMPANY',101,902)");
+        jdbc.update("INSERT INTO design_case_asset(id,case_version_id,asset_id,asset_role) VALUES(903,902,?,'COVER')", id);
+        var ticket = assetService.requestCasePreviewTicket(501, 901, id);
+        assertThatThrownBy(() -> assetService.readCasePreviewTicket(502, 901, id, ticket.getToken())).isInstanceOf(ServiceException.class);
+        var own = assetService.requestCasePreviewTicket(501, 901, id);
+        assertThat(assetService.readCasePreviewTicket(501, 901, id, own.getToken()).content()).isNotEmpty();
+        assertThatThrownBy(() -> assetService.readCasePreviewTicket(501, 901, id, own.getToken())).isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> assetService.requestCasePreviewTicket(501, 904, id)).isInstanceOf(ServiceException.class);
+        assertThat(rightsGrantService.hasEffectiveGrant(id, "PUBLIC_DISPLAY")).isFalse();
+        jdbc.update("DELETE FROM design_case_asset WHERE id=903");
+        assertThatThrownBy(() -> assetService.requestCasePreviewTicket(501, 901, id)).isInstanceOf(ServiceException.class);
     }
 
     // ========== 辅助 ==========
+
+    @Test
+    void avatarMustBeOwnedAcceptedAndDedicatedType() throws Exception {
+        var avatars = new cn.iocoder.yudao.module.design.asset.ProfileAvatarAdapter(jdbc.getDataSource());
+        long id = uploadAndComplete(USER_A, "USER_AVATAR", "image/png", pngBytes(32, 32));
+        avatars.requireOwnedAcceptedAvatar(USER_A, id);
+        assertThatThrownBy(() -> avatars.requireOwnedAcceptedAvatar(USER_B, id))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        jdbc.update("UPDATE asset SET moderation_status = 'PENDING' WHERE id = ?", id);
+        assertThatThrownBy(() -> avatars.requireOwnedAcceptedAvatar(USER_A, id))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        jdbc.update("UPDATE asset SET moderation_status = 'PASSED', asset_type = 'USER_REFERENCE' WHERE id = ?", id);
+        assertThatThrownBy(() -> avatars.requireOwnedAcceptedAvatar(USER_A, id))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+    }
+
+    @Test
+    void avatarTypeRejectsOversizeAndNonImageContent() {
+        assertThatThrownBy(() -> assetService.createUploadTicket(USER_A, "USER_AVATAR", "image/png", 2097153, "a".repeat(64)))
+                .isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> assetService.createUploadTicket(USER_A, "USER_AVATAR", "application/pdf", 100, "a".repeat(64)))
+                .isInstanceOf(ServiceException.class);
+    }
 
     private byte[] pngBytes(int width, int height) throws Exception {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);

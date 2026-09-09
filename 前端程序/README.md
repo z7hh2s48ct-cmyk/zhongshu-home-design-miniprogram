@@ -16,10 +16,11 @@
 
 ## 目录
 
-- `miniprogram/app.json`：17 条原生页面路由，对应 18 个效果图状态
+- `miniprogram/app.json`：24条原生页面路由，含T10预算七页、项目历史及旧区间兼容入口
 - `miniprogram/pages`：首页、户型库、AI 设计、预算、账户及结果页面
-- `miniprogram/components/v12-navbar`：适配微信胶囊位置的品牌导航栏
-- `miniprogram/custom-tab-bar`：首页、户型库、AI 设计、我的四个一级入口
+- `miniprogram/components/v12-navbar`：适配微信胶囊位置的品牌导航栏；消息入口不占用页面右上角
+- `miniprogram/custom-tab-bar`：首页、户型库、AI 设计、我的四个一级入口；“我的”按真实未读数显示角标
+- `miniprogram/pages/profile`：承载消息中心入口；未读数量与消息页、底部角标共享
 - `miniprogram/assets/v12`：从 V1.2 效果图拆分并校准的品牌、户型及方案素材
 - `miniprogram/styles`：V1.2 颜色、字号、间距与安全区规范
 - `miniprogram/components/tdesign-miniprogram`：本地化的 TDesign 图标组件与运行时，不依赖远程字体
@@ -27,7 +28,11 @@
 
 ## 运行
 
+预算专项当前源码已接真实参数/目录/分项生成/保存/历史API，不再以globalData作为结果唯一存储；上文旧原型说明不能作为T10预算状态依据。实际联调需要完成207～209迁移的兼容后端、有效业务会话以及管理员核定配置的地区与选项。迁移不会自动发布生产单价；缺项显示待补预算，正式报价及项目临时补项仍待后续任务。开发/测试与微信视觉验收边界见[本批记录](../项目文档/T10-生成保存与配置结果实现验收-2026-09-08.md)。
+
 使用微信开发者工具直接导入本目录，项目根目录保持为 `miniprogram/`。当前使用游客 AppID 方便独立预览；接入真实授权、支付及后端接口前，将 `project.config.json` 中的 `touristappid` 替换为众墅之家小程序 AppID。
+
+样式源文件是 `.scss`，必须启用 `setting.useCompilerPlugins` 中的 `sass`。推荐导入外层 `前端程序/`，由其中的 `miniprogramRoot` 指向源码；如果本机已把内层 `miniprogram/` 单独导入，则它自己的 `project.config.json` 也必须启用相同编译插件，外层配置不会自动继承。否则页面、顶部导航和底部导航会整体丢失样式。修改后重新编译；若工具没有重新读取配置，关闭并重新打开项目（保留现有 AppID，无需构建 npm、重装依赖或改安全设置）。`npm test` 会检查两个实际存在的导入配置及本机覆盖，防止 Sass 开关再次被关闭。
 
 图标字体和 TDesign 图标组件所需的 `tslib` 已随工程本地化，无需联网加载字体，也无需在开发者工具中单独执行“构建 npm”。
 

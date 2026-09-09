@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.identity.wechat;
 
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -12,6 +13,7 @@ import java.util.HexFormat;
  * 仅用于 CODE_PRESENT / AUTOMATED_VERIFIED 证据等级；真实 code2session 由 P2B（G0B 后）替换。
  */
 @Component
+@Profile("zsdev & !prod & !production")
 public class StubWechatIdentityAdapter implements WechatIdentityPort {
 
     @Override

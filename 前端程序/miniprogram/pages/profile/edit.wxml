@@ -1,0 +1,20 @@
+<view class="v12-page profile-edit" wx:if="{{accessReady}}">
+  <v12-navbar title="个人资料" show-back show-brand="{{false}}" />
+  <view class="v12-content edit-content">
+    <view wx:if="{{loading}}" class="edit-note">正在读取资料…</view>
+    <form wx:else bindsubmit="save">
+      <view class="v12-card edit-card">
+        <button class="avatar-action" open-type="chooseAvatar" bindchooseavatar="chooseAvatar" disabled="{{saving}}" aria-label="更换头像">
+          <image wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" />
+          <view wx:else class="avatar-placeholder"><t-icon name="user" size="36px" color="#9a6d39" /></view>
+          <text>更换头像</text>
+        </button>
+        <text class="edit-note">支持 JPG、PNG，大小不超过 2MB</text>
+        <view class="nickname-row"><text>昵称</text><input type="nickname" name="nickname" value="{{nickname}}" maxlength="32" placeholder="请输入昵称" bindinput="changeNickname" bindnicknamereview="reviewNickname" disabled="{{saving}}" adjust-position cursor-spacing="32" /></view>
+      </view>
+      <text wx:if="{{error}}" class="edit-error">{{error}}</text>
+      <button class="save-profile" form-type="submit" loading="{{saving}}" disabled="{{saving}}">{{saving ? '正在保存' : '保存修改'}}</button>
+      <text class="edit-note">点击保存后生效，返回不会保存未提交的修改</text>
+    </form>
+  </view>
+</view>

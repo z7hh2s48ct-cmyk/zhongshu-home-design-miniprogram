@@ -28,6 +28,22 @@
 }
 
 .tabbar-item--active { color: #7b3f17; }
-.tabbar-icon { height: 50rpx; display: flex; align-items: center; justify-content: center; }
+.tabbar-icon { position: relative; height: 50rpx; display: flex; align-items: center; justify-content: center; }
 .tabbar-glyph { font-family: Georgia, 'Times New Roman', serif; font-size: 46rpx; line-height: 1; }
 .tabbar-label { margin-top: 6rpx; font-size: 23rpx; line-height: 1; }
+.tabbar-badge {
+  position: absolute;
+  left: calc(50% + 13rpx);
+  top: -8rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 7rpx;
+  box-sizing: border-box;
+  border: 3rpx solid #fffdf8;
+  border-radius: 999rpx;
+  color: #fff;
+  background: #e44545;
+  font-size: 18rpx;
+  line-height: 22rpx;
+  text-align: center;
+}

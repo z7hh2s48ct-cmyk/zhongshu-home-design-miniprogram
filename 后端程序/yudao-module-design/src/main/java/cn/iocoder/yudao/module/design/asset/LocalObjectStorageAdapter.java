@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.design.asset;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,6 +14,7 @@ import java.nio.file.StandardCopyOption;
  * 本地文件系统对象存储适配器（P0 开发/测试用；COS Adapter 就绪后替换）
  */
 @Component
+@Profile("zsdev & !prod & !production")
 public class LocalObjectStorageAdapter implements ObjectStoragePort {
 
     private final Path root;

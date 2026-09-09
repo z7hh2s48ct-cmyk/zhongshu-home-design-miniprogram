@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.design.asset;
 
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 /**
  * 内容安全审核端口（架构 §6.9：内容审核与版权授权是两个独立状态）
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
  * 未通过 moderation 的资产不能下载、发布或进入 Provider。
  */
 @Component
+@Profile("zsdev & !prod & !production")
 public class StubContentModerationAdapter implements ContentModerationPort {
 
     @Override

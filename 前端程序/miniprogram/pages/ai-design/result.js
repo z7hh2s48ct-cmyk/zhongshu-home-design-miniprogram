@@ -1,64 +1,80 @@
 'use strict';
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const http = require('../../utils/request');
 const assets = require('../../utils/assets');
+const view = require('../../utils/record-view');
 
 protectedPage({
-  data: { tab: 0, versions: [], latest: null, versionLabel: '', imageUrl: '', loading: true },
-  onLoad() { this.loadVersions(); },
+  data: { tab: 0, versions: [], latest: null, versionLabel: '', imageUrl: '', flatImageUrl: '', loading: false, error: '', imageError: '', readOnly: false },
+  onLoad(options) {
+    this._projectId = view.id(options.projectId || getApp().globalData.projectId);
+    this._versionId = options.resultVersionId == null ? null : view.id(options.resultVersionId);
+    this._invalidVersion = options.resultVersionId != null && !this._versionId;
+    this.loadVersions();
+  },
+  onUnload() { this._seq = (this._seq || 0) + 1; this._token = null; },
+  onShow() { if (!(http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) this.loadVersions(); },
+  current(seq) {
+    if (seq !== this._seq) return false;
+    if (this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) return true;
+    this.setData({ latest: null, versions: [], imageUrl: '', flatImageUrl: '', loading: false, error: '登录身份已变化，请重新进入' });
+    return false;
+  },
   loadVersions() {
-    const self = this;
-    const projectId = getApp().globalData.projectId;
-    if (!projectId) {
-      wx.showToast({ title: '请先完成方案设计', icon: 'none' });
-      wx.switchTab({ url: '/pages/ai-design/index' });
-      return;
-    }
-    api.getResultVersions(projectId).then(function (page) {
-      const list = page.list || [];
-      const latest = list.filter(function (v) { return !v.superseded; }).pop()
-        || list[list.length - 1] || null;
-      self.setData({
-        versions: list, latest: latest, loading: false,
-        versionLabel: latest ? '版本 v' + latest.version : '暂无结果版本',
-        elevationLabel: getApp().globalData.elevationLabel || ''
-      });
-      self.loadImages();
-    }).catch(function (err) {
-      self.setData({ loading: false });
-      wx.showToast({ title: (err && err.msg) || '结果加载失败', icon: 'none' });
-    });
+    const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
+    this.setData({ loading: false, error: '', latest: null, versions: [], imageUrl: '', flatImageUrl: '', imageError: '' });
+    if (!this._projectId || this._invalidVersion || !this._token) { this.setData({ error: '方案信息无效，请从「我的方案」重新进入' }); return; }
+    this.setData({ loading: true });
+    return api.getResultVersions(this._projectId).then(page => {
+      if (!this.current(seq)) return;
+      if (!page || !Array.isArray(page.list)) throw Error('方案版本读取失败');
+      const list = page.list;
+      const selected = this._versionId ? list.find(item => item.versionId === this._versionId)
+        : list.find(item => item.superseded === false) || list[0];
+      if (!selected || !view.id(selected.versionId)) throw Error('该方案版本不可用或尚未完成');
+      this.setData({ versions: list, latest: selected, loading: false, versionLabel: '版本 v' + selected.version,
+        readOnly: selected.superseded === true });
+      return this.loadImages();
+    }).catch(error => { if (this.current(seq)) this.setData({ loading: false, error: view.errorText(error) }); });
   },
-  // 立面 Tab 用选定立面候选图，平面 Tab 用选定平面候选图（COS 后换签名 URL，取图入口不变）
   loadImages() {
-    const self = this;
-    const global = getApp().globalData;
-    const elevationAssetId = global.selectedElevationAssetId;
-    const flatAssetId = global.selectedFlatAssetId;
-    const apply = function (key, assetId) {
-      if (!assetId) return;
-      assets.fetchAssetDataUrl(assetId).then(function (url) {
-        self.setData({ [key]: url });
-      }).catch(function () { /* 保留占位 */ });
-    };
-    apply('imageUrl', elevationAssetId || flatAssetId);
-    apply('flatImageUrl', flatAssetId);
+    if (!this.current(this._seq) || !this.data.latest) return;
+    const seq = this._seq, selected = this.data.latest;
+    this.setData({ imageError: '' });
+    return Promise.all([['imageUrl', selected.selectedElevationAssetId], ['flatImageUrl', selected.selectedFlatAssetId]].map(([key, assetId]) => {
+      if (!view.id(assetId)) { this.setData({ imageError: '本版本图片暂不可用' }); return; }
+      return assets.fetchProfileAvatar(assetId).then(url => { if (this.current(seq)) this.setData({ [key]: url }); })
+        .catch(() => { if (this.current(seq)) this.setData({ imageError: '部分图片加载失败，可重试' }); });
+    }));
   },
-  selectTab(e) { this.setData({ tab: Number(e.currentTarget.dataset.index) }); },
-  budget() { wx.navigateTo({ url: '/pages/budget/input' }); },
-  publish() { wx.navigateTo({ url: '/pages/ai-design/publish' }); },
-  adjust() { wx.navigateBack(); },
-  save() { wx.showToast({ title: '方案已保存', icon: 'success' }); },
+  selectTab(event) { this.setData({ tab: Number(event.currentTarget.dataset.index) === 1 ? 1 : 0 }); },
+  budget() {
+    if (this.current(this._seq) && this.data.latest) wx.navigateTo({ url: '/pages/budget/input?projectId=' + this._projectId + '&resultVersionId=' + this.data.latest.versionId });
+  },
+  publish() {
+    if (!this.current(this._seq) || !this.data.latest || this.data.readOnly) return;
+    Object.assign(getApp().globalData, { projectId: this._projectId, resultVersionId: this.data.latest.versionId });
+    wx.navigateTo({ url: '/pages/ai-design/publish' });
+  },
+  save() { wx.navigateTo({ url: '/pages/profile/records?type=projects' }); },
+  adjust() { this.regenerate(); },
   regenerate() {
-    const projectId = getApp().globalData.projectId;
-    if (!projectId) return;
-    const idemKey = 'revision-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-    api.createRevisionRequest(projectId, { reason: '用户发起重新生成', count: 2 }, idemKey)
-      .then(function (vo) {
-        getApp().globalData.jobId = vo.jobId;
-        wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=2' });
-      }).catch(function (err) {
-        wx.showToast({ title: (err && err.msg) || '发起调整失败', icon: 'none' });
-      });
+    if (!this.current(this._seq) || !this.data.latest || this.data.readOnly || this.data.regenerating) return;
+    const seq = this._seq;
+    wx.showModal({ title: '重新生成方案', content: '将创建新的立面任务并消耗设计点，原方案保留。是否继续？',
+      success: result => {
+        if (!result.confirm || !this.current(seq) || this.data.regenerating) return;
+        this.setData({ regenerating: true });
+        this._revisionKey = this._revisionKey || 'revision-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+        api.createRevisionRequest(this._projectId, { reason: '用户发起重新生成', count: 2 }, this._revisionKey).then(vo => {
+          if (!this.current(seq)) return;
+          if (!vo || !view.id(vo.jobId)) throw Error('任务编号无效');
+          Object.assign(getApp().globalData, { projectId: this._projectId, jobId: vo.jobId });
+          wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=2' });
+        }).catch(error => { if (this.current(seq)) wx.showToast({ title: view.errorText(error), icon: 'none' }); })
+          .then(() => { if (this.current(seq)) this.setData({ regenerating: false }); });
+      }
+    });
   }
 });

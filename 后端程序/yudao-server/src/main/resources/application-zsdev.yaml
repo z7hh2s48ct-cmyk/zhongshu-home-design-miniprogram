@@ -2,7 +2,8 @@
 # 启用方式：--spring.profiles.active=local,pg,zsdev
 #
 # ⚠️ 本文件内的密钥是公开的占位值，仅用于本机联调，严禁用于任何共享或生产环境。
-# 生产只启用 local,pg（或 prod,pg），密钥由环境变量/密钥托管注入，缺失即快速失败。
+# 生产只启用 local,pg（或 prod,pg），需注册真实外部服务适配器并从环境注入密钥。
+# Stub/本地存储仅在 zsdev 且不含 prod/production 时装配；只填写密钥不会切换为真实实现。
 #
 # 与 pg profile 的分工：
 # - pg     = 数据库基线 + 生产安全默认（无密钥、不播种、不开内容端点）
@@ -13,7 +14,7 @@ zhongshu:
     internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
   identity:
-    # 无真实 AppID 时用 Stub 身份适配器，登录链路可在开发者工具内跑通
+    # 此 profile 始终使用 Stub 身份适配器；真实 AppID 不会自动切换实现
     wechat-appid: ${ZS_WX_APPID:stub-appid}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}

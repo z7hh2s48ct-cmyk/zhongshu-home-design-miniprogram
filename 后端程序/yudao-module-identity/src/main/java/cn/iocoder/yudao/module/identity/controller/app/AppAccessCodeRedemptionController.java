@@ -58,7 +58,7 @@ public class AppAccessCodeRedemptionController {
         String token = authorization != null && authorization.startsWith("Bearer ")
                 ? authorization.substring(7) : authorization;
         return sessionService.validateAccessToken(token)
-                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("会话无效或已过期"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(401, "会话无效或已过期"));
     }
 
     private AppAccessGrantRespVO toGrantVO(long accountId, long grantId) {

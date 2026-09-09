@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.design.project;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.design.asset.AssetService;
+import cn.iocoder.yudao.module.design.budget.BudgetInputs;
 import cn.iocoder.yudao.module.design.rights.RightsGrantService;
 import cn.iocoder.yudao.module.infra.zhongshu.api.AiJobPort;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
@@ -71,6 +72,7 @@ public class DesignProjectService {
     /** 创建项目：CASE_REFERENCE 仅可引用已发布案例并冻结版本；SELF_UPLOAD 需草图资产 */
     public long createProject(long userId, String sourceType, Long refCaseId, Long sketchAssetId,
                               Map<String, Object> requirementInputs) {
+        Map<String, Object> validatedInputs = BudgetInputs.validateRequirementInputs(requirementInputs);
         return txTemplate.execute(status -> {
             Long refVersionId = null;
             if ("CASE_REFERENCE".equals(sourceType)) {
@@ -97,8 +99,8 @@ public class DesignProjectService {
                     "INSERT INTO design_requirement_snapshot (id, project_id, inputs, sketch_asset_id) "
                             + "VALUES (?, ?, CAST(? AS jsonb), ?)",
                     IdWorker.getId(), projectId,
-                    requirementInputs == null ? null
-                            : toStringJson(requirementInputs),
+                    validatedInputs == null ? null
+                            : toStringJson(validatedInputs),
                     sketchAssetId);
             log.info("[createProject][project={} user={} source={} ref={}]",
                     projectId, userId, sourceType, refCaseId);
@@ -108,6 +110,50 @@ public class DesignProjectService {
 
     public Optional<ProjectSnapshot> getProject(long projectId, long userId) {
         return getProject(projectId).filter(p -> p.userId() == userId);
+    }
+
+    public Optional<AiJobPort.JobView> latestJob(ProjectSnapshot project) {
+        String phase = activeSelectionCandidateId(project.projectId(), "FLAT") == null ? "FLAT" : "ELEVATION";
+        return aiJobPort.latestJob(project.userId(), project.projectId(), phase);
+    }
+
+    public Long selectedFlatAssetId(long projectId) {
+        List<Long> rows = jdbcTemplate.queryForList("SELECT c.asset_id FROM design_selection s JOIN design_candidate c "
+                + "ON c.id=s.candidate_id AND c.project_id=s.project_id AND c.deleted=FALSE "
+                + "WHERE s.project_id=? AND s.stage='FLAT' AND s.active=TRUE AND s.deleted=FALSE", Long.class, projectId);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public record BudgetInputSnapshot(Map<String, Object> inputs, List<String> requirementSnapshotIds) { }
+
+    /** Read existing append-only requirement snapshots; result-bound reads never import later project edits. */
+    public BudgetInputSnapshot getBudgetInputSnapshot(long userId, long projectId, Long resultVersionId) {
+        requireOwner(userId, projectId);
+        java.sql.Timestamp cutoff = null;
+        Map<String, Object> resultConfig = Map.of();
+        if (resultVersionId != null) {
+            List<Map<String, Object>> versions = jdbcTemplate.queryForList(
+                    "SELECT config_snapshot::text, create_time FROM design_result_version "
+                            + "WHERE id = ? AND project_id = ? AND deleted = FALSE", resultVersionId, projectId);
+            if (versions.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
+            cutoff = (java.sql.Timestamp) versions.get(0).get("create_time");
+            resultConfig = BudgetInputs.readJson((String) versions.get(0).get("config_snapshot"));
+        }
+        String sql = "SELECT id, inputs::text FROM design_requirement_snapshot WHERE project_id = ? AND deleted = FALSE"
+                + (cutoff == null ? "" : " AND create_time <= ?") + " ORDER BY input_version ASC, id ASC";
+        List<Map<String, Object>> snapshots = cutoff == null ? jdbcTemplate.queryForList(sql, projectId)
+                : jdbcTemplate.queryForList(sql, projectId, cutoff);
+        var inputs = new java.util.LinkedHashMap<String, Object>();
+        var snapshotIds = new java.util.ArrayList<String>();
+        for (var snapshot : snapshots) {
+            var fields = BudgetInputs.fromSnapshot(BudgetInputs.readJson((String) snapshot.get("inputs")));
+            if (!fields.isEmpty()) {
+                inputs.putAll(fields);
+                snapshotIds.add(String.valueOf(snapshot.get("id")));
+            }
+        }
+        inputs.putAll(BudgetInputs.fromSnapshot(resultConfig)); // Explicit result values take precedence.
+        return new BudgetInputSnapshot(java.util.Collections.unmodifiableMap(inputs), List.copyOf(snapshotIds));
     }
 
     public Optional<ProjectSnapshot> getProject(long projectId) {
@@ -130,6 +176,11 @@ public class DesignProjectService {
     }
 
     public FlatJobCreated createFlatJob(long userId, long projectId, int count, String idempotencyKey) {
+        return createFlatJob(userId, projectId, count, idempotencyKey, null);
+    }
+
+    public FlatJobCreated createFlatJob(long userId, long projectId, int count, String idempotencyKey,
+                                        cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmation) {
         ProjectSnapshot project = getProject(projectId)
                 .orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
         if (project.userId() != userId) {
@@ -142,7 +193,8 @@ public class DesignProjectService {
         if ("CASE_REFERENCE".equals(project.sourceType())) {
             ensureGenerationReference(project);
         }
-        long jobId = aiJobPort.createFlatJob(userId, count, idempotencyKey, String.valueOf(projectId));
+        long jobId = confirmation == null ? aiJobPort.createFlatJob(userId, count, idempotencyKey, String.valueOf(projectId))
+                : aiJobPort.createFlatJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation);
         jdbcTemplate.update(
                 "UPDATE design_project SET update_time = now() WHERE id = ?", projectId);
         return new FlatJobCreated(jobId, true);
@@ -332,6 +384,12 @@ public class DesignProjectService {
     /** 创建立面任务：必须已选定平面候选；立面配置写入需求快照 v2 */
     public FlatJobCreated createElevationJob(long userId, long projectId, int count, String idempotencyKey,
                                              Map<String, Object> elevationConfig) {
+        return createElevationJob(userId, projectId, count, idempotencyKey, elevationConfig, null);
+    }
+
+    public FlatJobCreated createElevationJob(long userId, long projectId, int count, String idempotencyKey,
+                                             Map<String, Object> elevationConfig,
+                                             cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmation) {
         ProjectSnapshot project = getProject(projectId)
                 .orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
         if (project.userId() != userId) {
@@ -342,13 +400,15 @@ public class DesignProjectService {
         if (flatSelection == null) {
             throw exception(DESIGN_STAGE_CONFLICT); // 未选定平面不得生成立面
         }
-        long jobId = aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId));
+        Map<String, Object> validatedConfig = BudgetInputs.validateRequirementInputs(elevationConfig);
+        long jobId = confirmation == null ? aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId))
+                : aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation);
         jdbcTemplate.update(
                 "INSERT INTO design_requirement_snapshot (id, project_id, input_version, inputs) "
                         + "SELECT ?, ?, COALESCE(MAX(input_version), 0) + 1, CAST(? AS jsonb) "
                         + "FROM design_requirement_snapshot WHERE project_id = ? AND deleted = FALSE",
                 IdWorker.getId(), projectId,
-                toStringJson(elevationConfig == null ? Map.of() : elevationConfig), projectId);
+                toStringJson(validatedConfig == null ? Map.of() : validatedConfig), projectId);
         jdbcTemplate.update(
                 "UPDATE design_project SET stage = 'ELEVATION', update_time = now() WHERE id = ?", projectId);
         return new FlatJobCreated(jobId, true);
@@ -410,8 +470,8 @@ public class DesignProjectService {
                 throw exception(DESIGN_STAGE_CONFLICT);
             }
             List<Long> flatCandidates = jdbcTemplate.queryForList(
-                    "SELECT id FROM design_candidate WHERE project_id = ? AND deleted = FALSE",
-                    Long.class, projectId);
+                    "SELECT candidate_id FROM design_selection WHERE id = ? AND project_id = ? AND stage='FLAT' AND deleted=FALSE",
+                    Long.class, flatSelection, projectId);
             long selectionId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO design_selection (id, project_id, stage, candidate_id, selected_by) "
@@ -450,10 +510,17 @@ public class DesignProjectService {
     public List<Map<String, Object>> listResultVersions(long userId, long projectId) {
         requireOwner(userId, projectId);
         return jdbcTemplate.queryForList(
-                "SELECT id, version, flat_selection_id, elevation_selection_id, "
-                        + "flat_candidate_ids::text, elevation_candidate_id, config_snapshot::text, "
-                        + "superseded, create_time FROM design_result_version "
-                        + "WHERE project_id = ? AND deleted = FALSE ORDER BY version DESC",
+                "SELECT v.id, v.version, v.flat_selection_id, v.elevation_selection_id, "
+                        + "v.flat_candidate_ids::text, v.elevation_candidate_id, v.config_snapshot::text, "
+                        + "v.superseded, v.create_time, fc.asset_id AS selected_flat_asset_id, "
+                        + "ec.asset_id AS selected_elevation_asset_id FROM design_result_version v "
+                        + "LEFT JOIN design_selection fs ON fs.id = v.flat_selection_id "
+                        + "AND fs.project_id = v.project_id AND fs.deleted = FALSE "
+                        + "LEFT JOIN design_candidate fc ON fc.id = fs.candidate_id "
+                        + "AND fc.project_id = v.project_id AND fc.deleted = FALSE "
+                        + "LEFT JOIN design_candidate ec ON ec.id = v.elevation_candidate_id "
+                        + "AND ec.project_id = v.project_id AND ec.deleted = FALSE "
+                        + "WHERE v.project_id = ? AND v.deleted = FALSE ORDER BY v.version DESC",
                 projectId);
     }
 

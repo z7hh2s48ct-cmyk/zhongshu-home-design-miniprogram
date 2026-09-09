@@ -164,14 +164,20 @@ public class RechargePaymentService {
      */
     public record OrderDetail(long orderId, String orderNo, long userId, long planId, long amountCents,
                               long basePoints, long bonusPoints, String paymentState,
-                              String fulfillmentState, Instant createdAt, Instant paidAt) {
+                              String fulfillmentState, Instant createdAt, Instant paidAt, RefundSummary refund) {
     }
+
+    public record RefundSummary(String refundId, String channelState, String pointReversalState,
+                                long amountCents, String reason) { }
 
     private static final String ORDER_DETAIL_COLUMNS =
             "o.id, o.order_no, o.user_id, o.plan_id, o.amount_cents, o.base_points, o.bonus_points, "
-                    + "o.payment_state, o.fulfillment_state, o.create_time, t.paid_at "
+                    + "o.payment_state, o.fulfillment_state, o.create_time, t.paid_at, "
+                    + "r.id AS refund_id, r.channel_state, r.point_reversal_state, r.amount_cents AS refund_amount_cents, r.reason "
                     + "FROM recharge_order o "
-                    + "LEFT JOIN payment_transaction t ON t.order_no = o.order_no AND t.deleted = FALSE ";
+                    + "LEFT JOIN payment_transaction t ON t.order_no = o.order_no AND t.deleted = FALSE "
+                    + "LEFT JOIN LATERAL (SELECT id, channel_state, point_reversal_state, amount_cents, reason "
+                    + "FROM refund_order WHERE order_id = o.id AND deleted = FALSE ORDER BY id DESC LIMIT 1) r ON TRUE ";
 
     public Optional<OrderDetail> getOrderDetail(long userId, long orderId) {
         List<OrderDetail> rows = jdbcTemplate.query(
@@ -202,7 +208,10 @@ public class RechargePaymentService {
                 rs.getLong("bonus_points"), rs.getString("payment_state"),
                 rs.getString("fulfillment_state"),
                 rs.getTimestamp("create_time") == null ? null : rs.getTimestamp("create_time").toInstant(),
-                rs.getTimestamp("paid_at") == null ? null : rs.getTimestamp("paid_at").toInstant());
+                rs.getTimestamp("paid_at") == null ? null : rs.getTimestamp("paid_at").toInstant(),
+                rs.getObject("refund_id") == null ? null : new RefundSummary(rs.getString("refund_id"),
+                        rs.getString("channel_state"), rs.getString("point_reversal_state"),
+                        rs.getLong("refund_amount_cents"), rs.getString("reason")));
     }
 
     // ========== 后台管理读模型（管理端页面 09~11）==========

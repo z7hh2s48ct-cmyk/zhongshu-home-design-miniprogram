@@ -66,17 +66,94 @@ class CaseP3BContractTest {
     @BeforeEach
     void cleanTables() {
         jdbc.execute("TRUNCATE design_case, design_case_version, design_case_asset, "
-                + "case_publication, case_favorite");
+                + "case_publication, case_favorite, asset_rights_grant, asset");
     }
 
     private long createAndPublish(int buildingArea, String style) {
         long caseId = catalog.createCompanyCase(ADMIN, "案例 " + buildingArea + "㎡",
                 null, style, 2, buildingArea, null, null, null, List.of(" tags-" + buildingArea));
+        seedPublishableImages(caseId);
         assertThat(catalog.publish(caseId, "admin")).isTrue();
         return caseId;
     }
 
     // ========== 1. 稳定游标分页：同面积不重页/漏页 ==========
+
+    private void seedPublishableImages(long caseId) {
+        long version = jdbc.queryForObject("SELECT current_version_id FROM design_case WHERE id=?", Long.class, caseId);
+        for (String role : List.of("COVER", "FLOOR_PLAN")) {
+            if (jdbc.queryForObject("SELECT count(*) FROM design_case_asset WHERE case_version_id=? AND asset_role=?", Integer.class, version, role) == 0)
+                jdbc.update("INSERT INTO design_case_asset(id,case_version_id,asset_id,asset_role) VALUES(?,?,?,?)",
+                        com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), version, com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), role);
+        }
+        for (Long id : jdbc.queryForList("SELECT DISTINCT asset_id FROM design_case_asset WHERE case_version_id=?", Long.class, version)) {
+            jdbc.update("INSERT INTO asset(id,object_key,owner_user_id,asset_type,source_type,sha256,declared_mime,size_bytes,upload_status,security_scan_status,moderation_status) "
+                    + "VALUES(?,? ,501,'CASE_IMAGE','COMPANY','seed','image/png',10,'ACCEPTED','PASSED','PASSED') ON CONFLICT(id) DO NOTHING", id, "test/" + id);
+            jdbc.update("INSERT INTO asset_rights_grant(id,asset_id,grantor_user_id,rights_holder,scope,effective_at) VALUES(?,?,501,'test','PUBLIC_DISPLAY',now())",
+                    com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), id);
+        }
+    }
+
+    @Test
+    void publicationRejectsMissingUnsafeAndUnlicensedImages() {
+        long id = catalog.createCompanyCase(ADMIN, "缺图", null, "MODERN", 1, 100, null, null, null, null);
+        assertThatThrownBy(() -> catalog.publish(id, "admin")).isInstanceOf(ServiceException.class);
+        seedPublishableImages(id);
+        jdbc.update("UPDATE asset SET security_scan_status='REJECTED'");
+        assertThatThrownBy(() -> catalog.publish(id, "admin")).isInstanceOf(ServiceException.class);
+        jdbc.update("UPDATE asset SET security_scan_status='PASSED'");
+        jdbc.update("UPDATE asset_rights_grant SET status='WITHDRAWN'");
+        assertThatThrownBy(() -> catalog.publish(id, "admin")).isInstanceOf(ServiceException.class);
+        assertThat(catalog.getAdminCase(id).orElseThrow().publicationStatus()).isEqualTo("DRAFT");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM case_publication WHERE case_id=?", Integer.class, id)).isZero();
+    }
+
+    @Test
+    void referenceActionRequiresEveryCurrentPlanGrantAndPreservesActualFloors() {
+        long id = catalog.createCompanyCase(ADMIN, "参考权限", null, "MODERN", 3, 120, null, null, null, null);
+        long version = jdbc.queryForObject("SELECT current_version_id FROM design_case WHERE id=?", Long.class, id);
+        assertThat(catalog.canUseForGeneration(id)).isFalse();
+        jdbc.update("INSERT INTO design_case_asset(id,case_version_id,asset_id,asset_role,floor_no) VALUES "
+                + "(901,?,801,'FLOOR_PLAN',1),(902,?,802,'FLOOR_PLAN',3)", version, version);
+        seedPublishableImages(id);
+        catalog.publish(id, "admin");
+        assertThat(catalog.getFloorPlans(id)).extracting(CaseCatalogService.FloorPlan::floorNo).containsExactly(1, 3);
+        jdbc.update("INSERT INTO asset_rights_grant(id,asset_id,grantor_user_id,rights_holder,scope,effective_at) "
+                + "VALUES (911,801,501,'test','GENERATION_REFERENCE',now()-interval '1 hour')");
+        assertThat(catalog.canUseForGeneration(id)).isFalse();
+        jdbc.update("INSERT INTO asset_rights_grant(id,asset_id,grantor_user_id,rights_holder,scope,effective_at) "
+                + "VALUES (912,802,501,'test','GENERATION_REFERENCE',now()-interval '1 hour')");
+        assertThat(catalog.canUseForGeneration(id)).isTrue();
+        jdbc.update("UPDATE asset_rights_grant SET expires_at=now()-interval '1 second' WHERE id=912");
+        assertThat(catalog.canUseForGeneration(id)).isFalse();
+        jdbc.update("UPDATE asset_rights_grant SET expires_at=null, effective_at=now()+interval '1 hour' WHERE id=912");
+        assertThat(catalog.canUseForGeneration(id)).isFalse();
+        jdbc.update("UPDATE asset_rights_grant SET effective_at=now()-interval '1 hour', status='WITHDRAWN' WHERE id=912");
+        assertThat(catalog.canUseForGeneration(id)).isFalse();
+        catalog.offline(id, "test", "admin");
+        assertThat(catalog.getPublishedCase(id)).isEmpty();
+        assertThat(catalog.getAdminCase(id)).isPresent();
+    }
+
+    @Test
+    void aiCaseCannotBeEditedOutsideSubmissionWorkflow() {
+        long id = createAndPublish(120, "MODERN");
+        jdbc.update("UPDATE design_case SET source_type='AI' WHERE id=?", id);
+        assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "changed", null, "MODERN", 2, 120,
+                null, null, null, null)).isInstanceOf(ServiceException.class);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(1);
+    }
+
+    @Test
+    void publishedCompanyCaseCannotBeChangedWithoutWithdrawal() {
+        long id = createAndPublish(120, "MODERN");
+        assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "直接改线上内容", null, "MODERN", 2, 120, null, null, null, null))
+                .isInstanceOf(ServiceException.class);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(1);
+        catalog.offline(id, "改图", "admin");
+        catalog.updateCase(id, ADMIN, 1, "线下修改", null, "MODERN", 2, 120, null, null, null, null);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(2);
+    }
 
     @Test
     void cursorPaginationCoversAllWithoutDuplication() {
@@ -144,6 +221,7 @@ class CaseP3BContractTest {
         // 详情读新版本
         var detail = catalog.getPublishedCase(caseId);
         // 未发布不可见 → 先发布
+        seedPublishableImages(caseId);
         assertThat(catalog.publish(caseId, "admin")).isTrue();
         assertThat(catalog.getPublishedCase(caseId).orElseThrow().title()).isEqualTo("v2 标题");
 
@@ -229,6 +307,7 @@ class CaseP3BContractTest {
                         + "VALUES (?,?,?,'FLOOR_PLAN',1)", 8002L, versionId, 9102L);
         jdbc.update("INSERT INTO design_case_asset (id, case_version_id, asset_id, asset_role, floor_no) "
                         + "VALUES (?,?,?,'FLOOR_PLAN',2)", 8003L, versionId, 9103L);
+        seedPublishableImages(caseId);
         catalog.publish(caseId, "admin");
 
         var detail = catalog.getPublishedCase(caseId).orElseThrow();

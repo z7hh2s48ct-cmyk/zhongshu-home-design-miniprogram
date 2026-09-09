@@ -110,8 +110,8 @@ public class AccountAdminController {
         grants.forEach(this::stringifyIds);
         detail.put("grants", grants);
         Long available = jdbc.queryForObject(
-                "SELECT l.available_after FROM design_point_ledger l WHERE l.user_id = ? "
-                        + "AND l.deleted = FALSE ORDER BY l.id DESC LIMIT 1", Long.class, id);
+                "SELECT COALESCE((SELECT available_points FROM design_point_account "
+                        + "WHERE user_id = ? AND deleted = FALSE), 0)", Long.class, id);
         detail.put("availablePoints", available == null ? 0 : available);
         List<Map<String, Object>> ledger = jdbc.queryForList(
                 "SELECT id, type, delta, available_after, biz_type, biz_id, reason, create_time "

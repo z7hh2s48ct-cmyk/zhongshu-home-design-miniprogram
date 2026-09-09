@@ -45,7 +45,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -76,6 +77,11 @@ const loading = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ pageNo: 1, pageSize: 20 })
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true

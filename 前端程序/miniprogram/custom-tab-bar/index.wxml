@@ -4,6 +4,7 @@
       <view class="tabbar-icon">
         <text wx:if="{{item.glyph}}" class="tabbar-glyph">{{item.glyph}}</text>
         <t-icon wx:else name="{{current === index ? item.activeIcon : item.icon}}" size="25px" color="{{current === index ? '#7b3f17' : '#707070'}}" />
+        <view wx:if="{{item.pagePath === '/pages/profile/index' && unreadCount > 0}}" class="tabbar-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
       </view>
       <text class="tabbar-label">{{item.text}}</text>
     </view>

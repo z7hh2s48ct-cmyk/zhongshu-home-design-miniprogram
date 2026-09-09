@@ -18,6 +18,11 @@ module.exports = {
   getProfile: function () {
     return http.get(BASE + '/profile');
   },
+  updateProfile: function (nickname, avatarAssetId) {
+    var body = { nickname: nickname };
+    if (avatarAssetId) body.avatarAssetId = String(avatarAssetId);
+    return http.patch(BASE + '/profile', body);
+  },
 
   // ---- 首页 / 户型库 ----
   getHome: function () {
@@ -42,15 +47,33 @@ module.exports = {
   },
 
   // ---- 设计项目 / AI 任务 ----
+  listProjects: function (cursor, limit) {
+    return http.get(BASE + '/design-projects?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+  },
+  listSubmissions: function (cursor, limit) {
+    return http.get(BASE + '/submissions?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+  },
+  getSubmission: function (id) {
+    return http.get(BASE + '/submissions/' + encodeURIComponent(id));
+  },
+  resubmitSubmission: function (id, note, key) {
+    return http.post(BASE + '/submissions/' + encodeURIComponent(id) + '/resubmissions', { note: note }, { 'Idempotency-Key': key });
+  },
+  listRechargeOrders: function (pageNo, pageSize) {
+    return http.get(BASE + '/recharge-orders?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
+  },
   createProject: function (body) {
     return http.post(BASE + '/design-projects', body || null);
   },
   getProject: function (projectId, jobId) {
     return http.get(BASE + '/design-projects/' + projectId + (jobId ? '?jobId=' + jobId : ''));
   },
-  createFlatJob: function (projectId, count, idemKey) {
+  getGenerationQuote: function (stage, count) {
+    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count);
+  },
+  createFlatJob: function (projectId, count, idemKey, priceConfirmation) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-jobs',
-      { count: count }, { 'Idempotency-Key': idemKey });
+      { count: count, priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
   },
   selectFlat: function (projectId, jobId, candidateId) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-selections',
@@ -118,10 +141,47 @@ module.exports = {
   createDownloadTicket: function (assetId) {
     return http.post(BASE + '/assets/' + assetId + '/download-tickets');
   },
+  resolveDownload: function (assetId, ticket) {
+    return http.post(BASE + '/assets/' + encodeURIComponent(assetId) + '/downloads', { ticket: ticket });
+  },
 
   // ---- 预算 ----
+  getBudgetInputs: function (projectId, resultVersionId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-inputs'
+      + (resultVersionId == null ? '' : '?resultVersionId=' + encodeURIComponent(resultVersionId)));
+  },
+  getBudgetRegions: function () {
+    return http.get(BASE + '/budget/regions');
+  },
+  getBudgetOptions: function (regionCode) {
+    return http.get(BASE + '/budget/options?regionCode=' + encodeURIComponent(regionCode));
+  },
   createBudgetEstimate: function (projectId, input) {
     return http.post(BASE + '/design-projects/' + projectId + '/budget-estimates', input);
+  },
+  createItemizedBudget: function (projectId, input, idemKey) {
+    return http.post(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates/itemized',
+      input, { 'Idempotency-Key': idemKey });
+  },
+  getBudgetEstimate: function (budgetId, revisionId) {
+    return http.get(BASE + '/budget-estimates/' + encodeURIComponent(budgetId)
+      + (revisionId == null ? '' : '?revisionId=' + encodeURIComponent(revisionId)));
+  },
+  saveBudgetEstimate: function (budgetId, idemKey) {
+    return http.post(BASE + '/budget-estimates/' + encodeURIComponent(budgetId) + '/save', {},
+      { 'Idempotency-Key': idemKey });
+  },
+  getBudgetHistory: function (projectId, options) {
+    const query = options || {};
+    const params = ['savedOnly=' + (query.savedOnly !== false), 'limit=' + encodeURIComponent(query.limit || 20)];
+    if (query.cursor != null) params.push('cursor=' + encodeURIComponent(query.cursor));
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates?' + params.join('&'));
+  },
+  getBudgetQuotes: function (projectId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes');
+  },
+  getBudgetQuote: function (projectId, quoteId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes/' + encodeURIComponent(quoteId));
   },
 
   // ---- 投稿 ----

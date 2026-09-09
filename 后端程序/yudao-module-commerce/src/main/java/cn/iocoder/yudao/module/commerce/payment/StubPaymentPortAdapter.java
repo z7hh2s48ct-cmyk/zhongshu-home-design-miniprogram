@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   「已创建预支付的订单查单返回 SUCCEEDED、退款返回 SUCCEEDED」。
  */
 @Component
+@Profile("zsdev & !prod & !production")
 public class StubPaymentPortAdapter implements PaymentPort {
 
     private static final ObjectMapper JSON = new ObjectMapper();

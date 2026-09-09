@@ -40,6 +40,27 @@ public class SubmissionAdminController {
     @Resource
     private SubmissionReviewService submissionReviewService;
 
+    @Resource
+    private cn.iocoder.yudao.module.design.asset.AssetService assetService;
+
+    @PostMapping("/{submissionId}/assets/{assetId}/preview-tickets")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.SUBMISSION_REVIEW + "')")
+    public CommonResult<Map<String, String>> previewTicket(@PathVariable("submissionId") long submissionId,
+                                                           @PathVariable("assetId") long assetId) {
+        var ticket = assetService.requestReviewTicket(SecurityFrameworkUtils.getLoginUserId(), submissionId, assetId);
+        return success(Map.of("ticket", ticket.getToken()));
+    }
+
+    @GetMapping("/{submissionId}/assets/{assetId}/content")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.SUBMISSION_REVIEW + "')")
+    public org.springframework.http.ResponseEntity<byte[]> previewContent(@PathVariable("submissionId") long submissionId,
+            @PathVariable("assetId") long assetId, @RequestParam("ticket") String ticket) {
+        var content = assetService.readReviewTicket(SecurityFrameworkUtils.getLoginUserId(), submissionId, assetId, ticket);
+        return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .contentType(org.springframework.http.MediaType.parseMediaType(content.mimeType()))
+                .header("X-Content-Type-Options", "nosniff").body(content.content());
+    }
+
     @GetMapping
     @Operation(summary = "投稿队列分页查询")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.SUBMISSION_REVIEW + "')")
@@ -60,7 +81,9 @@ public class SubmissionAdminController {
     public CommonResult<AppSubmissionRespVO> getSubmission(@PathVariable("submissionId") String submissionId) {
         var row = submissionReviewService.getAdminSubmission(Long.parseLong(submissionId))
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("投稿不存在"));
-        return success(toVo(row));
+        var vo = toVo(row);
+        vo.setPreviewAssets(submissionReviewService.previewAssets(row.resultVersionId()));
+        return success(vo);
     }
 
     @PostMapping("/{submissionId}/review-decisions")
@@ -125,9 +148,12 @@ public class SubmissionAdminController {
         vo.setStatus(row.status());
         vo.setCurrentRound(row.currentRound());
         vo.setReviewComment(row.reviewComment());
+        vo.setNote(row.note());
+        vo.setPublicDisplayGranted(row.publicDisplayGranted());
+        vo.setGenerationReferenceGranted(row.generationReferenceGranted());
         vo.setSubmittedAt(row.createTime() == null ? null
                 : LocalDateTime.ofInstant(row.createTime(), ZoneId.systemDefault()));
-        vo.setPublicationStatus(row.publishedCaseId() == null ? null : "PUBLISHED");
+        vo.setPublicationStatus(submissionReviewService.publicationStatus(row.publishedCaseId()));
         vo.setAllowedActions(switch (row.status()) {
             case "SUBMITTED", "RESUBMITTED", "IN_REVIEW" -> List.of("APPROVE", "CHANGES_REQUESTED", "REJECT");
             case "APPROVED" -> row.publishedCaseId() == null
@@ -135,6 +161,7 @@ public class SubmissionAdminController {
             case "CHANGES_REQUESTED" -> List.of("VIEW"); // 等待投稿人重提
             default -> List.of("VIEW");
         });
+        if (java.util.Objects.equals(SecurityFrameworkUtils.getLoginUserId(), row.userId())) vo.setAllowedActions(List.of("VIEW"));
         return vo;
     }
 

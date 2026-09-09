@@ -70,6 +70,10 @@ export const removeLoginForm = () => {
 // ========== 租户相关 ==========
 
 export const getTenantId = () => {
+  // 关闭租户切换不等于关闭后端租户隔离；单租户部署不读取旧登录的租户缓存。
+  if (import.meta.env.VITE_APP_TENANT_ENABLE !== 'true') {
+    return import.meta.env.VITE_APP_TENANT_ID
+  }
   return wsCache.get(CACHE_KEY.TenantId)
 }
 

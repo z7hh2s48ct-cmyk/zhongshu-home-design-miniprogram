@@ -1,0 +1,21 @@
+<view class="v12-page" wx:if="{{accessReady}}">
+  <v12-navbar title="{{title}}" show-back show-brand="{{false}}" />
+  <view class="records-content">
+    <view wx:if="{{loading}}" class="record-empty">正在读取…</view>
+    <view wx:elif="{{error}}" class="v12-card record-empty"><text>{{error}}</text><button class="record-button" bindtap="load">重试</button></view>
+    <block wx:elif="{{loaded}}">
+      <button wx:if="{{canResume}}" class="record-button" bindtap="resumeDesign">继续设计</button>
+      <view class="v12-card record-card record-fields"><view wx:for="{{fields}}" wx:key="label"><text class="label">{{item.label}}</text><text>{{item.value}}</text></view></view>
+      <view wx:if="{{canResubmit}}" class="v12-card record-card">
+        <text class="record-title">修改后重新提交</text>
+        <text class="record-hint">请根据审核意见补充说明。本次重提沿用上方投稿的冻结方案，不替换图纸。</text>
+        <textarea class="resubmit-note" value="{{resubmitNote}}" bindinput="editResubmitNote" maxlength="512" disabled="{{submitting}}" placeholder="填写修改说明" aria-label="修改说明" adjust-position />
+        <text wx:if="{{submitError}}" class="record-hint">{{submitError}}</text>
+        <button class="record-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="resubmit">重新提交审核</button>
+      </view>
+      <view wx:for="{{versions}}" wx:key="id" class="v12-card record-card" data-id="{{item.id}}" bindtap="openVersion" role="button" aria-label="{{'查看' + item.title}}"><view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="18px" color="#8d8178" /></view><text class="record-hint">{{item.hint}}</text><text class="record-hint">{{item.time}}</text></view>
+      <view wx:if="{{!versions.length && !versionId}}" class="v12-card record-empty">尚未形成最终方案版本；完成立面选择后可在这里回看。</view>
+      <view class="record-actions"><button wx:if="{{versionId}}" class="record-button" bindtap="openVersion">查看投稿方案</button><button class="record-button" bindtap="budgetHistory">查看已保存预算</button><button class="record-button" bindtap="load">刷新状态</button></view>
+    </block>
+  </view>
+</view>

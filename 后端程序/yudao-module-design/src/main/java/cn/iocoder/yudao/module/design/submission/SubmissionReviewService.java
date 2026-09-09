@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.design.submission;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.design.catalog.CaseCatalogService;
+import cn.iocoder.yudao.module.design.budget.BudgetInputs;
+import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.module.infra.zhongshu.event.OutboxEventMessage;
 import cn.iocoder.yudao.module.infra.zhongshu.event.ReliableEventPort;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
@@ -34,6 +36,13 @@ import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.SUBMISSION
 @Service
 public class SubmissionReviewService {
 
+    public String publicationStatus(Long caseId) {
+        if (caseId == null) return null;
+        List<String> rows = jdbcTemplate.queryForList("SELECT publication_status FROM design_case WHERE id=? AND deleted=FALSE",
+                String.class, caseId);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
     private final JdbcTemplate jdbcTemplate;
 
     private final TransactionTemplate txTemplate;
@@ -57,7 +66,9 @@ public class SubmissionReviewService {
     public long countAdminSubmissions(String status) {
         StringBuilder where = new StringBuilder(" WHERE deleted = FALSE");
         java.util.List<Object> args = new java.util.ArrayList<>();
-        if (status != null && !status.isBlank()) {
+        if ("SUBMITTED".equals(status)) {
+            where.append(" AND status IN ('SUBMITTED','RESUBMITTED','IN_REVIEW')");
+        } else if (status != null && !status.isBlank()) {
             where.append(" AND status = ?");
             args.add(status);
         }
@@ -69,7 +80,9 @@ public class SubmissionReviewService {
     public java.util.List<SubmissionRow> pageAdminSubmissions(String status, int pageNo, int pageSize) {
         StringBuilder where = new StringBuilder(" WHERE s.deleted = FALSE");
         java.util.List<Object> args = new java.util.ArrayList<>();
-        if (status != null && !status.isBlank()) {
+        if ("SUBMITTED".equals(status)) {
+            where.append(" AND s.status IN ('SUBMITTED','RESUBMITTED','IN_REVIEW')");
+        } else if (status != null && !status.isBlank()) {
             where.append(" AND s.status = ?");
             args.add(status);
         }
@@ -92,12 +105,14 @@ public class SubmissionReviewService {
 
     public record SubmissionRow(long submissionId, long projectId, long userId, long resultVersionId, String status,
                                 int currentRound, Long publishedCaseId, String reviewComment,
-                                java.time.Instant createTime) {
+                                java.time.Instant createTime, boolean publicDisplayGranted,
+                                boolean generationReferenceGranted, String note) {
     }
 
     private static final String SUBMISSION_COLUMNS =
             "s.id, s.project_id, s.user_id, s.result_version_id, s.status, s.current_round, s.published_case_id, "
-                    + "s.create_time, d.comment AS review_comment "
+                    + "s.create_time, s.public_display_granted, s.generation_reference_granted, d.comment AS review_comment, "
+                    + "(SELECT r.content_snapshot->>'note' FROM submission_revision r WHERE r.submission_id=s.id AND r.round_no=s.current_round AND r.deleted=FALSE) AS note "
                     + "FROM case_submission s "
                     + "LEFT JOIN review_task t ON t.submission_id = s.id AND t.round_no = s.current_round "
                     + "AND t.deleted = FALSE "
@@ -134,10 +149,14 @@ public class SubmissionReviewService {
         return new SubmissionRow(rs.getLong("id"), rs.getLong("project_id"), rs.getLong("user_id"),
                 rs.getLong("result_version_id"), rs.getString("status"), rs.getInt("current_round"),
                 publishedCaseId, rs.getString("review_comment"),
-                rs.getTimestamp("create_time") == null ? null : rs.getTimestamp("create_time").toInstant());
+                rs.getTimestamp("create_time") == null ? null : rs.getTimestamp("create_time").toInstant(),
+                rs.getBoolean("public_display_granted"), rs.getBoolean("generation_reference_granted"), rs.getString("note"));
     }
 
     public List<String> validateForPublication(long userId, long projectId, long resultVersionId) {
+        Long owner = jdbcTemplate.queryForObject("SELECT count(*) FROM design_project WHERE id=? AND user_id=? AND deleted=FALSE",
+                Long.class, projectId, userId);
+        if (owner == null || owner == 0) throw exception(RESOURCE_FORBIDDEN);
         List<String> missing = new java.util.ArrayList<>();
         Long version = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM design_result_version WHERE id = ? AND project_id = ? "
@@ -221,6 +240,9 @@ public class SubmissionReviewService {
         if (decision == null || !List.of("APPROVE", "CHANGES_REQUESTED", "REJECT").contains(decision)) {
             throw exception(SUBMISSION_STATE_CONFLICT);
         }
+        if ("CHANGES_REQUESTED".equals(decision) && (comment == null || comment.isBlank())) {
+            throw new ServiceException(1_071_000_002, "退修必须填写修改意见");
+        }
         txTemplate.execute(status -> {
             Map<String, Object> submission = jdbcTemplate.queryForMap(
                     "SELECT id, user_id, status, current_round FROM case_submission "
@@ -230,7 +252,7 @@ public class SubmissionReviewService {
                 throw exception(RESOURCE_FORBIDDEN); // 投稿人自审拒绝
             }
             String currentStatus = (String) submission.get("status");
-            if (!List.of("SUBMITTED", "RESUBMITTED", "IN_REVIEW", "CHANGES_REQUESTED").contains(currentStatus)) {
+            if (!List.of("SUBMITTED", "RESUBMITTED", "IN_REVIEW").contains(currentStatus)) {
                 throw exception(SUBMISSION_STATE_CONFLICT);
             }
             int round = ((Number) submission.get("current_round")).intValue();
@@ -269,6 +291,13 @@ public class SubmissionReviewService {
 
     /** 退修后重提：仅 CHANGES_REQUESTED；新建 revision 轮次与新审核任务 */
     public long resubmit(long userId, long submissionId, String note) {
+        return resubmit(userId, submissionId, note, null).submissionId();
+    }
+
+    public SubmissionRow resubmit(long userId, long submissionId, String note, String idempotencyKey) {
+        if (note != null && note.length() > 512 || idempotencyKey != null && idempotencyKey.length() > 128) {
+            throw new ServiceException(1_071_000_002, "重提说明或请求编号过长");
+        }
         return txTemplate.execute(status -> {
             Map<String, Object> submission = jdbcTemplate.queryForMap(
                     "SELECT id, user_id, status, current_round, result_version_id, "
@@ -276,6 +305,18 @@ public class SubmissionReviewService {
                             + "WHERE id = ? AND deleted = FALSE FOR UPDATE", submissionId);
             if (((Number) submission.get("user_id")).longValue() != userId) {
                 throw exception(RESOURCE_FORBIDDEN);
+            }
+            // 锁定投稿后读回执：响应丢失或并发重复请求均只创建一次轮次。
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                var receipts = jdbcTemplate.queryForList("SELECT content_snapshot::text, response_snapshot::text FROM submission_revision "
+                        + "WHERE submission_id=? AND idempotency_key=?", submissionId, idempotencyKey);
+                if (!receipts.isEmpty()) {
+                    var receipt = receipts.get(0);
+                    if (!java.util.Objects.equals(BudgetInputs.readJson((String) receipt.get("content_snapshot")).get("note"), note)) {
+                        throw exception(SUBMISSION_STATE_CONFLICT);
+                    }
+                    return JsonUtils.parseObject((String) receipt.get("response_snapshot"), SubmissionRow.class);
+                }
             }
             if (!"CHANGES_REQUESTED".equals(submission.get("status"))) {
                 throw exception(SUBMISSION_STATE_CONFLICT);
@@ -296,8 +337,49 @@ public class SubmissionReviewService {
             jdbcTemplate.update(
                     "UPDATE case_submission SET status = 'RESUBMITTED', current_round = ?, "
                             + "update_time = now() WHERE id = ?", nextRound, submissionId);
-            return submissionId;
+            SubmissionRow response = getMySubmission(userId, submissionId).orElseThrow();
+            if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                jdbcTemplate.update("UPDATE submission_revision SET idempotency_key=?, response_snapshot=CAST(? AS jsonb) "
+                        + "WHERE submission_id=? AND round_no=?", idempotencyKey, JsonUtils.toJsonString(response), submissionId, nextRound);
+            }
+            return response;
         });
+    }
+
+    public record PreviewAsset(String assetId, String role, String label) { }
+
+    /** 只读取冻结选择，不读取项目当前选择或所有历史候选。 */
+    public List<PreviewAsset> previewAssets(long resultVersionId) {
+        return jdbcTemplate.query("SELECT c.asset_id,s.stage FROM design_result_version v "
+                        + "JOIN design_selection s ON s.id IN (v.flat_selection_id,v.elevation_selection_id) "
+                        + "AND s.project_id=v.project_id AND s.deleted=FALSE "
+                        + "JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=v.project_id AND c.deleted=FALSE "
+                        + "WHERE v.id=? AND v.deleted=FALSE ORDER BY s.stage DESC",
+                (rs, i) -> new PreviewAsset(rs.getString("asset_id"), rs.getString("stage"),
+                        "FLAT".equals(rs.getString("stage")) ? "选定平面方案" : "选定立面效果"), resultVersionId);
+    }
+
+    private Map<String, Object> publicationParameters(long resultVersionId) {
+        var fields = new java.util.LinkedHashMap<String, Object>();
+        var snapshots = jdbcTemplate.queryForList("SELECT s.inputs::text FROM design_requirement_snapshot s "
+                + "JOIN design_result_version v ON v.project_id=s.project_id WHERE v.id=? AND s.deleted=FALSE "
+                + "AND s.create_time<=v.create_time ORDER BY s.input_version,s.id", resultVersionId);
+        snapshots.forEach(s -> fields.putAll(BudgetInputs.readJson((String) s.get("inputs"))));
+        fields.putAll(BudgetInputs.readJson(jdbcTemplate.queryForObject(
+                "SELECT config_snapshot::text FROM design_result_version WHERE id=?", String.class, resultVersionId)));
+        if (!fields.containsKey("floorCount") && fields.containsKey("floors")) fields.put("floorCount", fields.get("floors"));
+        var resolved = new java.util.LinkedHashMap<String, Object>(BudgetInputs.resolve(BudgetInputs.fromSnapshot(fields), Map.of()).values());
+        Object style = fields.get("styleCode");
+        if (style == null) {
+            var styles = jdbcTemplate.queryForList("SELECT cv.style_code FROM design_result_version v JOIN design_project p ON p.id=v.project_id "
+                    + "JOIN design_case_version cv ON cv.id=p.ref_version_id WHERE v.id=?", String.class, resultVersionId);
+            if (!styles.isEmpty()) style = styles.get(0);
+        }
+        if (style == null || style.toString().isBlank() || !resolved.containsKey("buildingArea") || !resolved.containsKey("floorCount")) {
+            throw new ServiceException(1_071_000_002, "投稿版本缺少建筑面积、层数或风格，不能使用默认参数发布");
+        }
+        resolved.put("styleCode", style);
+        return resolved;
     }
 
     /**
@@ -307,10 +389,13 @@ public class SubmissionReviewService {
     public long publishApprovedAsCase(long submissionId, String operator) {
         return txTemplate.execute(status -> {
             Map<String, Object> submission = jdbcTemplate.queryForMap(
-                    "SELECT id, user_id, status, result_version_id, generation_reference_granted "
+                    "SELECT id, user_id, status, result_version_id, public_display_granted, generation_reference_granted "
                             + "FROM case_submission WHERE id = ? AND deleted = FALSE FOR UPDATE", submissionId);
             if (!"APPROVED".equals(submission.get("status"))) {
                 throw exception(SUBMISSION_STATE_CONFLICT);
+            }
+            if (!Boolean.TRUE.equals(submission.get("public_display_granted"))) {
+                throw exception(PUBLICATION_VALIDATION_FAILED);
             }
             Long alreadyPublished = jdbcTemplate.queryForObject(
                     "SELECT published_case_id FROM case_submission WHERE id = ? FOR UPDATE",
@@ -320,34 +405,22 @@ public class SubmissionReviewService {
             }
             long userId = ((Number) submission.get("user_id")).longValue();
             long resultVersionId = ((Number) submission.get("result_version_id")).longValue();
-            // 从投稿项目的真实结果版本与需求快照提取案例参数（审查 C5：不得硬编码假参数）
-            Map<String, Object> proj = jdbcTemplate.queryForMap(
-                    "SELECT p.ref_case_id, "
-                    + "(SELECT v.style_code FROM design_case_version v WHERE v.id = p.ref_version_id) AS style_code "
-                    + "FROM design_result_version rv JOIN design_project p ON p.id = rv.project_id "
-                    + "WHERE rv.id = ?", resultVersionId);
-            Map<String, Object> rv = jdbcTemplate.queryForMap(
-                    "SELECT elevation_selection_id FROM design_result_version WHERE id = ?", resultVersionId);
-            String styleCode = proj.get("style_code") == null ? "MODERN" : (String) proj.get("style_code");
-            // 面积/层数取自需求快照输入（无则用投稿用户项目需求默认）
-            int buildingArea = 0;
-            int floorCount = 0;
-            List<Map<String, Object>> inputs = jdbcTemplate.queryForList(
-                    "SELECT inputs::text FROM design_requirement_snapshot "
-                            + "WHERE project_id = (SELECT project_id FROM design_result_version WHERE id = ?) "
-                            + "AND deleted = FALSE ORDER BY input_version DESC LIMIT 1", resultVersionId);
-            if (!inputs.isEmpty() && inputs.get(0).get("inputs") != null) {
-                try {
-                    var node = new com.fasterxml.jackson.databind.ObjectMapper()
-                            .readTree((String) inputs.get(0).get("inputs"));
-                    buildingArea = node.path("buildingArea").asInt(0);
-                    floorCount = node.path("floors").asInt(0);
-                } catch (Exception ignored) {
-                    // 快照解析失败按 0 处理，下方默认值兜底
-                }
+            var parameters = publicationParameters(resultVersionId);
+            String styleCode = parameters.get("styleCode").toString();
+            // 案例目录的既有面积字段为整数平方米。不能静默截断小数或填假值。
+            int buildingArea;
+            try { buildingArea = new java.math.BigDecimal(parameters.get("buildingArea").toString()).intValueExact(); }
+            catch (ArithmeticException e) { throw new ServiceException(1_071_000_002, "案例目录暂仅支持整数平方米，请先核定投稿版本面积"); }
+            int floorCount = ((Number) parameters.get("floorCount")).intValue();
+            var selected = previewAssets(resultVersionId);
+            if (selected.size() != 2 || selected.stream().map(PreviewAsset::role).distinct().count() != 2) {
+                throw exception(PUBLICATION_VALIDATION_FAILED);
             }
-            if (buildingArea <= 0) buildingArea = 120;
-            if (floorCount <= 0) floorCount = 2;
+            for (var asset : selected) {
+                Integer usable = jdbcTemplate.queryForObject("SELECT count(*) FROM asset WHERE id=? AND owner_user_id=? "
+                        + "AND upload_status='ACCEPTED' AND deleted=FALSE", Integer.class, Long.parseLong(asset.assetId()), userId);
+                if (usable == null || usable == 0) throw exception(PUBLICATION_VALIDATION_FAILED);
+            }
             long caseId = IdWorker.getId();
             long versionId = IdWorker.getId();
             jdbcTemplate.update(
@@ -366,36 +439,27 @@ public class SubmissionReviewService {
             jdbcTemplate.update(
                     "UPDATE case_submission SET published_case_id = ?, update_time = now() WHERE id = ?",
                     caseId, submissionId);
-            // 投稿项目的候选资产 → AI 案例资产关联（详情页可见，审查 C5 缺口 #4）
-            List<Map<String, Object>> candidates = jdbcTemplate.queryForList(
-                    "SELECT id, asset_id, slot_no FROM design_candidate "
-                            + "WHERE project_id = (SELECT project_id FROM design_result_version WHERE id = ?) "
-                            + "AND deleted = FALSE ORDER BY id", resultVersionId);
-            int floorNo = 0;
-            boolean coverTaken = false;
-            java.util.Set<Long> seenAssets = new java.util.HashSet<>();
-            for (Map<String, Object> c : candidates) {
-                long candidateAssetId = ((Number) c.get("asset_id")).longValue();
-                if (!seenAssets.add(candidateAssetId)) {
-                    continue; // 平面/立面任务可能共享资产，去重防 (version, role, floor) 唯一键冲突
-                }
-                // 第一条未占用候选做封面，其余按平面图挂接；COVER 已占用则一律 FLOOR_PLAN
-                String role = coverTaken ? "FLOOR_PLAN" : "COVER";
+            for (var asset : selected) {
+                long candidateAssetId = Long.parseLong(asset.assetId());
+                String role = "FLAT".equals(asset.role()) ? "FLOOR_PLAN" : "ELEVATION";
                 jdbcTemplate.update(
                         "INSERT INTO design_case_asset (id, case_version_id, asset_id, asset_role, floor_no) "
                                 + "VALUES (?, ?, ?, ?, ?)",
                         IdWorker.getId(), versionId, candidateAssetId, role,
-                        role.equals("FLOOR_PLAN") ? ++floorNo : null);
-                coverTaken = true;
+                        role.equals("FLOOR_PLAN") ? 1 : null);
+                if ("ELEVATION".equals(role)) {
+                    jdbcTemplate.update("INSERT INTO design_case_asset (id,case_version_id,asset_id,asset_role) VALUES (?,?,?,'COVER')",
+                            IdWorker.getId(), versionId, candidateAssetId);
+                }
             }
             // 用户授予的生成参考许可 → 案例平面资产的显式授权记录（审查 C5 缺口 #3：asset_id 必须是真实资产）
             if ((Boolean) submission.get("generation_reference_granted")) {
-                for (Map<String, Object> c : candidates) {
+                for (var asset : selected) {
                     jdbcTemplate.update(
                             "INSERT INTO asset_rights_grant (id, asset_id, grantor_user_id, rights_holder, "
                                     + "scope, territories, purposes, effective_at) "
                             + "VALUES (?, ?, ?, ?, 'GENERATION_REFERENCE', '*', '*', now())",
-                            IdWorker.getId(), ((Number) c.get("asset_id")).longValue(), userId, "投稿用户");
+                            IdWorker.getId(), Long.parseLong(asset.assetId()), userId, "投稿用户");
                 }
             }
             reliableEventPort.append(OutboxEventMessage.builder()

@@ -109,11 +109,40 @@ test('所有底部入口遵守相同门禁，我的基础页可打开', () => {
   }
 });
 
-test('首页消息入口同样需要激活', () => {
+test('“我的”页面消息入口同样需要激活', () => {
   const env = runtime();
-  const definition = env.component('components/v12-navbar/index.js');
-  definition.methods.openMessages();
+  const profile = env.page('pages/profile/index');
+  profile.openMessages();
   assert.equal(env.calls[0][0], 'modal');
+});
+
+test('未读消息数量在消息页与“我的”Tab之间共享并防止重复请求', async () => {
+  const env = runtime(true);
+  const api = env.load('utils/api.js');
+  let resolveCount;
+  let requestCount = 0;
+  api.getUnreadCount = () => {
+    requestCount += 1;
+    return new Promise((resolve) => { resolveCount = resolve; });
+  };
+  const unread = env.load('utils/unread-count.js');
+  const first = unread.refreshUnreadCount();
+  const second = unread.refreshUnreadCount();
+  assert.equal(requestCount, 1);
+  resolveCount(3);
+  assert.equal(await first, 3);
+  assert.equal(await second, 3);
+  assert.equal(env.app.globalData.unreadCount, 3);
+  assert.equal(unread.decrementUnreadCount(), 2);
+
+  const definition = env.component();
+  const instance = {
+    data: { ...definition.data },
+    setData(value) { Object.assign(this.data, value); }
+  };
+  api.getUnreadCount = () => Promise.resolve(4);
+  await definition.methods.updateUnreadCount.call(instance);
+  assert.equal(instance.data.unreadCount, 4);
 });
 
 test('已激活用户点击直接进入原功能', () => {
@@ -136,7 +165,7 @@ test('非布尔有效状态和读取失败不能放行业务，但首页仍能�
 });
 
 test('未激活直达任何业务页时不展示页面，也不初始化业务', () => {
-  for (const route of config.pages.filter((route) => !['pages/home/index', 'pages/profile/index', 'pages/auth/index'].includes(route))) {
+  for (const route of config.pages.filter((route) => !['pages/home/index', 'pages/profile/index', 'pages/profile/services', 'pages/auth/index'].includes(route))) {
     const env = runtime();
     const page = env.page(route, { stage: 'elevation', count: '4' });
     assert.equal(page.data.accessReady, false, route);
@@ -161,27 +190,44 @@ test('授权失效后页面隐藏，点击不能继续生成或支付', () => {
   }
 });
 
-test('受限页中的导航栏与底部导航也清除失效内容并引导激活', () => {
-  for (const entry of ['message', 'tab']) {
-    const env = runtime(true);
-    env.page('pages/home/index');
-    const page = env.page('pages/ai-design/index');
-    env.storage.v12Authorized = false;
-    if (entry === 'message') env.component('components/v12-navbar/index.js').methods.openMessages();
-    else {
-      const tab = env.component();
-      tab.methods.switchTab.call({ data: { ...tab.data, current: 2 } }, { currentTarget: { dataset: { index: 1 } } });
-    }
-    assert.equal(page.data.accessReady, false);
-    assert.equal(env.calls[0][0], 'switchTab');
-    assert.equal(env.calls[0][1].url, '/pages/home/index');
-    assert.equal(env.calls[1][0], 'modal');
-    env.calls[1][1].success({ cancel: true });
-    assert.equal(env.calls.length, 2);
-  }
+test('受限页中的底部导航清除失效内容并引导激活', () => {
+  const env = runtime(true);
+  env.page('pages/home/index');
+  const page = env.page('pages/ai-design/index');
+  env.storage.v12Authorized = false;
+  const tab = env.component();
+  tab.methods.switchTab.call({ data: { ...tab.data, current: 2 } }, { currentTarget: { dataset: { index: 1 } } });
+  assert.equal(page.data.accessReady, false);
+  assert.equal(env.calls[0][0], 'switchTab');
+  assert.equal(env.calls[0][1].url, '/pages/home/index');
+  assert.equal(env.calls[1][0], 'modal');
+  env.calls[1][1].success({ cancel: true });
+  assert.equal(env.calls.length, 2);
 });
 
-test('激活往返只解码外层导航参数，原目标的编码参数保持原样', () => {
+test('读取消息后无需 Tab 生命周期事件也同步缓存角标，访客清零', async () => {
+  const env = runtime(true);
+  const unread = env.load('utils/unread-count.js');
+  const tab = { data: {}, setData(value) { Object.assign(this.data, value); } };
+  env.pages.push({ getTabBar: () => tab }, { route: 'pages/messagecenter/messagecenter' });
+  unread.setUnreadCount(4);
+  assert.equal(tab.data.unreadCount, 4);
+  assert.equal(unread.decrementUnreadCount(), 3);
+  assert.equal(tab.data.unreadCount, 3);
+  env.load('utils/api.js').getUnreadCount = async () => 2;
+  await unread.refreshUnreadCount();
+  assert.equal(tab.data.unreadCount, 2);
+  env.storage.v12Authorized = false;
+  await unread.refreshUnreadCount();
+  assert.equal(tab.data.unreadCount, 0);
+});
+
+function mockRedemption(env) {
+  env.storage.zs_access_token = 'test-session';
+  env.load('utils/api.js').redeemAccessCode = async () => ({ status: 'ACTIVE' });
+}
+
+test('激活往返只解码外层导航参数，原目标的编码参数保持原样', async () => {
   const target = '/pages/budget/input?source=home%26card&title=%E6%88%B7%E5%9E%8B';
   const env = runtime();
   env.page('pages/home/index');
@@ -190,12 +236,13 @@ test('激活往返只解码外层导航参数，原目标的编码参数保持�
   const encoded = env.calls[1][1].url.split('?redirect=')[1];
   assert.equal(decodeURIComponent(encoded), target);
   const auth = env.page('pages/auth/index', { redirect: encoded });
-  auth.onInput({ detail: { value: 'DEMO-ONLY' } });
-  auth.verify();
+  mockRedemption(env);
+  auth.onInput({ detail: { value: 'TEST-ACTIVATION' } });
+  await auth.verify();
   assert.equal(env.calls.at(-1)[1].url, target);
 });
 
-test('激活页默认空码，演示激活成功按白名单回到原功能并保留查询参数', () => {
+test('激活页默认空码，服务端确认激活后回到原功能并保留查询参数', async () => {
   for (const target of ['/pages/ai-design/index', '/pages/budget/input?source=home']) {
     const env = runtime();
     env.page('pages/home/index');
@@ -203,31 +250,79 @@ test('激活页默认空码，演示激活成功按白名单回到原功能并�
     assert.equal(auth.data.code, '');
     auth.verify();
     assert.equal(env.storage.v12Authorized, false);
-    auth.onInput({ detail: { value: 'DEMO-ONLY' } });
-    auth.verify();
+    mockRedemption(env);
+    auth.onInput({ detail: { value: 'TEST-ACTIVATION' } });
+    await auth.verify();
     assert.equal(env.storage.v12Authorized, true);
     assert.equal(env.calls.at(-1)[1].url, target);
     assert.equal(env.calls.at(-1)[0], target.includes('ai-design') ? 'switchTab' : 'redirectTo');
   }
 });
 
-test('激活写入失败留在授权页，非法回跳回到首页', () => {
+test('激活写入失败留在授权页，非法回跳回到首页', async () => {
   const broken = runtime();
   broken.page('pages/home/index');
   const auth = broken.page('pages/auth/index');
-  auth.onInput({ detail: { value: 'DEMO-ONLY' } });
+  mockRedemption(broken);
+  auth.onInput({ detail: { value: 'TEST-ACTIVATION' } });
   broken.wx.setStorageSync = () => { throw new Error('storage unavailable'); };
-  auth.verify();
+  await auth.verify();
   assert.ok(!broken.calls.some(([type]) => ['navigateTo', 'redirectTo', 'switchTab'].includes(type)));
   assert.equal(broken.calls.at(-1)[0], 'toast');
   for (const target of ['https://example.com', '/pages/auth/index', '/pages/unknown/index', '%E0%A4%A']) {
     const env = runtime();
     env.page('pages/home/index');
     const page = env.page('pages/auth/index', { redirect: target });
-    page.onInput({ detail: { value: 'DEMO-ONLY' } });
-    page.verify();
+    mockRedemption(env);
+    page.onInput({ detail: { value: 'TEST-ACTIVATION' } });
+    await page.verify();
     assert.equal(env.calls.at(-1)[1].url, '/pages/home/index');
   }
+});
+
+test('演示码也必须由服务端兑换，失败、空结果或未激活状态不放行业务', async () => {
+  for (const result of [null, true, { status: 'NONE' }, { status: 'REVOKED' }, new Error('invalid code')]) {
+    const env = runtime();
+    env.page('pages/home/index');
+    mockRedemption(env);
+    let calls = 0;
+    env.load('utils/api.js').redeemAccessCode = async code => {
+      calls++; assert.equal(code, 'DEMO-ONLY');
+      if (result instanceof Error) throw result;
+      return result;
+    };
+    const page = env.page('pages/auth/index');
+    page.onInput({ detail: { value: 'DEMO-ONLY' } });
+    await page.verify();
+    assert.equal(calls, 1);
+    assert.equal(env.storage.v12Authorized, false);
+    assert.equal(page.data.loading, false);
+    assert.ok(!env.calls.some(([type]) => ['navigateTo', 'redirectTo', 'switchTab'].includes(type)));
+  }
+});
+
+test('兑换处理中防重复，失败保留授权码，可重试成功', async () => {
+  const env = runtime();
+  env.page('pages/home/index');
+  mockRedemption(env);
+  let rejectFirst, count = 0;
+  env.load('utils/api.js').redeemAccessCode = () => {
+    count++;
+    return new Promise((resolve, reject) => { rejectFirst = reject; });
+  };
+  const page = env.page('pages/auth/index');
+  page.onInput({ detail: { value: 'TEST-RETRY' } });
+  const first = page.verify();
+  await page.verify();
+  assert.equal(count, 1);
+  rejectFirst({ msg: '网络异常' });
+  await first;
+  assert.equal(page.data.code, 'TEST-RETRY');
+  assert.equal(page.data.loading, false);
+  assert.equal(env.storage.v12Authorized, false);
+  mockRedemption(env);
+  await page.verify();
+  assert.equal(env.storage.v12Authorized, true);
 });
 
 test('未激活的我的基础页不虚构身份和余额，激活状态切换可即时刷新', () => {

@@ -33,14 +33,19 @@ public class AiJobQueryService {
 
     public List<AiJobOrchestrationService.JobSnapshot> pageJobs(String status, String phase,
                                                                 int pageNo, int pageSize) {
+        int size = Math.max(1, Math.min(pageSize, 100));
         return jdbcTemplate.query(baseSelect() + where(status, phase)
-                        + " ORDER BY id LIMIT ? OFFSET ?",
-                (rs, i) -> mapRow(rs), pageSize, (long) Math.max(pageNo - 1, 0) * pageSize);
+                        + " ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
+                (rs, i) -> mapRow(rs), size, (long) Math.max(pageNo - 1, 0) * size);
     }
 
-    private String baseSelect() {
+    static String baseSelect() {
         return "SELECT id, user_id, phase, status, requested_count, accepted_count, progress, "
-                + "cancel_seq FROM ai_job";
+                + "cancel_seq, project_ref, unit_point_cost, total_point_cost, create_time, "
+                + "(SELECT SUM(s.refunded_points) FROM ai_job_settlement s WHERE s.job_id = ai_job.id "
+                + "AND s.deleted = FALSE) AS refunded_points, "
+                + "(SELECT MAX(s.create_time) FROM ai_job_settlement s WHERE s.job_id = ai_job.id "
+                + "AND s.deleted = FALSE) AS finished_at FROM ai_job";
     }
 
     private String where(String status, String phase) {
@@ -54,11 +59,16 @@ public class AiJobQueryService {
         return sb.toString();
     }
 
-    private AiJobOrchestrationService.JobSnapshot mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+    static AiJobOrchestrationService.JobSnapshot mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+        boolean terminal = List.of("SUCCEEDED", "PARTIALLY_SUCCEEDED", "FAILED", "CANCELLED").contains(rs.getString("status"));
         return new AiJobOrchestrationService.JobSnapshot(
                 rs.getLong("id"), rs.getLong("user_id"), rs.getString("phase"), rs.getString("status"),
-                rs.getInt("requested_count"), rs.getInt("accepted_count"), rs.getInt("progress"),
-                rs.getObject("cancel_seq") == null ? "ACTIVE" : "CANCEL_REQUESTED");
+                rs.getInt("requested_count"), rs.getInt("accepted_count"), terminal ? 100 : rs.getInt("progress"),
+                rs.getObject("cancel_seq") == null ? "ACTIVE" : "CANCEL_REQUESTED", rs.getString("project_ref"),
+                rs.getObject("unit_point_cost", Long.class), rs.getObject("total_point_cost", Long.class),
+                rs.getObject("refunded_points") == null ? null : rs.getBigDecimal("refunded_points").longValueExact(),
+                rs.getTimestamp("create_time").toInstant(),
+                terminal && rs.getTimestamp("finished_at") != null ? rs.getTimestamp("finished_at").toInstant() : null);
     }
 
 }

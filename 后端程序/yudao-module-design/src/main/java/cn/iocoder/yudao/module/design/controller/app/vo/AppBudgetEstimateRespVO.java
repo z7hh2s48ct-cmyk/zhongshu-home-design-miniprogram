@@ -14,6 +14,9 @@ public class AppBudgetEstimateRespVO {
     @Schema(description = "测算编号")
     private String estimateId;
 
+    @Schema(description = "计价模型；旧区间记录不可伪造为分项预算")
+    private String model = "LEGACY_RANGE";
+
     @Schema(description = "项目编号")
     private String projectId;
 
@@ -23,10 +26,10 @@ public class AppBudgetEstimateRespVO {
     @Schema(description = "输入快照（地区、结构、材料等级等）")
     private Map<String, Object> inputSnapshot;
 
-    @Schema(description = "总价区间下限（元）")
+    @Schema(description = "总价区间下限（分）")
     private Long totalMinCents;
 
-    @Schema(description = "总价区间上限（元）")
+    @Schema(description = "总价区间上限（分）")
     private Long totalMaxCents;
 
     @Schema(description = "费用构成明细")

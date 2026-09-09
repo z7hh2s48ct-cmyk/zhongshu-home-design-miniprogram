@@ -15,7 +15,7 @@
             placeholder="昵称关键字"
             clearable
             style="width: 180px"
-            @keyup.enter="load"
+            @keyup.enter="search"
           />
         </el-form-item>
         <el-form-item label="状态">
@@ -24,7 +24,7 @@
             clearable
             placeholder="全部"
             style="width: 150px"
-            @change="load"
+            @change="search"
           >
             <el-option label="正常" value="ACTIVE" />
             <el-option label="已停用" value="DISABLED" />
@@ -32,7 +32,7 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" @click="load">查询</el-button>
+          <el-button class="zs-btn-primary" @click="search">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -75,7 +75,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -174,6 +175,11 @@ const detail = reactive({ visible: false, loading: false, data: null as any })
 const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' })[s] || s
 const statusClass = (s: string) =>
   ({ ACTIVE: 'zs-tag--green', DISABLED: 'zs-tag--yellow', CLOSED: 'zs-tag--red' })[s] || ''
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true

@@ -37,6 +37,7 @@ protectedPage({
     const global = getApp().globalData;
     this.setData({ flatLabel: global.flatLabel || '已选平面方案' });
     this.refreshPoints();
+    require('../../utils/generation-price').refresh(this, 'ELEVATION');
     this.loadFlatImage();
   },
   refreshPoints() {
@@ -57,7 +58,7 @@ protectedPage({
     const field = e.currentTarget.dataset.field;
     this.setData({ [field]: e.currentTarget.dataset.value });
   },
-  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); },
+  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'ELEVATION'); },
   generate() {
     if (this.data.creating) return;
     const projectId = getApp().globalData.projectId;
@@ -73,11 +74,14 @@ protectedPage({
       color: self.data.accent
     };
     getApp().globalData.elevationConfig = config;
-    api.createElevationJob(projectId, config, idemKey).then(function (job) {
+    require('../../utils/generation-price').confirm('ELEVATION', self.data.count).then(function (price) {
+      config.priceConfirmation = price;
+      return api.createElevationJob(projectId, config, idemKey);
+    }).then(function (job) {
       getApp().globalData.jobId = job.jobId;
-      wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=' + self.data.count });
+      wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=' + config.count });
     }).catch(function (err) {
-      wx.showToast({ title: (err && err.msg) || '创建立面任务失败', icon: 'none' });
+      if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '创建立面任务失败', icon: 'none' });
       self.setData({ creating: false });
     });
   }

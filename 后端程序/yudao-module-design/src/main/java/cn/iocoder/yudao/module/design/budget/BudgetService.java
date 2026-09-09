@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.design.budget;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
+import cn.iocoder.yudao.module.design.project.DesignProjectService;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.RESOURCE_FORBIDDEN;
+import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.BUDGET_INPUT_INVALID;
 
 /**
  * 预算测算（架构 §6.8；P0 仅参考区间）：规则版本化，输入快照可复算，历史不漂移
@@ -28,9 +31,11 @@ public class BudgetService {
     private static final String DISCLAIMER = "仅供参考，不构成报价或结算依据";
 
     private final JdbcTemplate jdbcTemplate;
+    private final DesignProjectService projectService;
 
-    public BudgetService(DataSource dataSource) {
+    public BudgetService(DataSource dataSource, DesignProjectService projectService) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.projectService = projectService;
     }
 
     public long createRuleVersion(String regionCode, String structureType, String materialGrade,
@@ -48,6 +53,16 @@ public class BudgetService {
     public Estimate createEstimate(long userId, long projectId, String regionCode,
                                    String structureType, String materialGrade, int buildingArea,
                                    Long resultVersionId) {
+        // Reuse the project domain's ownership check before looking up prices or writing a budget.
+        projectService.getProject(projectId, userId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+        if (resultVersionId != null && !Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM design_result_version WHERE id = ? AND project_id = ? AND deleted = FALSE)",
+                Boolean.class, resultVersionId, projectId))) {
+            throw exception(RESOURCE_FORBIDDEN);
+        }
+        if (buildingArea < 1 || buildingArea > 10000) {
+            throw exception(BUDGET_INPUT_INVALID);
+        }
         List<Map<String, Object>> rules = jdbcTemplate.queryForList(
                 "SELECT id, low_cents_per_sqm, high_cents_per_sqm FROM budget_rule_version "
                         + "WHERE region_code = ? AND structure_type = ? AND material_grade = ? "
@@ -76,7 +91,7 @@ public class BudgetService {
         List<Estimate> rows = jdbcTemplate.query(
                 "SELECT id, project_id, rule_version_id, input_snapshot::text, total_low_cents, "
                         + "total_high_cents, create_time FROM budget_estimate "
-                        + "WHERE id = ? AND user_id = ? AND deleted = FALSE",
+                        + "WHERE id = ? AND user_id = ? AND model = 'LEGACY_RANGE' AND deleted = FALSE",
                 (rs, i) -> {
                     try {
                         var input = new com.fasterxml.jackson.databind.ObjectMapper().<Map<String, Object>>readValue(
@@ -92,14 +107,15 @@ public class BudgetService {
                     }
                 },
                 estimateId, userId);
-        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+        return rows.stream().findFirst().filter(row -> projectService.getProject(row.projectId(), userId).isPresent());
     }
 
     public List<Estimate> listByProject(long userId, long projectId) {
+        projectService.getProject(projectId, userId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
         return jdbcTemplate.query(
                 "SELECT id, project_id, rule_version_id, input_snapshot::text, total_low_cents, "
                         + "total_high_cents, create_time FROM budget_estimate "
-                        + "WHERE project_id = ? AND user_id = ? AND deleted = FALSE ORDER BY id DESC",
+                        + "WHERE project_id = ? AND user_id = ? AND model = 'LEGACY_RANGE' AND deleted = FALSE ORDER BY id DESC",
                 (rs, i) -> {
                     try {
                         var input = new com.fasterxml.jackson.databind.ObjectMapper().<Map<String, Object>>readValue(

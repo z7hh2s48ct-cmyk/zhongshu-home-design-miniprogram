@@ -1,0 +1,48 @@
+<view class="v12-page budget-page category-page" wx:if="{{accessReady}}">
+  <v12-navbar title="{{categoryTitle}}配置" show-back show-brand="{{false}}" />
+  <view wx:if="{{loading}}" class="budget-card state-card">正在加载预算配置…</view>
+  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="load">重试</button></view>
+  <block wx:elif="{{draft}}">
+    <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>请选择本项目的{{categoryTitle === '主体类' ? '主体建造' : '外装'}}配置</text><text class="completion-count"><text>{{completeCount}}</text>/{{totalCount}} 已完成</text></view>
+    <view wx:if="{{regionMissing}}" class="inline-warning"><text>请先选择已启用的建造地区。</text><button class="text-action" bindtap="parameters">修改参数</button></view>
+    <view wx:if="{{notice || storageError}}" class="inline-warning">{{storageError || notice}}</view>
+    <view class="budget-card category-card">
+      <view class="category-head"><text class="section-title">{{categoryTitle}}</text></view>
+      <view wx:for="{{standardRows}}" wx:key="code" class="selection-row" data-id="{{item.itemId}}" bindtap="openItem" role="button" aria-label="{{item.name}}配置">
+        <t-icon name="{{item.complete ? 'check-circle-filled' : 'circle'}}" size="25px" color="{{item.complete ? '#559b54' : '#c5c7c9'}}" />
+        <view class="selection-copy"><text class="item-name">{{item.name}}</text><text class="item-hint">{{item.hint}}</text></view>
+        <view class="selection-value"><text>{{item.selectedLabel}}</text><text wx:if="{{item.partial}}" class="selection-warning">配置待补齐</text><text wx:if="{{item.pendingPrice}}" class="selection-warning">待补价</text></view>
+        <t-icon name="chevron-right" size="16px" color="#898c94" />
+      </view>
+    </view>
+    <view wx:if="{{customRows.length}}" class="budget-card category-card custom-card">
+      <view class="category-head"><text class="section-title">补充预算项</text><text class="item-hint">按需选择</text></view>
+      <view wx:for="{{customRows}}" wx:key="itemId" class="selection-row" data-id="{{item.itemId}}" bindtap="openItem" role="button" aria-label="{{item.name}}配置">
+        <t-icon name="{{item.complete ? 'check-circle-filled' : 'circle'}}" size="25px" color="{{item.complete ? '#559b54' : '#c5c7c9'}}" />
+        <view class="selection-copy"><text class="item-name">{{item.name}}</text><text class="item-hint">补充项目</text></view>
+        <view class="selection-value"><text>{{item.selectedLabel}}</text><text wx:if="{{item.pendingPrice}}" class="selection-warning">待补价</text></view>
+        <t-icon name="chevron-right" size="16px" color="#898c94" />
+      </view>
+    </view>
+    <view wx:if="{{category === 'BODY'}}" class="budget-card explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">配置说明</text><text class="muted">选项只用于匹配当地预算标准</text></view></view>
+    <view wx:if="{{pendingPriceCount}}" class="inline-warning">已选配置中有{{pendingPriceCount}}项待补价，选择完成不代表预算已完整计价。</view>
+    <view class="budget-footer"><text class="footer-hint">配置保留在本机草稿，可返回生成待补充预算</text><button class="budget-primary" bindtap="save">保存并返回</button></view>
+  </block>
+  <view wx:if="{{activeItem}}" class="picker-mask" bindtap="closeItem">
+    <view class="picker-sheet" catchtap="keepSheet">
+      <view class="picker-heading"><text class="section-title">{{activeItem.name}}</text><button class="close-picker text-action" bindtap="closeItem" aria-label="关闭"><t-icon name="close" size="23px" color="#777a82" /></button></view>
+      <text class="muted">{{activeGroups.length > 1 ? '直接点选各组内容，同一组只选择一项' : '点击选项即可完成选择'}}</text>
+      <text wx:if="{{storageError}}" class="inline-warning">{{storageError}}</text>
+      <scroll-view scroll-y class="picker-content">
+        <view wx:for="{{activeGroups}}" wx:for-item="group" wx:key="name" class="group-row">
+          <text class="group-label">{{group.label}}</text>
+          <text wx:if="{{!group.options.length}}" class="muted">此组待管理员配置</text>
+          <view wx:for="{{group.options}}" wx:for-item="option" wx:key="optionId" class="direct-option {{option.selected ? 'direct-option--selected' : ''}}" data-group="{{group.name}}" data-option-id="{{option.optionId}}" bindtap="chooseOption" role="button" aria-label="{{option.displayLabel}}{{option.selected ? '，已选中' : ''}}">
+            <text>{{option.displayLabel}}</text><t-icon name="{{option.selected ? 'check-circle-filled' : 'circle'}}" size="23px" color="{{option.selected ? '#884312' : '#b6b4b0'}}" />
+          </view>
+        </view>
+      </scroll-view>
+      <button wx:if="{{activeGroups.length > 1}}" class="budget-primary" bindtap="closeItem">完成</button>
+    </view>
+  </view>
+</view>

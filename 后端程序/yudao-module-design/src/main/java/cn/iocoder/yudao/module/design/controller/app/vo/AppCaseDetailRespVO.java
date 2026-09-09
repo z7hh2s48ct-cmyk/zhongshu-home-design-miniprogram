@@ -31,6 +31,10 @@ public class AppCaseDetailRespVO {
     @Schema(description = "各层平面资产 ID 列表（按层序）")
     private List<String> floorPlanAssetIds;
 
+    private List<cn.iocoder.yudao.module.design.catalog.CaseCatalogService.FloorPlan> floorPlans;
+
+    private String designUnavailableReason;
+
     @Schema(description = "立面资产 ID")
     private String elevationAssetId;
 

@@ -25,7 +25,7 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="load">
+      <el-tabs v-model="activeTab" @tab-change="search">
         <el-tab-pane label="全部" name="ALL" />
         <el-tab-pane label="未使用" name="ACTIVE" />
         <el-tab-pane label="已绑定" name="CONSUMED" />
@@ -39,11 +39,11 @@
             placeholder="搜索掩码"
             clearable
             style="width: 200px"
-            @keyup.enter="load"
+            @keyup.enter="search"
           />
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" @click="load">查询</el-button>
+          <el-button class="zs-btn-primary" @click="search">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -84,7 +84,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -136,6 +137,11 @@ const loadStats = async () => {
   }
 }
 
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
+
 const load = async () => {
   query.status = activeTab.value === 'ALL' ? '' : activeTab.value
   loading.value = true
@@ -152,6 +158,7 @@ const load = async () => {
   loadStats()
 }
 const reset = () => {
+  query.pageNo = 1
   query.codeMask = ''
   load()
 }
@@ -167,7 +174,6 @@ const exportCodes = () => {
   message.info('完整码仅一次交付：请从批次详情生成一次性导出票据')
 }
 onMounted(load)
-watch(activeTab, load)
 </script>
 
 <style lang="scss" scoped>

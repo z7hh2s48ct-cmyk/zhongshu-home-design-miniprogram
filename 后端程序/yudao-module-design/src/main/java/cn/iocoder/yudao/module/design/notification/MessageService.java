@@ -68,6 +68,9 @@ public class MessageService implements cn.iocoder.yudao.module.infra.zhongshu.de
 
     /** 已读回执幂等 */
     public boolean markRead(long userId, long messageId) {
+        Integer owned = jdbcTemplate.queryForObject("SELECT count(*) FROM user_message WHERE id=? AND user_id=? AND deleted=FALSE",
+                Integer.class, messageId, userId);
+        if (owned == null || owned == 0) throw new org.springframework.security.access.AccessDeniedException("消息不存在或无权访问");
         int inserted = jdbcTemplate.update(
                 "INSERT INTO message_receipt (id, user_id, message_id) VALUES (?, ?, ?) "
                         + "ON CONFLICT (user_id, message_id) DO NOTHING",
@@ -76,12 +79,27 @@ public class MessageService implements cn.iocoder.yudao.module.infra.zhongshu.de
     }
 
     public List<Map<String, Object>> list(long userId, int limit) {
-        return jdbcTemplate.queryForList(
+        return listPage(userId, null, limit).list();
+    }
+
+    public record MessagePage(List<Map<String, Object>> list, String nextCursor) { }
+
+    public MessagePage listPage(long userId, String cursor, int limit) {
+        int size = Math.max(1, Math.min(limit, 100));
+        long before = Long.MAX_VALUE;
+        if (cursor != null && !cursor.isBlank()) {
+            try { before = Long.parseLong(cursor); if (before <= 0) throw new NumberFormatException(); }
+            catch (NumberFormatException e) { throw new cn.iocoder.yudao.framework.common.exception.ServiceException(400, "消息游标无效"); }
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "SELECT m.id, m.message_type, m.title, m.content, m.biz_type, m.biz_id, m.create_time, "
                         + "(r.id IS NOT NULL) AS read FROM user_message m "
                         + "LEFT JOIN message_receipt r ON r.message_id = m.id AND r.user_id = m.user_id "
-                        + "WHERE m.user_id = ? AND m.deleted = FALSE ORDER BY m.id DESC LIMIT ?",
-                userId, Math.min(limit, 100));
+                        + "WHERE m.user_id = ? AND m.deleted = FALSE AND m.id < ? ORDER BY m.id DESC LIMIT ?",
+                userId, before, size + 1);
+        boolean more = rows.size() > size;
+        var page = more ? rows.subList(0, size) : rows;
+        return new MessagePage(List.copyOf(page), more ? String.valueOf(page.get(page.size() - 1).get("id")) : null);
     }
 
 }

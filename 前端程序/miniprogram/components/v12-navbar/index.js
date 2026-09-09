@@ -1,13 +1,10 @@
 "use strict";
 
-const { openFeature } = require('../../utils/access');
-
 Component({
   properties: {
     title: { type: String, value: '' },
     showBack: { type: Boolean, value: false },
-    showBrand: { type: Boolean, value: true },
-    showNotice: { type: Boolean, value: false }
+    showBrand: { type: Boolean, value: true }
   },
   data: {
     statusBarHeight: 20,
@@ -34,9 +31,6 @@ Component({
   methods: {
     goBack() {
       wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/home/index' }) });
-    },
-    openMessages() {
-      openFeature('/pages/messagecenter/messagecenter');
     }
   }
 });

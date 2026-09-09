@@ -1,0 +1,10 @@
+<view class="v12-page">
+  <v12-navbar title="设置" show-back show-brand="{{false}}" />
+  <view class="v12-content services-content">
+    <text class="group-title">账号设置</text>
+    <view class="v12-card menu-card">
+      <view bindtap="openEdit" role="button"><text>个人资料</text><t-icon name="chevron-right" size="16px" /></view>
+      <view bindtap="openAuthorization" role="button"><text>{{authorized ? '授权信息' : '激活账号'}}</text><t-icon name="chevron-right" size="16px" /></view>
+    </view>
+  </view>
+</view>

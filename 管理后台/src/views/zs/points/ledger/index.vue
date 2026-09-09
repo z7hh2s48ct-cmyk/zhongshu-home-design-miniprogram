@@ -10,7 +10,7 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="load">
+      <el-tabs v-model="activeTab" @tab-change="search">
         <el-tab-pane label="点数流水" name="ledger" />
         <el-tab-pane label="人工调点单" name="adjustment" />
       </el-tabs>
@@ -23,7 +23,7 @@
               placeholder="用户编号"
               clearable
               style="width: 160px"
-              @keyup.enter="load"
+              @keyup.enter="search"
             />
           </el-form-item>
           <el-form-item label="类型">
@@ -32,7 +32,7 @@
               clearable
               placeholder="全部"
               style="width: 180px"
-              @change="load"
+              @change="search"
             >
               <el-option label="充值基础点" value="RECHARGE_BASE_CREDIT" />
               <el-option label="充值赠送点" value="RECHARGE_BONUS_CREDIT" />
@@ -46,7 +46,7 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button class="zs-btn-primary" @click="load">查询</el-button>
+            <el-button class="zs-btn-primary" @click="search">查询</el-button>
             <el-button @click="reset">重置</el-button>
             <el-button type="warning" plain @click="adjustDialog.visible = true"
               >人工调点</el-button
@@ -94,7 +94,7 @@
               clearable
               placeholder="全部"
               style="width: 180px"
-              @change="load"
+              @change="search"
             >
               <el-option label="待复核" value="SUBMITTED" />
               <el-option label="已执行" value="EXECUTED" />
@@ -102,7 +102,7 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button class="zs-btn-primary" @click="load">查询</el-button>
+            <el-button class="zs-btn-primary" @click="search">查询</el-button>
             <el-button type="warning" plain @click="adjustDialog.visible = true"
               >人工调点</el-button
             >
@@ -159,7 +159,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -273,6 +274,11 @@ const typeText = (t: string) =>
     RECHARGE_BASE_REVERSAL: '退款冲正(基础)',
     RECHARGE_BONUS_REVERSAL: '退款冲正(赠送)'
   })[t] || t
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true

@@ -1,18 +1,22 @@
 {
   "schemaVersion": 1,
-  "asOf": "2026-09-08",
+  "asOf": "2026-09-09",
   "inventory": {
     "mini": {
-      "executableFiles": 3,
-      "declaredTestCalls": 18
+      "executableFiles": 11,
+      "declaredTestCalls": 118
     },
     "backend": {
-      "contractFiles": 17,
-      "testMethods": 106,
+      "contractFiles": 31,
+      "testMethods": 263,
       "parameterizedMethods": 0
     },
+    "admin": {
+      "executableFiles": 5,
+      "declaredTestCalls": 40
+    },
     "e2e": {
-      "checkpoints": 37
+      "checkpoints": 54
     }
   }
 }

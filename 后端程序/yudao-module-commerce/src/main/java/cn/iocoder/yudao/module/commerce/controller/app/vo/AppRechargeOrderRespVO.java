@@ -31,6 +31,9 @@ public class AppRechargeOrderRespVO {
     @Schema(description = "到账履约状态：NOT_READY/PENDING/CREDITED/FAILED")
     private String fulfillmentState;
 
+    @Schema(description = "最近退款事实；无退款时为空，不以订单关闭推断退款成功")
+    private cn.iocoder.yudao.module.commerce.payment.RechargePaymentService.RefundSummary refund;
+
     @Schema(description = "客户端成功页必须查询服务端，不信任页面 URL 参数；未 CREDITED 前展示“到账处理中”")
     private List<String> allowedActions;
 

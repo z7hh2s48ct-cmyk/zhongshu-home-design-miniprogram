@@ -1,5 +1,5 @@
 <view class="v12-page">
-  <v12-navbar show-notice />
+  <v12-navbar />
   <view class="v12-content v12-content--tab home-content">
     <view class="v12-card hero">
       <image class="hero-art" src="/assets/v12/home-hero-scene.png" mode="aspectFill" />

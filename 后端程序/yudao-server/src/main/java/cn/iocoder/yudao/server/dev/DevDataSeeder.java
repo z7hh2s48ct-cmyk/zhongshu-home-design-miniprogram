@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import javax.sql.DataSource;
 import java.time.Instant;
@@ -20,6 +21,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@Profile("zsdev & !prod & !production")
 public class DevDataSeeder implements org.springframework.beans.factory.InitializingBean {
 
     private final JdbcTemplate jdbcTemplate;

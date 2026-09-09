@@ -27,6 +27,7 @@ protectedPage({
   onShow() {
     this.setData({ refCase: getApp().globalData.refCase });
     this.refreshPoints();
+    require('../../utils/generation-price').refresh(this, 'FLAT');
   },
   refreshPoints() {
     const self = this;
@@ -35,31 +36,25 @@ protectedPage({
     }).catch(function () { /* 静默保留占位 */ });
   },
   selectMode(e) { this.setData({ mode: Number(e.currentTarget.dataset.index) }); },
-  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); },
+  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'FLAT'); },
   chooseReference() { wx.switchTab({ url: '/pages/library/index' }); },
   clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
   onPromptInput(e) { this.setData({ prompt: e.detail.value }); },
 
   // ---- 草图上传：选图 → 摘要 → 上传票据 → 直传 → 完成校验 ----
-  chooseImage(e) {
-    const kind = e.currentTarget.dataset.kind === 'reference' ? 'reference' : 'sketch';
+  chooseImage() {
     const self = this;
     wx.chooseMedia({
       count: 1, mediaType: ['image'], sizeType: ['compressed'],
       success: function (res) {
         const file = res.tempFiles && res.tempFiles[0];
         if (!file) return;
-        if (kind === 'reference') {
-          // 后端创建项目契约暂无参考图字段，入口保留但暂不开放上传
-          wx.showToast({ title: '参考图上传即将开放', icon: 'none' });
-          return;
-        }
-        self.uploadSketch(file, kind);
+        self.uploadSketch(file);
       }
     });
   },
-  uploadSketch(file, kind) {
+  uploadSketch(file) {
     const self = this;
     const mime = mimeFromPath(file.tempFilePath);
     if (!mime) { wx.showToast({ title: '仅支持 JPG/PNG 图片', icon: 'none' }); return; }
@@ -79,8 +74,7 @@ protectedPage({
           })
           .then(function (ticket) {
             wx.hideLoading();
-            if (kind === 'sketch') self.setData({ sketchAssetId: ticket.assetId, sketchImage: file.tempFilePath });
-            else wx.showToast({ title: '参考图已上传', icon: 'success' });
+            self.setData({ sketchAssetId: ticket.assetId, sketchImage: file.tempFilePath });
           })
           .catch(function (err) {
             wx.hideLoading();
@@ -104,7 +98,7 @@ protectedPage({
         url: url,
         filePath: filePath,
         name: 'file',
-        header: { 'Content-Type': mime, 'Authorization': 'Bearer ' + http.getToken() },
+        header: { 'Content-Type': mime, 'Authorization': 'Bearer ' + http.getToken(), 'tenant-id': String(config.tenantId) },
         success: function (res) {
           if (res.statusCode >= 400) reject({ msg: '上传失败(' + res.statusCode + ')' });
           else resolve();
@@ -116,6 +110,7 @@ protectedPage({
 
   generate() {
     if (this.data.creating) return;
+    const count = this.data.count;
     const self = this;
     self.setData({ creating: true });
     const idemKey = 'proj-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
@@ -130,18 +125,22 @@ protectedPage({
             prompt: this.data.prompt, note: this.data.note
           }
         };
-    api.createProject(body).then(function (project) {
+    let confirmedPrice;
+    require('../../utils/generation-price').confirm('FLAT', count).then(function (price) {
+      confirmedPrice = price;
+      return api.createProject(body);
+    }).then(function (project) {
       const projectId = project && project.projectId;
       if (!projectId) throw { msg: '创建设计项目失败' };
       getApp().globalData.projectId = projectId;
       getApp().globalData.refCase = null;
       getApp().globalData.resultVersionId = null;
-      return api.createFlatJob(projectId, self.data.count, idemKey).then(function (job) {
+      return api.createFlatJob(projectId, count, idemKey, confirmedPrice).then(function (job) {
         getApp().globalData.jobId = job.jobId;
-        wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + self.data.count });
+        wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + count });
       });
     }).catch(function (err) {
-      wx.showToast({ title: (err && err.msg) || '创建任务失败', icon: 'none' });
+      if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '创建任务失败', icon: 'none' });
       self.setData({ creating: false });
     });
   }

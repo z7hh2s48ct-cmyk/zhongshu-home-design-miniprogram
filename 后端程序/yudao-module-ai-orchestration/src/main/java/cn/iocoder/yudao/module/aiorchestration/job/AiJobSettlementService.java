@@ -54,6 +54,11 @@ public class AiJobSettlementService {
     /** 创建任务并同事务扣点（P4C 接通账本；幂等键 = user_id + Idempotency-Key） */
     public long createJobWithCharge(long userId, String phase, int count,
                                     String idempotencyKey, String projectRef) {
+        return createJobWithCharge(userId, phase, count, idempotencyKey, projectRef, null);
+    }
+
+    public long createJobWithCharge(long userId, String phase, int count,
+                                    String idempotencyKey, String projectRef, PricingPort.PriceConfirmation confirmation) {
         try {
             return txTemplate.execute(status -> {
                 if (idempotencyKey != null && !idempotencyKey.isBlank()) {
@@ -66,6 +71,7 @@ public class AiJobSettlementService {
                     }
                 }
                 PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count);
+                PricingPort.requireConfirmed(quote, confirmation);
                 pricingPort.validateSnapshotStillValid(quote); // 价格更新竞态：失效即 PRICE_RULE_CHANGED
 
                 long jobId = IdWorker.getId();

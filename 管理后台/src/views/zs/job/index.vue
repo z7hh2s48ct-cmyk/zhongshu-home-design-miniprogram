@@ -17,7 +17,7 @@
             clearable
             placeholder="全部"
             style="width: 180px"
-            @change="load"
+            @change="search"
           >
             <el-option
               v-for="(label, value) in statusText"
@@ -33,14 +33,14 @@
             clearable
             placeholder="全部"
             style="width: 150px"
-            @change="load"
+            @change="search"
           >
             <el-option label="平面" value="FLAT" />
             <el-option label="立面" value="ELEVATION" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" @click="load">查询</el-button>
+          <el-button class="zs-btn-primary" @click="search">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -77,7 +77,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -100,13 +101,22 @@
           detail.data.acceptedCount
         }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{
-          detail.data.createdAt || '—'
+          fmtTime(detail.data.createdAt)
         }}</el-descriptions-item>
         <el-descriptions-item label="完成时间">{{
-          detail.data.finishedAt || '—'
+          fmtTime(detail.data.finishedAt)
         }}</el-descriptions-item>
         <el-descriptions-item label="单位点数" :span="2">{{
           detail.data.unitPointCost ?? '—'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="扣点快照">{{
+          detail.data.totalPointCost ?? '—'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="结算退点">{{
+          detail.data.refundedPointCost ?? '暂无结算'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="结算净消耗">{{
+          detail.data.netPointCost ?? '暂无结算'
         }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -115,6 +125,7 @@
 
 <script lang="ts" setup>
 import * as ZsApi from '@/api/zs'
+import { fmtTime } from '@/utils/zsFormat'
 
 defineOptions({ name: 'ZsAiJob' })
 
@@ -149,6 +160,11 @@ const statusClass = (s: string) =>
     FAILED: 'zs-tag--red',
     CANCELLED: 'zs-tag--red'
   })[s] || ''
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true

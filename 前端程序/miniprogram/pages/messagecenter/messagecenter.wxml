@@ -4,5 +4,7 @@
     <view wx:if="{{loading}}" class="v12-card message-empty">消息加载中…</view>
     <view wx:elif="{{!messages.length}}" class="v12-card message-empty">暂无消息，任务与审核动态会在这里通知你</view>
     <view class="v12-card message {{item.read ? '' : 'unread'}}" wx:for="{{messages}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap"><view class="message-icon"><t-icon name="notification" size="25px" color="#8a4a1a" /></view><view><text>{{item.title}}</text><text>{{item.content}}</text></view><span>{{item.time}}</span></view>
+    <view wx:if="{{error}}" class="v12-card message-empty" bindtap="retry">{{error}} · 点击重试</view>
+    <view wx:elif="{{nextCursor}}" class="v12-card message-empty" bindtap="loadMore">{{loadingMore ? '加载中…' : '加载更多消息'}}</view>
   </view>
 </view>

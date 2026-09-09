@@ -1,0 +1,26 @@
+@import '../../styles/v12-theme.scss';
+
+.budget-page { padding: 0 28rpx calc(190rpx + env(safe-area-inset-bottom)); background: #faf9f7; color: #121314; }
+.budget-page > v12-navbar { display: block; margin: 0 -28rpx; }
+.budget-card { background: #fff; border-radius: 20rpx; box-sizing: border-box; }
+.auto-note { min-height: 82rpx; margin-top: 24rpx; padding: 12rpx 24rpx; border-radius: 18rpx; background: #fdf5e9; display: flex; align-items: center; gap: 14rpx; color: #b35c07; font-size: 23rpx; box-sizing: border-box; }
+.auto-note > text:first-of-type { flex: 1; }
+.source-tag { flex-shrink: 0; padding: 4rpx 13rpx; border: 1rpx solid #e7c49e; border-radius: 28rpx; font-size: 22rpx; }
+.section-title { font-size: 29rpx; font-weight: 600; line-height: 1.4; }
+// Override WeChat's button:not([size='mini']) defaults within budget pages only.
+.budget-page .text-action { display: inline-flex; width: auto; margin: 0; padding: 0; color: #884312; background: transparent; border: 0; line-height: 1.6; border-radius: 0; font-size: 25rpx; }
+.text-action::after, .budget-primary::after { border: 0; }
+.text-action[disabled] { background: transparent; color: #939393; }
+.budget-page .text-action.source-tag { flex-shrink: 0; padding: 4rpx 13rpx; border: 1rpx solid #e7c49e; border-radius: 28rpx; font-size: 22rpx; }
+.round-icon { width: 74rpx; height: 74rpx; flex-shrink: 0; border-radius: 50%; background: #f4f0e9; display: flex; align-items: center; justify-content: center; }
+.explanation { margin-top: 26rpx; padding: 32rpx 30rpx; display: flex; align-items: center; gap: 24rpx; }
+.muted { display: block; margin-top: 10rpx; color: #777a82; font-size: 23rpx; line-height: 1.65; }
+.budget-footer { position: fixed; left: 40rpx; right: 40rpx; bottom: calc(22rpx + env(safe-area-inset-bottom)); z-index: 80; }
+.budget-page .budget-primary { width: 100%; height: 98rpx; margin: 0; padding: 0; border: 0; border-radius: 15rpx; background: #7c3f16; color: #fff; font-size: 31rpx; font-weight: 500; display: flex; align-items: center; justify-content: center; }
+.budget-primary[disabled] { color: #fff; background: #bdab9d; }
+.footer-hint { display: block; margin-bottom: 10rpx; color: #777a82; font-size: 21rpx; text-align: center; background: #faf9f7; }
+.state-card { margin-top: 28rpx; padding: 36rpx; }
+.state-card > text { display: block; }
+.state-card .text-action { margin-top: 24rpx; }
+.inline-warning { margin-top: 18rpx; padding: 18rpx 24rpx; background: #fdf5e9; border-radius: 14rpx; color: #9a570e; font-size: 22rpx; line-height: 1.5; }
+.inline-warning .text-action { margin-left: 12rpx; }

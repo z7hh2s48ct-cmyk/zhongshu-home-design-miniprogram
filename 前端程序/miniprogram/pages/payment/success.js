@@ -1,48 +1,55 @@
 'use strict';
-
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const http = require('../../utils/request');
+const view = require('../../utils/record-view');
 
 protectedPage({
-  data: { price: 0, base: 0, bonus: 0, total: 0,
-          orderId: '', paymentState: 'PENDING', fulfillmentState: 'NOT_READY',
-          paymentStateText: '处理中', polling: true },
-  onLoad(options) {
-    this.setData({
-      price: options.price || 0, base: options.base || 0,
-      bonus: options.bonus || 0, total: options.total || 0,
-      orderId: options.orderId || ''
-    });
-    if (this.data.orderId) this.poll();
-    else this.setData({ polling: false, paymentStateText: '订单信息缺失' });
+  data: { price: '—', base: '—', bonus: '—', total: '—', orderId: '', paymentState: '', fulfillmentState: '',
+    paymentStateText: '正在查询', paymentTitle: '订单详情', paymentHint: '到账结果以服务端确认为准', polling: false, error: '' },
+  onLoad(options) { this.setData({ orderId: view.id(options.orderId) || '' }); },
+  onShow() { this.refresh(); },
+  onHide() { this.stop(); },
+  onUnload() { this.stop(); this._token = null; },
+  stop() { this._seq = (this._seq || 0) + 1; clearTimeout(this._timer); this.setData({ polling: false }); },
+  current(seq) {
+    if (seq !== this._seq) return false;
+    if (this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) return true;
+    this.stop();
+    this.setData({ price: '—', base: '—', bonus: '—', total: '—', paymentState: '', fulfillmentState: '', paymentStateText: '身份已变化', paymentTitle: '订单详情', paymentHint: '', error: '请重新登录后读取订单' });
+    return false;
   },
-  onUnload() { this.setData({ polling: false }); },
-  // 状态以服务端 payment_state + fulfillment_state 为准，不信页面参数
+  refresh() {
+    this.stop(); this._token = http.getToken(); this._attempts = 0;
+    this.setData({ price: '—', base: '—', bonus: '—', total: '—', paymentState: '', fulfillmentState: '', paymentStateText: '正在查询', paymentTitle: '订单详情', paymentHint: '到账结果以服务端确认为准', error: '' });
+    if (!this.data.orderId || !this._token) { this.setData({ error: '订单信息缺失或登录已失效，请从充值记录重新进入' }); return; }
+    this.setData({ polling: true }); return this.poll();
+  },
   applyOrder(order) {
-    const payment = order.paymentState || 'UNKNOWN';
-    const fulfillment = order.fulfillmentState || 'NOT_READY';
-    let text = '处理中';
-    if (payment === 'SUCCEEDED' && fulfillment === 'CREDITED') text = '已完成';
-    else if (payment === 'SUCCEEDED') text = '已支付，到账确认中';
-    else if (payment === 'UNKNOWN') text = '支付结果确认中';
-    else if (payment === 'FAILED') text = '支付失败';
-    this.setData({ paymentState: payment, fulfillmentState: fulfillment, paymentStateText: text });
-    return payment === 'SUCCEEDED' && fulfillment === 'CREDITED';
+    if (!order || order.orderId !== this.data.orderId) throw Error('订单数据不匹配');
+    const refunded = order.refund && order.refund.channelState === 'SUCCEEDED';
+    const credited = !order.refund && order.paymentState === 'SUCCEEDED' && order.fulfillmentState === 'CREDITED';
+    const refundHint = order.refund ? '退款 ¥' + view.amount(order.refund.amountCents) + ' · ' + (order.refund.reason || '未填写退款原因') : '';
+    const base = Number.isSafeInteger(order.basePoints) && order.basePoints >= 0 ? order.basePoints : null;
+    const bonus = Number.isSafeInteger(order.bonusPoints) && order.bonusPoints >= 0 ? order.bonusPoints : null;
+    const points = base != null && bonus != null ? base + bonus : '—';
+    this.setData({ price: view.amount(order.amountCents), base: base ?? '—', bonus: bonus ?? '—', total: credited ? points : '—',
+      paymentState: order.paymentState, fulfillmentState: order.fulfillmentState,
+      paymentStateText: view.payment(order), paymentTitle: credited ? '支付成功 · 已到账' : view.payment(order),
+      paymentHint: refundHint || (credited ? points + ' 设计点已到账' : '未确认到账前，请勿重复下单') });
+    return refunded || credited || (order.refund && order.refund.channelState === 'FAILED') || ['FAILED', 'CLOSED', 'CANCELLED', 'REFUNDED'].includes(order.paymentState);
   },
   poll() {
     if (!this.data.polling) return;
-    const self = this;
-    api.getRechargeOrder(this.data.orderId).then(function (order) {
-      const done = self.applyOrder(order);
-      if (done || order.paymentState === 'FAILED') {
-        self.setData({ polling: false });
-      } else if (self.data.polling) {
-        setTimeout(function () { self.poll(); }, 2000);
-      }
-    }).catch(function () {
-      self.setData({ polling: false, paymentStateText: '查询失败，请稍后刷新' });
-    });
+    const seq = this._seq; this._attempts++;
+    return api.getRechargeOrder(this.data.orderId).then(order => {
+      if (!this.current(seq)) return;
+      const done = this.applyOrder(order);
+      if (done || this._attempts >= 10) this.setData({ polling: false });
+      else this._timer = setTimeout(() => { if (this.current(seq)) this.poll(); }, 2000);
+    }).catch(error => { if (this.current(seq)) this.setData({ polling: false, error: view.errorText(error) }); });
   },
   backAi() { wx.switchTab({ url: '/pages/ai-design/index' }); },
-  viewPoints() { wx.switchTab({ url: '/pages/profile/index' }); }
+  viewPoints() { wx.switchTab({ url: '/pages/profile/index' }); },
+  records() { wx.navigateTo({ url: '/pages/profile/records?type=orders' }); }
 });

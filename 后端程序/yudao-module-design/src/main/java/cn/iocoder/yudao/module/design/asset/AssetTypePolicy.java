@@ -10,6 +10,7 @@ import java.util.Set;
 public enum AssetTypePolicy {
 
     USER_SKETCH(10L * 1024 * 1024, Set.of("image/jpeg", "image/png")),
+    USER_AVATAR(2L * 1024 * 1024, Set.of("image/jpeg", "image/png")),
     CASE_IMAGE(20L * 1024 * 1024, Set.of("image/jpeg", "image/png")),
     CASE_PDF(20L * 1024 * 1024, Set.of("application/pdf")),
     AI_OUTPUT(20L * 1024 * 1024, Set.of("image/jpeg", "image/png"));
@@ -39,6 +40,7 @@ public enum AssetTypePolicy {
     public String keyPrefix() {
         return switch (this) {
             case USER_SKETCH -> "user-sketches";
+            case USER_AVATAR -> "user-avatars";
             case CASE_IMAGE, CASE_PDF -> "company-cases";
             case AI_OUTPUT -> "ai-quarantine";
         };

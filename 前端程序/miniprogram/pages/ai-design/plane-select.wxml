@@ -7,6 +7,6 @@
       <view class="badge">{{item.letter}}</view><view class="plan-images"><image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFit" /><text wx:else class="plan-placeholder">效果图加载中</text></view><view class="plan-copy"><text>{{item.name}}</text><b>候选 {{item.slot}}</b><i>查看大图 〉</i></view><view class="radio"><view></view></view>
     </view>
   </view>
-  <view class="consume"><t-icon name="lightbulb" size="18px" color="#8a4a1a" /> 重新生成将消耗10设计点</view>
+  <view class="consume"><t-icon name="lightbulb" size="18px" color="#8a4a1a" /> 重新生成前将确认最新点数</view>
   <view class="select-actions"><view class="v12-secondary-button" bindtap="regenerate">重新生成</view><view class="v12-primary-button" bindtap="confirm">选定并生成立面</view></view>
 </view>

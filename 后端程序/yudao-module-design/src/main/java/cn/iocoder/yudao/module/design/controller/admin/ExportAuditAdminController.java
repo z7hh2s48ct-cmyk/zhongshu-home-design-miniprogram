@@ -48,28 +48,63 @@ public class ExportAuditAdminController {
         return success(Map.of("exportJobId", String.valueOf(jobId), "status", "PENDING"));
     }
 
+    @GetMapping("/export-jobs")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
+    public CommonResult<PageResult<Map<String, Object>>> getExportJobs(
+            @RequestParam(value = "pageNo", defaultValue = "1") int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
+        var jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+        Long owner = SecurityFrameworkUtils.getLoginUserId();
+        int size = Math.max(1, Math.min(pageSize, 100));
+        Long total = jdbc.queryForObject("SELECT count(*) FROM export_job WHERE requester_type = 'ADMIN' "
+                + "AND requester_user_id = ?", Long.class, owner);
+        var ids = jdbc.queryForList("SELECT id FROM export_job WHERE requester_type = 'ADMIN' "
+                + "AND requester_user_id = ? ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
+                Long.class, owner, size, (long) Math.max(0, pageNo - 1) * size);
+        return success(new PageResult<>(ids.stream().map(id -> exportView(requireOwnedJob(id))).toList(), total));
+    }
+
+    private cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot requireOwnedJob(long id) {
+        var job = deliveryPort.getExportJob(id);
+        if (job == null || !"ADMIN".equals(job.getRequesterType())
+                || !java.util.Objects.equals(job.getRequesterUserId(), SecurityFrameworkUtils.getLoginUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("导出任务不存在或无权访问");
+        }
+        return job;
+    }
+
+    private String exportStatus(cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot job) {
+        return job.getExpiresAt() != null && !job.getExpiresAt().isAfter(java.time.Instant.now())
+                ? "EXPIRED" : job.getStatus().name();
+    }
+
+    private Map<String, Object> exportView(cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot job) {
+        return Map.of("exportJobId", String.valueOf(job.getJobId()), "jobType", job.getJobType(),
+                "status", exportStatus(job), "createdAt", job.getCreateTime() == null ? "" : job.getCreateTime().toString(),
+                "expiresAt", job.getExpiresAt() == null ? "" : job.getExpiresAt().toString());
+    }
+
+    private cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot requireDownloadableJob(long id) {
+        var job = requireOwnedJob(id);
+        if (!"COMPLETED".equals(exportStatus(job)) || job.getExpiresAt() == null
+                || job.getFileAssetId() == null || job.getFileAssetId().isBlank()) {
+            throw new org.springframework.security.access.AccessDeniedException("导出尚未完成或已过期，请重新创建任务");
+        }
+        return job;
+    }
+
     @GetMapping("/export-jobs/{exportJobId}")
     @Operation(summary = "查询导出任务状态")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
     public CommonResult<Map<String, Object>> getExportJob(@PathVariable("exportJobId") String exportJobId) {
-        var job = deliveryPort.getExportJob(Long.parseLong(exportJobId));
-        if (job == null) {
-            return success(null);
-        }
-        return success(Map.of("exportJobId", String.valueOf(job.getJobId()),
-                "jobType", job.getJobType(), "status", job.getStatus().name(),
-                "fileAssetId", job.getFileAssetId() == null ? "" : job.getFileAssetId(),
-                "expiresAt", job.getExpiresAt() == null ? "" : job.getExpiresAt().toString()));
+        return success(exportView(requireOwnedJob(Long.parseLong(exportJobId))));
     }
 
     @PostMapping("/export-jobs/{exportJobId}/download-tickets")
     @Operation(summary = "生成导出文件的一次性下载票据（短时、单次、留审计）")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
     public CommonResult<Map<String, Object>> createDownloadTicket(@PathVariable("exportJobId") String exportJobId) {
-        var job = deliveryPort.getExportJob(Long.parseLong(exportJobId));
-        if (job == null || !"COMPLETED".equals(job.getStatus().name())) {
-            return success(Map.of("ticket", "", "error", "EXPORT_NOT_COMPLETED"));
-        }
+        var job = requireDownloadableJob(Long.parseLong(exportJobId));
         var ticket = deliveryPort.issueDownloadTicket("EXPORT_FILE",
                 String.valueOf(job.getJobId()), SecurityFrameworkUtils.getLoginUserId(), 600);
         return success(Map.of("ticket", ticket.getToken(),
@@ -83,6 +118,7 @@ public class ExportAuditAdminController {
             @PathVariable("exportJobId") String exportJobId,
             @RequestParam("ticket") String ticket) {
         long jobId = Long.parseLong(exportJobId);
+        var job = requireDownloadableJob(jobId);
         var consumption = deliveryPort.consumeDownloadTicket(ticket,
                 String.valueOf(SecurityFrameworkUtils.getLoginUserId()));
         if (consumption.getOutcome() != cn.iocoder.yudao.module.infra.zhongshu.delivery.TicketConsumption.Outcome.CONSUMED_NOW
@@ -90,18 +126,15 @@ public class ExportAuditAdminController {
                 || !String.valueOf(jobId).equals(consumption.getBizRef())) {
             throw new org.springframework.security.access.AccessDeniedException("下载票据无效");
         }
-        var job = deliveryPort.getExportJob(jobId);
-        if (job == null || job.getFileAssetId() == null || job.getFileAssetId().isBlank()) {
-            throw new org.springframework.security.access.AccessDeniedException("导出文件不存在");
-        }
         byte[] content;
         try (java.io.InputStream in = storage.getObject(job.getFileAssetId())) {
             content = in.readAllBytes();
-        } catch (java.io.IOException e) {
+        } catch (java.io.IOException | IllegalStateException e) {
             throw new org.springframework.security.access.AccessDeniedException("导出文件读取失败");
         }
         var headers = new org.springframework.http.HttpHeaders();
         headers.setContentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setCacheControl(org.springframework.http.CacheControl.noStore());
         headers.set("Content-Disposition", "attachment; filename=export-" + jobId + ".csv");
         return org.springframework.http.ResponseEntity.ok().headers(headers).body(content);
     }
