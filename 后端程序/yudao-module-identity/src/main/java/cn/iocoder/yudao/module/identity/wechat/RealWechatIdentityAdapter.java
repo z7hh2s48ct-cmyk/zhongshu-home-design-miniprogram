@@ -41,7 +41,7 @@ import java.util.concurrent.TimeoutException;
  *       落入错误日志库。故失败根因只以「异常类型名」记录于服务端日志，消息只含数值 errcode 与本地净化描述。</li>
  * </ul>
  *
- * <p>健壮性（T13-04；错误分类与登录链路处理见 T13-05）：
+ * <p>健壮性（T13-04）与失败分类（T13-05：各抛出点以 {@link WechatLoginFailure} 标注、微信 errcode 经 {@link #classifyErrcode} 归类）：
  * <ul>
  *   <li><b>有界总超时</b>：{@code sendAsync(...).get(totalDeadline)} 界定「建连+响应头+body 读取」的完整交换，兜底
  *       Java 17 下 {@code HttpRequest.timeout} 收到响应头即失效、不限时 body 读取的缺口，杜绝请求线程被慢速/停滞响应无限挂起；</li>
@@ -144,11 +144,12 @@ public class RealWechatIdentityAdapter implements WechatIdentityPort {
         if (isBlank(appid) || isBlank(appSecret)) {
             throw new WechatIdentityException(
                     "微信 code2session 配置缺失：appid/appsecret 必须非空"
-                            + "（检查 zhongshu.identity.wechat-appid 与 zhongshu.identity.wechat-appsecret）", null);
+                            + "（检查 zhongshu.identity.wechat-appid 与 zhongshu.identity.wechat-appsecret）",
+                    null, WechatLoginFailure.CONFIG_ERROR);
         }
         if (isBlank(loginCode)) {
             // 客户端 code 为空属请求问题；一次性凭证语义下空 code 必然失败，直接拒绝而不发起调用。
-            throw new WechatIdentityException("微信登录 code 不能为空", null);
+            throw new WechatIdentityException("微信登录 code 不能为空", null, WechatLoginFailure.INVALID_CODE);
         }
 
         // 携带 secret+一次性 code 的请求 URI 与 HttpRequest 属敏感数据：把「URI.create + HttpRequest.newBuilder + build」
@@ -171,7 +172,8 @@ public class RealWechatIdentityAdapter implements WechatIdentityPort {
         } catch (RuntimeException e) {
             log.warn("[code2session] 请求构建失败（{}）", e.getClass().getSimpleName());
             throw new WechatIdentityException(
-                    "微信 code2session 请求构建失败：" + e.getClass().getSimpleName(), null);
+                    "微信 code2session 请求构建失败：" + e.getClass().getSimpleName(),
+                    null, WechatLoginFailure.CONFIG_ERROR);
         }
 
         HttpResponse<String> response = sendOnceBounded(request);
@@ -180,7 +182,8 @@ public class RealWechatIdentityAdapter implements WechatIdentityPort {
         if (status != 200) {
             // 微信正常业务错误仍以 200 + errcode 返回；非 200 视为服务端/网关异常。不记录 body（成功体含 session_key）。
             log.warn("[code2session] 微信返回非 200 状态：{}", status);
-            throw new WechatIdentityException("微信 code2session HTTP 状态异常：" + status, null);
+            throw new WechatIdentityException("微信 code2session HTTP 状态异常：" + status,
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         }
 
         Code2SessionResponse parsed;
@@ -190,25 +193,29 @@ public class RealWechatIdentityAdapter implements WechatIdentityPort {
             // 解析失败：绝不记录 body（可能含 session_key）；绝不把 Jackson 异常作为 cause 外抛
             // （其消息可能回显响应体片段，经 GlobalExceptionHandler 落入错误日志库）。只取异常类型名。
             log.warn("[code2session] 响应解析失败（{}）", e.getClass().getSimpleName());
-            throw new WechatIdentityException("微信 code2session 响应解析失败", null);
+            throw new WechatIdentityException("微信 code2session 响应解析失败",
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         }
         if (parsed == null) {
             // body 为 JSON 字面量 null：readValue 返回 null，需显式判空避免 NPE，按协议异常处理。
             log.warn("[code2session] 响应为空（协议异常）");
-            throw new WechatIdentityException("微信 code2session 响应为空", null);
+            throw new WechatIdentityException("微信 code2session 响应为空",
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         }
 
         Integer errcode = parsed.errcode();
         if (errcode != null && errcode != 0) {
             // 只记录数值 errcode；errmsg 是微信返回的不可信文本，可能回显 js_code/secret/URL，
-            // 故绝不写入日志或异常消息（错误分类在 T13-05 按数值 errcode 进行）。
+            // 故绝不写入日志或异常消息（错误分类见 classifyErrcode：按数值 errcode 归入四类）。
             log.warn("[code2session] 微信返回错误：errcode={}", errcode);
-            throw new WechatIdentityException("微信 code2session 失败：errcode=" + errcode, errcode);
+            throw new WechatIdentityException("微信 code2session 失败：errcode=" + errcode,
+                    errcode, classifyErrcode(errcode));
         }
         if (isBlank(parsed.openid())) {
             // errcode 缺失/为 0 却无 openid：协议异常（微信正常成功必含 openid）。
             log.warn("[code2session] 响应缺少 openid（协议异常）");
-            throw new WechatIdentityException("微信 code2session 响应缺少 openid", errcode);
+            throw new WechatIdentityException("微信 code2session 响应缺少 openid",
+                    errcode, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         }
         // unionid 允许为空：未绑定微信开放平台账号时微信不返回 unionid。
         return new WechatSession(parsed.openid(), parsed.unionid());
@@ -232,23 +239,50 @@ public class RealWechatIdentityAdapter implements WechatIdentityPort {
             // 完整交换超过硬上限（含 body 读取停滞）：取消底层交换，调用线程立即返回，不被挂起；不重试一次性 code。
             future.cancel(true);
             log.warn("[code2session] 请求超时（超过 {}ms 完整交换上限），不重试一次性 code", totalDeadlineMs);
-            throw new WechatIdentityException("微信 code2session 请求超时", null);
+            throw new WechatIdentityException("微信 code2session 请求超时",
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         } catch (InterruptedException e) {
             future.cancel(true);
             Thread.currentThread().interrupt();
-            throw new WechatIdentityException("微信 code2session 请求被中断", null);
+            throw new WechatIdentityException("微信 code2session 请求被中断",
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         } catch (ExecutionException e) {
             // 传输失败（连接被拒/重置/EOF/至响应头超时等）：只取根因类型名，绝不外抛原始 cause（其消息可能含 URL）。
             Throwable cause = e.getCause();
             if (cause instanceof HttpTimeoutException) {
                 // 至响应头超时（HttpRequest.timeout）：与完整交换超时归一为「请求超时」语义，便于 T13-05 分类。
                 log.warn("[code2session] 请求超时（至响应头 {}ms 上限），不重试一次性 code", headerTimeout.toMillis());
-                throw new WechatIdentityException("微信 code2session 请求超时", null);
+                throw new WechatIdentityException("微信 code2session 请求超时",
+                        null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
             }
             String type = (cause != null ? cause : e).getClass().getSimpleName();
             log.warn("[code2session] 请求微信失败（{}），不重试一次性 code", type);
-            throw new WechatIdentityException("微信 code2session 请求失败：" + type, null);
+            throw new WechatIdentityException("微信 code2session 请求失败：" + type,
+                    null, WechatLoginFailure.WECHAT_SERVICE_ERROR);
         }
+    }
+
+    /**
+     * 按微信数值 errcode 归类登录失败（T13-05）。errcode 语义经微信官方返回码文档核实：
+     * <ul>
+     *   <li>{@code 40029} 无效 code → {@link WechatLoginFailure#INVALID_CODE}；</li>
+     *   <li>{@code 40163} code 已被使用（oauth_code 已使用）→ {@link WechatLoginFailure#CODE_ALREADY_USED}；</li>
+     *   <li>{@code 40013} 不合法 AppID、{@code 40125} 不合法 secret、{@code 41002} 缺 appid、{@code 41004} 缺 secret
+     *       → {@link WechatLoginFailure#CONFIG_ERROR}（服务端凭据配置问题，非用户可修复）；</li>
+     *   <li>其它（{@code -1} 系统繁忙、{@code 45011} 频率限制、{@code 40226} 高风险用户拦截等）
+     *       → {@link WechatLoginFailure#WECHAT_SERVICE_ERROR}（微信侧瞬态 / 非预期，可稍后由客户端取新 code 重试）。</li>
+     * </ul>
+     *
+     * @param errcode 微信返回码（调用点已保证非 {@code null} 且非 0）
+     * @return 对应失败分类
+     */
+    private static WechatLoginFailure classifyErrcode(int errcode) {
+        return switch (errcode) {
+            case 40029 -> WechatLoginFailure.INVALID_CODE;
+            case 40163 -> WechatLoginFailure.CODE_ALREADY_USED;
+            case 40013, 40125, 41002, 41004 -> WechatLoginFailure.CONFIG_ERROR;
+            default -> WechatLoginFailure.WECHAT_SERVICE_ERROR;
+        };
     }
 
     private static String enc(String value) {

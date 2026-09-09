@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.module.identity.account;
 
 import cn.iocoder.yudao.module.identity.session.UserSessionService;
+import cn.iocoder.yudao.module.identity.wechat.WechatIdentityException;
 import cn.iocoder.yudao.module.identity.wechat.WechatIdentityPort;
+import cn.iocoder.yudao.module.identity.wechat.WechatLoginFailure;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,7 +51,21 @@ public class AccountLoginService {
     }
 
     public LoginResult login(String appid, String loginCode, String deviceDigest) {
-        WechatIdentityPort.WechatSession wxSession = wechatIdentityPort.codeToSession(appid, loginCode);
+        // T13-05：code2session 失败按四类翻译为不同错误码（无效/已使用 code、微信服务异常、配置错误），而非一律当作通用 500。
+        // codeToSession 先于任何 DB 访问，抛异常时不触库；一次性 code 绝不重试，失败即抛出由客户端重新 wx.login 取新 code。
+        WechatIdentityPort.WechatSession wxSession;
+        try {
+            wxSession = wechatIdentityPort.codeToSession(appid, loginCode);
+        } catch (WechatIdentityException e) {
+            WechatLoginFailure failure = e.getFailure();
+            // 只记录失败分类与微信数值 errcode（均为安全值，不含 secret/code/URL）；配置错误以 ERROR 级告警运维，其余 WARN。
+            if (failure == WechatLoginFailure.CONFIG_ERROR) {
+                log.error("[login][微信身份配置错误 kind={} errcode={}]", failure, e.getErrcode());
+            } else {
+                log.warn("[login][微信登录失败 kind={} errcode={}]", failure, e.getErrcode());
+            }
+            throw failure.toServiceException();
+        }
         long accountId = resolveAccount(appid, wxSession.openid(), wxSession.unionid());
         boolean granted = hasActiveGrant(accountId);
         UserSessionService.IssuedTokens tokens = sessionService.issue(
