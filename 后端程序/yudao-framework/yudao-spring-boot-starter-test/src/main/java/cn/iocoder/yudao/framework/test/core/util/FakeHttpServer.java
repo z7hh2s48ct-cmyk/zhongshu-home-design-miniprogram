@@ -104,7 +104,7 @@ public final class FakeHttpServer implements AutoCloseable {
      */
     public FakeHttpServer stub(String method, String path, int status, String contentType, String body) {
         byte[] bytes = (body == null || body.isEmpty()) ? null : body.getBytes(StandardCharsets.UTF_8);
-        stubs.put(key(method, path), new Stub(status, contentType, bytes));
+        stubs.put(key(method, path), new Stub(status, contentType, bytes, 0L, false));
         return this;
     }
 
@@ -116,6 +116,27 @@ public final class FakeHttpServer implements AutoCloseable {
     /** {@link #stub} 的 POST 便捷方法。 */
     public FakeHttpServer stubPost(String path, int status, String contentType, String body) {
         return stub("POST", path, status, contentType, body);
+    }
+
+    /**
+     * 注册「接受并记录请求后直接关闭连接、不发送任何响应」的桩，模拟传输层故障（连接被重置/无响应）。
+     * 客户端将收到 IOException，供真实适配器测试「传输失败转为净化异常、不泄露含凭据的 URL、不重试」。
+     */
+    public FakeHttpServer stubCloseWithoutResponse(String method, String path) {
+        stubs.put(key(method, path), new Stub(0, null, null, 0L, true));
+        return this;
+    }
+
+    /**
+     * 注册「先发送响应头、随后停滞 {@code stallMillis} 毫秒再写响应体」的桩，模拟慢速/停滞响应体。
+     * 配合客户端的完整交换超时，验证「body 读取受有界总超时约束、请求线程不被无限挂起」
+     * （兜底 Java 17 下 {@code HttpRequest.timeout} 收到响应头即失效的缺口）。
+     */
+    public FakeHttpServer stubStalledBody(String method, String path, int status, String contentType,
+                                          String body, long stallMillis) {
+        byte[] bytes = (body == null || body.isEmpty()) ? null : body.getBytes(StandardCharsets.UTF_8);
+        stubs.put(key(method, path), new Stub(status, contentType, bytes, stallMillis, false));
+        return this;
     }
 
     /** 已记录请求的只读快照（按到达顺序）。 */
@@ -152,6 +173,10 @@ public final class FakeHttpServer implements AutoCloseable {
             recorded.add(new RecordedRequest(method, path, query, headers, body));
 
             Stub stub = stubs.get(key(method, path));
+            // 传输故障注入：记录请求后直接关闭连接、不发送任何响应（客户端收到 IOException）。
+            if (stub != null && stub.closeWithoutResponse()) {
+                return;
+            }
             int status = (stub == null) ? 404 : stub.status();
             byte[] responseBody = (stub == null || stub.body() == null) ? new byte[0] : stub.body();
             if (stub != null && stub.contentType() != null) {
@@ -162,6 +187,15 @@ public final class FakeHttpServer implements AutoCloseable {
                 exchange.sendResponseHeaders(status, -1);
             } else {
                 exchange.sendResponseHeaders(status, responseBody.length);
+                // 慢速/停滞响应体注入：先发响应头，再停滞 stallMillis 后才写体，
+                // 验证客户端 body 读取受有界总超时约束（停滞期间处理线程独立，不阻塞其他请求）。
+                if (stub != null && stub.stallMillis() > 0) {
+                    try {
+                        Thread.sleep(stub.stallMillis());
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 try (OutputStream out = exchange.getResponseBody()) {
                     out.write(responseBody);
                 }
@@ -193,7 +227,7 @@ public final class FakeHttpServer implements AutoCloseable {
         }
     }
 
-    private record Stub(int status, String contentType, byte[] body) {
+    private record Stub(int status, String contentType, byte[] body, long stallMillis, boolean closeWithoutResponse) {
     }
 
     /**

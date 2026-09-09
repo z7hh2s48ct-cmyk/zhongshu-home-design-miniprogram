@@ -29,18 +29,20 @@ class RealServiceWiringPolicyTest {
         return p;
     }
 
-    /** 全部端口选择真实实现，并齐备真实实现所需的核心机密与 appid（生产放行的完整正确配置）。 */
+    /** 全部端口选择真实实现，并齐备真实实现所需的核心机密、appid 与 appsecret（生产放行的完整正确配置）。 */
     private Map<String, String> allReal() {
         Map<String, String> p = new HashMap<>();
         p.put("zhongshu.identity.wechat.provider", "real");
         p.put("zhongshu.commerce.payment.provider", "real");
         p.put("zhongshu.design.asset.storage.provider", "cos");
         p.put("zhongshu.design.asset.moderation.provider", "real");
-        // T13-02：真实实现所需的已消费机密与 appid（值仅测试用虚构凭据，非真实密钥）
+        // T13-02/T13-04：真实实现所需的已消费机密、appid 与 appsecret（值仅测试用虚构凭据，非真实密钥）
         p.put("zhongshu.identity.access-code-pepper", PEPPER_VALUE);
         p.put("zhongshu.identity.access-code-artifact-key", "test-artifact-key-base64-32bytes!!!!!!");
         p.put("zhongshu.ai.internal-secret", "test-internal-secret-0123456789abcdef");
         p.put("zhongshu.identity.wechat-appid", "wx-test-real-appid");
+        // T13-04：real 微信身份还需 appsecret（code2session 消费）
+        p.put("zhongshu.identity.wechat-appsecret", "test-real-appsecret");
         return p;
     }
 
@@ -199,11 +201,35 @@ class RealServiceWiringPolicyTest {
     }
 
     @Test
-    void devRealWechatWithAppidPasses() {
-        // 开发环境启用真实微信身份并给出非占位 appid，其余端口仍用开发替身：放行
+    void devRealWechatWithAppidAndSecretPasses() {
+        // 开发环境启用真实微信身份并给出非占位 appid + 非空 appsecret，其余端口仍用开发替身：放行
         Map<String, String> p = allStub();
         p.put("zhongshu.identity.wechat.provider", "real");
         p.put("zhongshu.identity.wechat-appid", "wx-dev-real-appid");
+        p.put("zhongshu.identity.wechat-appsecret", "dev-real-appsecret");
         assertThatCode(() -> RealServiceWiringPolicy.validate(DEV, p::get)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void realWechatProviderRequiresAppsecret() {
+        // T13-04：启用真实微信身份但缺 appsecret（code2session 必需）→ 快速失败
+        Map<String, String> p = allStub();
+        p.put("zhongshu.identity.wechat.provider", "real");
+        p.put("zhongshu.identity.wechat-appid", "wx-dev-real-appid");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.wechat-appsecret");
+    }
+
+    @Test
+    void realWechatProviderRejectsBlankAppsecret() {
+        // T13-04：appsecret 为空白等同缺失（appsecret 无开发占位值，仅校验非空）
+        Map<String, String> p = allStub();
+        p.put("zhongshu.identity.wechat.provider", "real");
+        p.put("zhongshu.identity.wechat-appid", "wx-dev-real-appid");
+        p.put("zhongshu.identity.wechat-appsecret", "   ");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.identity.wechat-appsecret");
     }
 }

@@ -26,7 +26,7 @@ import java.util.function.Function;
  *   <li>生产禁止启用开发便利 profile {@code zsdev}（携带公开占位密钥/种子数据/开发端点，对应 T12 B05）；</li>
  *   <li>生产必须提供已被消费的核心机密（激活码 pepper/制品密钥、Runtime 内部签名密钥），缺失即启动期快速失败，
  *       早于运行期 {@code AccessCodeCipher.requirePepper} 等使用处失败；</li>
- *   <li>「启用真实服务才要求相应密钥」：某端口选择真实实现时才校验其依赖的配置（当前微信 real 需要 appid）。</li>
+ *   <li>「启用真实服务才要求相应密钥」：某端口选择真实实现时才校验其依赖的配置（微信 real 需要 appid 与 appsecret）。</li>
  * </ul>
  * 所有违例消息<b>只回显配置键名与环境变量名，绝不回显密钥值</b>，与「日志/管理端不泄露密钥」保持一致。
  * B2（COS）、B4（微信支付）真实适配器落地时，在 {@link #REAL_MODE_REQUIREMENTS} 登记各自密钥键即可复用本校验。
@@ -61,13 +61,18 @@ public final class RealServiceWiringPolicy {
             new RequiredSecret("zhongshu.ai.internal-secret", "AI Runtime 内部接口签名（InternalSignatureVerifier）"));
 
     /**
-     * 「启用真实实现才要求相应配置/密钥」的登记（T13-02 验收核心）。当前仅微信身份 real 需要 appid
-     * （已被 AppAuthController 消费）；此处只登记<b>已被消费</b>的键，不发明未消费变量（T12 约束）。
-     * B2（COS secret-id/secret-key/region/bucket）、B4（商户号/API v3 密钥/商户私钥）真实适配器落地时在此追加。
+     * 「启用真实实现才要求相应配置/密钥」的登记（T13-02 验收核心）。微信身份 real 需要 appid（AppAuthController 消费）
+     * 与 appsecret（T13-04 RealWechatIdentityAdapter 的 code2session 消费）；此处只登记<b>已被消费</b>的键，
+     * 不发明未消费变量（T12 约束）。B2（COS secret-id/secret-key/region/bucket）、B4（商户号/API v3 密钥/商户私钥）
+     * 真实适配器落地时在此追加。
      */
     private static final List<RealModeRequirement> REAL_MODE_REQUIREMENTS = List.of(
             new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
-                    "zhongshu.identity.wechat-appid", "stub-appid", "B1"));
+                    "zhongshu.identity.wechat-appid", "stub-appid", "B1"),
+            // T13-04：real 微信身份还需 AppSecret（code2session 用）。AppSecret 无开发占位值（zsdev 默认留空），
+            // 故 placeholderValue=null：validate() 仅要求非空（value.equals(null) 恒 false，自动跳过占位值比对）。
+            new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
+                    "zhongshu.identity.wechat-appsecret", null, "B1"));
 
     private RealServiceWiringPolicy() {
     }
@@ -170,7 +175,7 @@ public final class RealServiceWiringPolicy {
     private record RequiredSecret(String propertyKey, String purpose) {
     }
 
-    /** 真实实现依赖的配置要求：端口 provider 键、其真实值、要求的配置键、该键的开发占位值、就绪批次提示。 */
+    /** 真实实现依赖的配置要求：端口 provider 键、其真实值、要求的配置键、该键的开发占位值（无占位值时为 null，仅校验非空）、就绪批次提示。 */
     private record RealModeRequirement(String providerKey, String realValue, String requiredKey,
                                        String placeholderValue, String batchHint) {
     }

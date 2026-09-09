@@ -18,6 +18,7 @@ import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.framework.web.core.filter.ApiRequestFilter;
+import cn.iocoder.yudao.framework.web.core.util.SensitiveLogRedactor;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,8 +49,6 @@ import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString
  */
 @Slf4j
 public class ApiAccessLogFilter extends ApiRequestFilter {
-
-    private static final String[] SANITIZE_KEYS = new String[]{"password", "token", "accessToken", "refreshToken"};
 
     private final String applicationName;
 
@@ -117,8 +116,12 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         if (result != null) {
             accessLog.setResultCode(result.getCode()).setResultMsg(result.getMsg());
         } else if (ex != null) {
+            // T13-04 安全（codex 五轮，修 P1）：下游 filter chain 在 CommonResult 记录前抛出请求体解析异常时，
+            // ExceptionUtil.getRootCauseMessage(ex) 会原文回显畸形 body token（含一次性登录 code / 密码等凭据）而落访问日志库；
+            // 命中 isBodyParseLeak 时改用安全占位符，杜绝凭据经访问日志 resultMsg 泄露（独立于已修的错误日志库路径）。
             accessLog.setResultCode(GlobalErrorCodeConstants.INTERNAL_SERVER_ERROR.getCode())
-                    .setResultMsg(ExceptionUtil.getRootCauseMessage(ex));
+                    .setResultMsg(SensitiveLogRedactor.isBodyParseLeak(ex)
+                            ? SensitiveLogRedactor.BODY_PARSE_OMITTED : ExceptionUtil.getRootCauseMessage(ex));
         } else {
             accessLog.setResultCode(GlobalErrorCodeConstants.SUCCESS.getCode()).setResultMsg("");
         }
@@ -189,7 +192,9 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         if (sanitizeKeys != null) {
             MapUtil.removeAny(map, sanitizeKeys);
         }
-        MapUtil.removeAny(map, SANITIZE_KEYS);
+        // T13-04 安全（修 codex A）：凭据键改用大小写不敏感移除——原 MapUtil.removeAny 精确匹配，
+        // {"CODE":..} / {"Session_Key":..} 等大写变体会漏移除而随访问日志库落盘。
+        map.keySet().removeIf(SensitiveLogRedactor::isSensitiveKey);
         return JsonUtils.toJsonString(map);
     }
 
@@ -198,13 +203,23 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
             return null;
         }
         try {
-            JsonNode rootNode = JsonUtils.parseTree(jsonString);
+            // T13-04 安全（修 codex B）：body 只按 JSON 处理；非 { / [ 开头（缺左括号的畸形 JSON、表单串等）无法结构化
+            // 定位敏感字段，整体省略，绝不回显可能含 code/secret 的原文。
+            String trimmed = jsonString.trim();
+            if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+                return "[omitted-unparseable]";
+            }
+            // T13-04 安全：改用「从不记录输入」的安静解析（JsonUtils.parseTree 解析失败会 log.error 原文，反而泄露凭据）。
+            JsonNode rootNode = SensitiveLogRedactor.parseTreeQuietly(jsonString);
+            if (rootNode == null) {
+                // 畸形 JSON：无法定位敏感字段，整体省略——绝不回显 / 落库可能含 code、secret 等凭据的原文。
+                return "[omitted-unparseable]";
+            }
             sanitizeJson(rootNode, sanitizeKeys);
             return JsonUtils.toJsonString(rootNode);
         } catch (Exception e) {
-            // 脱敏失败的情况下，直接忽略异常，避免影响用户请求
-            log.error("[sanitizeJson][脱敏({}) 发生异常]", jsonString, e);
-            return jsonString;
+            // T13-04 安全：任何脱敏异常都整体省略，绝不 log / 返回原文（可能含凭据），且不影响用户请求。
+            return "[omitted-unparseable]";
         }
     }
 
@@ -240,8 +255,10 @@ public class ApiAccessLogFilter extends ApiRequestFilter {
         Iterator<Map.Entry<String, JsonNode>> iterator = node.properties().iterator();
         while (iterator.hasNext()) {
             Map.Entry<String, JsonNode> entry = iterator.next();
+            // T13-04 安全（修 codex A）：凭据键改用大小写不敏感匹配——原 ArrayUtil.contains(SANITIZE_KEYS, ..) 精确匹配，
+            // 大写变体（CODE/Session_Key 等）会漏移除而随访问日志库落盘。
             if (ArrayUtil.contains(sanitizeKeys, entry.getKey())
-                || ArrayUtil.contains(SANITIZE_KEYS, entry.getKey())) {
+                || SensitiveLogRedactor.isSensitiveKey(entry.getKey())) {
                 iterator.remove();
                 continue;
             }

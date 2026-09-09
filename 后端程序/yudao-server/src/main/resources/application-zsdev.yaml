@@ -18,9 +18,17 @@ zhongshu:
   identity:
     # 填真实 AppID 不会自动切换实现；需同时把下方 wechat.provider 设为 real（B1 就绪后）
     wechat-appid: ${ZS_WX_APPID:stub-appid}
+    # T13-04：真实 code2session 所需 AppSecret，仅 provider=real 时被 RealWechatIdentityAdapter 消费；
+    # 本 profile 默认留空（stub 模式不需要）。切 real 前必须由环境变量 ZS_WX_APPSECRET 注入，否则启动守卫拒绝。
+    wechat-appsecret: ${ZS_WX_APPSECRET:}
     wechat:
       # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B1 真实 code2session
       provider: stub
+      # T13-04 code2session 端点基址：默认微信正式端点；隔离测试将其指向本地 FakeHttpServer（绝不触达真实微信）
+      base-url: ${ZS_WX_BASE_URL:https://api.weixin.qq.com}
+      # T13-04 有界超时（毫秒）：建连/读取分别限时，微信不可达时不会无限阻塞请求线程
+      connect-timeout-ms: ${ZS_WX_CONNECT_TIMEOUT_MS:3000}
+      read-timeout-ms: ${ZS_WX_READ_TIMEOUT_MS:5000}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:ZGV2LW9ubHktYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzISEh}

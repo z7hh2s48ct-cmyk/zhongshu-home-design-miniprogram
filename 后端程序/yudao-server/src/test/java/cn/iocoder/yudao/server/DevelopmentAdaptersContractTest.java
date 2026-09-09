@@ -3,7 +3,9 @@ package cn.iocoder.yudao.server;
 import cn.iocoder.yudao.module.commerce.payment.StubPaymentPortAdapter;
 import cn.iocoder.yudao.module.design.asset.LocalObjectStorageAdapter;
 import cn.iocoder.yudao.module.design.asset.StubContentModerationAdapter;
+import cn.iocoder.yudao.module.identity.wechat.RealWechatIdentityAdapter;
 import cn.iocoder.yudao.module.identity.wechat.StubWechatIdentityAdapter;
+import cn.iocoder.yudao.module.identity.wechat.WechatIdentityPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -80,6 +82,24 @@ class DevelopmentAdaptersContractTest {
             assertThat(context.getBeansOfType(StubPaymentPortAdapter.class)).hasSize(1);
             assertThat(context.getBeansOfType(LocalObjectStorageAdapter.class)).hasSize(1);
             assertThat(context.getBeansOfType(StubContentModerationAdapter.class)).hasSize(1);
+        }
+    }
+
+    /**
+     * T13-04：微信端口选 real 时装配 RealWechatIdentityAdapter、且 Stub 不装配——
+     * 证明真实/替身互斥、每端口只装配一个实现（B1 真实适配器已就位，由装配合同锁定）。
+     */
+    @Test
+    void realWechatProviderAssemblesRealAdapterOnly() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("real-wechat",
+                    Map.of("zhongshu.identity.wechat.provider", "real")));
+            context.register(StubWechatIdentityAdapter.class, RealWechatIdentityAdapter.class);
+            context.refresh();
+            assertThat(context.getBeansOfType(RealWechatIdentityAdapter.class)).hasSize(1);
+            assertThat(context.getBeansOfType(StubWechatIdentityAdapter.class)).isEmpty();
+            assertThat(context.getBeansOfType(WechatIdentityPort.class))
+                    .as("每端口只装配一个实现").hasSize(1);
         }
     }
 

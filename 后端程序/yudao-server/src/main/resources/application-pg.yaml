@@ -57,6 +57,9 @@ zhongshu:
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
   identity:
     wechat-appid: ${ZS_WX_APPID:}
+    # T13-04：真实 code2session AppSecret——生产安全基线不给默认值；provider=real 时必须由 ZS_WX_APPSECRET 注入，
+    # 缺失即被启动守卫 RealServiceWiringPolicy 快速失败（本 profile 不声明 provider，见上方 T13-01 注释）。
+    wechat-appsecret: ${ZS_WX_APPSECRET:}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:}
