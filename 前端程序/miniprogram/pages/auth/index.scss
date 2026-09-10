@@ -16,3 +16,4 @@
 .note-icon { width: 54rpx; height: 54rpx; border-radius: 50%; background: #f5eee6; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 25rpx; }
 .auth-notes > view:first-child .note-icon { border-radius: 10rpx 10rpx 50% 50%; background: #7b3f17; }
 .contact { margin-top: 32rpx; min-height: 88rpx; display: flex; justify-content: center; align-items: center; color: #7b3f17; font-size: 26rpx; }
+.v12-primary-button.is-loading { opacity: 0.6; pointer-events: none; }

@@ -55,9 +55,9 @@ function safeTarget(value) {
   return TAB_PAGES.includes(route) ? route : target;
 }
 
-function navigate(url, replace = false) {
+function navigate(url, replace = false, handlers = {}) {
   const method = TAB_PAGES.includes(url.split('?')[0]) ? 'switchTab' : replace ? 'redirectTo' : 'navigateTo';
-  wx[method]({ url, fail: navigationFailed });
+  wx[method]({ url, success: handlers.success, fail: handlers.fail || navigationFailed });
 }
 
 function openActivation(target = HOME) {
