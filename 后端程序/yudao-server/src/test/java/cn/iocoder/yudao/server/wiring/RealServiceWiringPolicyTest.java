@@ -43,6 +43,13 @@ class RealServiceWiringPolicyTest {
         p.put("zhongshu.identity.wechat-appid", "wx-test-real-appid");
         // T13-04：real 微信身份还需 appsecret（code2session 消费）
         p.put("zhongshu.identity.wechat-appsecret", "test-real-appsecret");
+        // T13-21：B4 微信支付 real 模式所需 merchant-id/merchant-serial-no/api-v3-key/merchant-private-key-path/notify-url
+        // （值仅测试用虚构凭据，非真实密钥；AppID 复用 zhongshu.identity.wechat-appid，不重复登记）
+        p.put("zhongshu.commerce.payment.wechat.merchant-id", "test-mch-1234567890");
+        p.put("zhongshu.commerce.payment.wechat.merchant-serial-no", "test-serial-0123456789ABCDEF");
+        p.put("zhongshu.commerce.payment.wechat.api-v3-key", "test-api-v3-key-32bytes-long!!!!");
+        p.put("zhongshu.commerce.payment.wechat.merchant-private-key-path", "classpath:test-only/apiclient_key.pem");
+        p.put("zhongshu.commerce.payment.wechat.notify-url", "https://test.example.com/design/v1/payments/wechat/notify");
         return p;
     }
 
@@ -231,5 +238,68 @@ class RealServiceWiringPolicyTest {
         assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("zhongshu.identity.wechat-appsecret");
+    }
+
+
+
+    // ===== T13-21：B4 微信支付 real 模式依赖配置（merchant-id/serial-no/api-v3-key/private-key-path/notify-url，消息不回显密钥值） =====
+
+    @Test
+    void realWechatPayProviderRequiresSecrets() {
+        // T13-21：启用 real 微信支付但缺 B4 五个配置键 → 快速失败（AppID 复用 B1 已登记的 wechat-appid，此处不重复登记）
+        Map<String, String> p = allStub();
+        p.put("zhongshu.commerce.payment.provider", "real");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.merchant-id")
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.merchant-serial-no")
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.api-v3-key")
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.merchant-private-key-path")
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.notify-url");
+    }
+
+    @Test
+    void realWechatPayProviderRejectsBlankApiV3Key() {
+        // T13-21：api-v3-key 为空白等同缺失（无开发占位值，仅校验非空）
+        Map<String, String> p = allStub();
+        p.put("zhongshu.commerce.payment.provider", "real");
+        p.put("zhongshu.commerce.payment.wechat.merchant-id", "test-mch-1234567890");
+        p.put("zhongshu.commerce.payment.wechat.merchant-serial-no", "test-serial-0123456789ABCDEF");
+        p.put("zhongshu.commerce.payment.wechat.api-v3-key", "   ");
+        p.put("zhongshu.commerce.payment.wechat.merchant-private-key-path", "classpath:test-only/apiclient_key.pem");
+        p.put("zhongshu.commerce.payment.wechat.notify-url", "https://test.example.com/design/v1/payments/wechat/notify");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.api-v3-key");
+    }
+
+    @Test
+    void devRealWechatPayWithAllKeysPasses() {
+        // 开发环境启用 real 微信支付并给出全部必需配置，其余端口仍用开发替身：放行
+        Map<String, String> p = allStub();
+        p.put("zhongshu.commerce.payment.provider", "real");
+        p.put("zhongshu.commerce.payment.wechat.merchant-id", "test-mch-1234567890");
+        p.put("zhongshu.commerce.payment.wechat.merchant-serial-no", "test-serial-0123456789ABCDEF");
+        p.put("zhongshu.commerce.payment.wechat.api-v3-key", "test-api-v3-key-32bytes-long!!!!");
+        p.put("zhongshu.commerce.payment.wechat.merchant-private-key-path", "classpath:test-only/apiclient_key.pem");
+        p.put("zhongshu.commerce.payment.wechat.notify-url", "https://test.example.com/design/v1/payments/wechat/notify");
+        assertThatCode(() -> RealServiceWiringPolicy.validate(DEV, p::get)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void wechatPayErrorMessageNeverEchoesSecretKeyValue() {
+        // T13-21：缺 merchant-id 触发违例时，聚合消息只回显键名，绝不回显已配置的 api-v3-key 与 private-key-path 值
+        Map<String, String> p = allStub();
+        p.put("zhongshu.commerce.payment.provider", "real");
+        // 故意缺 merchant-id 触发违例
+        p.put("zhongshu.commerce.payment.wechat.merchant-serial-no", "test-serial-0123456789ABCDEF");
+        p.put("zhongshu.commerce.payment.wechat.api-v3-key", "SUPER-SECRET-APIV3-KEY-DO-NOT-ECHO");
+        p.put("zhongshu.commerce.payment.wechat.merchant-private-key-path", "file:///abs/path/SUPER-SECRET-KEY-DO-NOT-ECHO.pem");
+        p.put("zhongshu.commerce.payment.wechat.notify-url", "https://test.example.com/design/v1/payments/wechat/notify");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.commerce.payment.wechat.merchant-id")
+                .hasMessageNotContaining("SUPER-SECRET-APIV3-KEY-DO-NOT-ECHO")
+                .hasMessageNotContaining("SUPER-SECRET-KEY-DO-NOT-ECHO");
     }
 }

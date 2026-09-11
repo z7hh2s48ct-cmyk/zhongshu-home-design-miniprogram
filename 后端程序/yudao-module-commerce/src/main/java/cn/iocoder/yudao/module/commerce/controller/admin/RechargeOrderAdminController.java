@@ -133,6 +133,19 @@ public class RechargeOrderAdminController {
             result.put("paidAt", detail.paidAt() == null ? null : java.time.LocalDateTime.ofInstant(detail.paidAt(), zone));
             result.put("refund", detail.refund());
         });
+        // T13-30 前半 ①a：详情弹窗展示真实渠道字段（渠道/商户号/渠道流水号），供财务核对资金归属。
+        // 数据源 payment_transaction（UK(channel, merchant_id, channel_transaction_id)）；未支付订单无流水则不下发。
+        jdbc.queryForList(
+                "SELECT channel, merchant_id, channel_transaction_id, paid_at FROM payment_transaction "
+                        + "WHERE order_no = ? AND deleted = FALSE ORDER BY id DESC LIMIT 1", o.orderNo())
+                .stream().findFirst().ifPresent(tx -> {
+                    var zone = java.time.ZoneId.of("Asia/Shanghai");
+                    result.put("channel", tx.get("channel"));
+                    result.put("merchantId", tx.get("merchant_id"));
+                    result.put("channelTransactionId", tx.get("channel_transaction_id"));
+                    result.put("channelPaidAt", tx.get("paid_at") == null ? null
+                            : java.time.LocalDateTime.ofInstant(((java.sql.Timestamp) tx.get("paid_at")).toInstant(), zone));
+                });
         return success(result);
     }
 
@@ -240,6 +253,51 @@ public class RechargeOrderAdminController {
             return success("ACTION_NOT_SUPPORTED");
         }
         return success(paymentService.reconcile(order.get().orderNo()));
+    }
+
+    @GetMapping("/payment-transactions")
+    @Operation(summary = "渠道支付流水分页（T13-30 前半 ③：复用 payment_transaction，供财务对账）")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.PAYMENT_RECONCILE + "')")
+    public CommonResult<PageResult<Map<String, Object>>> getPaymentTransactionPage(
+            @RequestParam(value = "channel", required = false) String channel,
+            @RequestParam(value = "orderNo", required = false) String orderNo,
+            @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        var where = new java.util.ArrayList<String>(List.of("deleted = FALSE"));
+        var args = new java.util.ArrayList<Object>();
+        if (channel != null && !channel.isBlank()) {
+            where.add("channel = ?");
+            args.add(channel);
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            where.add("order_no = ?");
+            args.add(orderNo);
+        }
+        String base = "FROM payment_transaction WHERE " + String.join(" AND ", where);
+        pageSize = Math.min(Math.max(pageSize, 1), 100);
+        Integer total = jdbc.queryForObject("SELECT count(*) " + base, Integer.class, args.toArray());
+        var params = new java.util.ArrayList<Object>(args);
+        params.add(pageSize);
+        params.add((long) Math.max(pageNo - 1, 0) * pageSize);
+        var rows = jdbc.queryForList(
+                "SELECT id, channel, merchant_id, channel_transaction_id, order_no, amount_cents, paid_at, create_time "
+                        + base + " ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
+                params.toArray());
+        var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(java.time.ZoneId.of("Asia/Shanghai"));
+        var list = rows.stream().map(r -> {
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", String.valueOf(((Number) r.get("id")).longValue()));
+            item.put("channel", r.get("channel"));
+            item.put("merchantId", r.get("merchant_id"));
+            item.put("channelTransactionId", r.get("channel_transaction_id"));
+            item.put("orderNo", r.get("order_no"));
+            item.put("amountCents", ((Number) r.get("amount_cents")).longValue());
+            item.put("paidAt", formatter.format(((java.sql.Timestamp) r.get("paid_at")).toInstant()));
+            item.put("createdAt", formatter.format(((java.sql.Timestamp) r.get("create_time")).toInstant()));
+            return item;
+        }).toList();
+        return success(new PageResult<>(list, total == null ? 0 : total.longValue()));
     }
 
 }

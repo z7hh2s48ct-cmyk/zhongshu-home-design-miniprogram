@@ -13,9 +13,15 @@
         <el-tab-pane label="支付成功未到账" name="PAID_NO_CREDIT" />
         <el-tab-pane label="待支付" name="PENDING" />
         <el-tab-pane label="渠道退款单" name="REFUNDS" />
+        <el-tab-pane label="渠道流水" name="TRANSACTIONS" />
       </el-tabs>
 
-      <el-table v-if="activeTab !== 'REFUNDS'" :data="list" v-loading="loading" stripe>
+      <el-table
+        v-if="activeTab !== 'REFUNDS' && activeTab !== 'TRANSACTIONS'"
+        :data="list"
+        v-loading="loading"
+        stripe
+      >
         <el-table-column label="订单号" prop="orderNo" width="165" />
         <el-table-column label="用户" prop="userId" width="100" />
         <el-table-column label="金额(元)" width="88">
@@ -30,11 +36,17 @@
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="到账状态" width="96">
+        <el-table-column label="到账状态" width="150">
           <template #default="{ row }">
             <span class="zs-tag" :class="fulColor(row.fulfillmentState)">{{
               fulText(row.fulfillmentState)
             }}</span>
+            <span
+              v-if="isPaidNoCredit(row)"
+              class="zs-tag zs-tag--orange"
+              title="支付成功但未到账，请主动查单或核对渠道流水"
+              >未到账</span
+            >
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="168">
@@ -57,14 +69,14 @@
               @click="doReconcile(row)"
               >主动查单</span
             >
-            <span class="zs-link-danger" v-if="canRefund(row)" @click="doRefund(row)"
-              >整单退款</span
-            >
+            <span class="zs-link-danger" v-if="canRefund(row)" @click="doRefund(row)">{{
+              refundingId === (row.orderId || row.id) ? '受理中…' : '整单退款'
+            }}</span>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-table v-else :data="list" v-loading="loading" stripe>
+      <el-table v-else-if="activeTab === 'REFUNDS'" :data="list" v-loading="loading" stripe>
         <el-table-column label="退款单号" prop="refundNo" width="180" />
         <el-table-column label="订单号" width="165">
           <template #default="{ row }"
@@ -95,6 +107,26 @@
         </el-table-column>
         <el-table-column label="创建时间" width="168">
           <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
+        </el-table-column>
+      </el-table>
+
+      <el-table v-else :data="list" v-loading="loading" stripe>
+        <el-table-column label="订单号" prop="orderNo" width="165" />
+        <el-table-column label="支付渠道" width="110">
+          <template #default="{ row }">{{ channelText(row.channel) }}</template>
+        </el-table-column>
+        <el-table-column label="商户号" prop="merchantId" width="150" show-overflow-tooltip />
+        <el-table-column
+          label="渠道流水号"
+          prop="channelTransactionId"
+          min-width="180"
+          show-overflow-tooltip
+        />
+        <el-table-column label="金额(元)" width="100">
+          <template #default="{ row }">{{ ((row.amountCents || 0) / 100).toFixed(2) }}</template>
+        </el-table-column>
+        <el-table-column label="支付时间" width="168">
+          <template #default="{ row }">{{ fmtTime(row.paidAt) }}</template>
         </el-table-column>
       </el-table>
 
@@ -130,6 +162,18 @@
         <el-descriptions-item label="支付时间">{{
           fmtTime(detail.data.paidAt)
         }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.data.channel" label="支付渠道">{{
+          channelText(detail.data.channel)
+        }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.data.merchantId" label="商户号">{{
+          detail.data.merchantId
+        }}</el-descriptions-item>
+        <el-descriptions-item
+          v-if="detail.data.channelTransactionId"
+          label="渠道流水号"
+          :span="2"
+          >{{ detail.data.channelTransactionId }}</el-descriptions-item
+        >
         <el-descriptions-item label="创建时间">{{
           fmtTime(detail.data.createdAt)
         }}</el-descriptions-item>
@@ -166,6 +210,8 @@ const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ pageNo: 1, pageSize: 10 })
 const detail = reactive({ visible: false, data: null as any })
+// T13-30 前半 ①b：整单退款重复提交防护（后端 refund_request_key 幂等之外的前端守卫）
+const refundingId = ref<string | null>(null)
 
 const payText = (s: string) =>
   ({
@@ -177,11 +223,22 @@ const payText = (s: string) =>
     UNKNOWN: '未知'
   })[s] || s
 const payColor = (s: string) =>
-  ({ SUCCEEDED: 'green', PENDING: 'orange', FAILED: 'red', UNKNOWN: 'red' })[s] || 'gray'
+  ({
+    SUCCEEDED: 'zs-tag--green',
+    PENDING: 'zs-tag--orange',
+    FAILED: 'zs-tag--red',
+    UNKNOWN: 'zs-tag--red'
+  })[s] || 'zs-tag--gray'
 const fulText = (s: string) =>
   ({ NOT_READY: '未到账', PENDING: '到账中', CREDITED: '已到账', FAILED: '到账失败' })[s] || s
 const fulColor = (s: string) =>
-  ({ CREDITED: 'green', FAILED: 'red', PENDING: 'orange' })[s] || 'gray'
+  ({ CREDITED: 'zs-tag--green', FAILED: 'zs-tag--red', PENDING: 'zs-tag--orange' })[s] ||
+  'zs-tag--gray'
+const channelText = (s: string) =>
+  ({ STUB: 'Stub(测试)', WECHAT: '微信支付', ALIPAY: '支付宝' })[s] || s || '—'
+// T13-30 前半 ①c：支付成功但未到账（需人工对账）的高亮判定
+const isPaidNoCredit = (row: any) =>
+  row.paymentState === 'SUCCEEDED' && row.fulfillmentState !== 'CREDITED'
 const refundText = (s: string) =>
   ({
     CREATED: '已创建',
@@ -209,6 +266,12 @@ const load = async () => {
   try {
     if (activeTab.value === 'REFUNDS') {
       const res = await ZsApi.getRefundOrderPage({ ...query })
+      list.value = res?.list || []
+      total.value = res?.total || 0
+      return
+    }
+    if (activeTab.value === 'TRANSACTIONS') {
+      const res = await ZsApi.getPaymentTransactionPage({ ...query })
       list.value = res?.list || []
       total.value = res?.total || 0
       return
@@ -243,16 +306,26 @@ const doReconcile = async (row: any) => {
 }
 
 const doRefund = async (row: any) => {
-  await message.confirm(
-    `确认为订单 ${row.orderNo} 受理整单退款？到账后若已有设计点消耗将被拒绝（P0 仅支持整单）。`,
-    '整单退款'
-  )
+  if (refundingId.value) return // 已有退款受理中，同步置位防双击重复提交
+  const orderId = row.orderId || row.id
+  refundingId.value = orderId
   try {
-    await ZsApi.createRefundRequest(row.orderId || row.id, { reason: '管理端整单退款' })
+    await message.confirm(
+      `确认为订单 ${row.orderNo} 受理整单退款？到账后若已有设计点消耗将被拒绝（P0 仅支持整单）。`,
+      '整单退款'
+    )
+  } catch {
+    refundingId.value = null
+    return // 用户取消：静默中止，不算失败
+  }
+  try {
+    await ZsApi.createRefundRequest(orderId, { reason: '管理端整单退款' })
     message.success('退款已受理')
-    load()
+    await load()
   } catch (e: any) {
     message.error(e?.msg || '退款失败')
+  } finally {
+    refundingId.value = null
   }
 }
 

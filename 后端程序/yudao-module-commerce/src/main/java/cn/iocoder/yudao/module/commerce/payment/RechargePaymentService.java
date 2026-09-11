@@ -56,15 +56,26 @@ public class RechargePaymentService {
 
     private final ReliableEventPort reliableEventPort;
 
+    private final PaymentFactValidator factValidator;
+
+    /**
+     * T13-29：退款卡单审计宽限期（分钟）。非终态退款单（PROCESSING/UNKNOWN/CREATED）超过此时长
+     * 仍未收口，重启补偿 {@link #recoverPendingRefunds()} 落一条 {@code REFUND_STUCK} 审计供人工核对，
+     * 避免退款永久悬挂而无人知晓（分派表 §3.2 T13-29 ④ + 可观测性）。
+     */
+    private static final int REFUND_STUCK_GRACE_MINUTES = 30;
+
     public RechargePaymentService(DataSource dataSource, PlatformTransactionManager transactionManager,
                                   PaymentPort paymentPort, PointLedgerPort ledgerPort,
-                                  PointAccountService pointAccountService, ReliableEventPort reliableEventPort) {
+                                  PointAccountService pointAccountService, ReliableEventPort reliableEventPort,
+                                  PaymentFactValidator factValidator) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.txTemplate = new TransactionTemplate(transactionManager);
         this.paymentPort = paymentPort;
         this.ledgerPort = ledgerPort;
         this.pointAccountService = pointAccountService;
         this.reliableEventPort = reliableEventPort;
+        this.factValidator = factValidator;
     }
 
     // ========== 方案 ==========
@@ -87,7 +98,7 @@ public class RechargePaymentService {
 
     // ========== 创建订单 ==========
 
-    public OrderSnapshot createOrder(long userId, long planId, String idempotencyKey) {
+    public OrderSnapshot createOrder(long userId, long planId, String idempotencyKey, String openid) {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             List<Long> existing = jdbcTemplate.query(
                     "SELECT id FROM recharge_order WHERE user_id = ? AND idempotency_key = ?",
@@ -124,11 +135,15 @@ public class RechargePaymentService {
         });
 
         // 预下单在事务外（合同：事务内不得等待渠道）
-        var prepay = paymentPort.createPrepay(created.orderNo(), created.amountCents(), "充值");
+        // T13-22：openid 由 Controller 从 IdentitySessionPort.SessionContext 取，禁止客户端请求参数传入
+        var prepay = paymentPort.createPrepay(created.orderNo(), created.amountCents(), "充值", openid);
+        // T13-24：持久化 payParams（JSAPI 六参数），供 createOrder 响应下发与 pay-params 恢复端点重新领取
+        String prepayParamsJson = toJson(prepay.getCallParams());
         txTemplate.execute(status -> {
             jdbcTemplate.update(
-                    "UPDATE recharge_order SET payment_state = 'PENDING', update_time = now() "
-                            + "WHERE id = ? AND payment_state = 'CREATED'", created.orderId());
+                    "UPDATE recharge_order SET payment_state = 'PENDING', prepay_params = CAST(? AS jsonb), update_time = now() "
+                            + "WHERE id = ? AND payment_state = 'CREATED'",
+                    prepayParamsJson, created.orderId());
             return null;
         });
         return new OrderSnapshot(created.orderId(), created.orderNo(), created.userId(),
@@ -141,6 +156,30 @@ public class RechargePaymentService {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** T13-24：Map → JSON 字符串（prepay_params 持久化用） */
+    private String toJson(Map<String, String> map) {
+        if (map == null || map.isEmpty()) {
+            return null;
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
+        } catch (Exception e) {
+            throw new IllegalStateException("prepay_params 序列化失败", e);
+        }
+    }
+
+    /**
+     * T13-24：独立领取 payParams（恢复流程端点 GET /recharge-orders/{orderId}/pay-params）。
+     * 仅当订单归属当前 userId 且 paymentState IN ('CREATED','PENDING') 时返回；
+     * 已支付/已关闭/已失败订单返回 empty（前端引导查看充值记录，不重复拉起支付）。
+     */
+    public Optional<Map<String, String>> getPayParams(long userId, long orderId) {
+        return getOrderDetail(userId, orderId)
+                .filter(detail -> "CREATED".equals(detail.paymentState()) || "PENDING".equals(detail.paymentState()))
+                .map(OrderDetail::prepayParams)
+                .filter(params -> params != null && !params.isEmpty());
     }
 
     public Optional<OrderSnapshot> getOrderById(long orderId) {
@@ -164,7 +203,8 @@ public class RechargePaymentService {
      */
     public record OrderDetail(long orderId, String orderNo, long userId, long planId, long amountCents,
                               long basePoints, long bonusPoints, String paymentState,
-                              String fulfillmentState, Instant createdAt, Instant paidAt, RefundSummary refund) {
+                              String fulfillmentState, Instant createdAt, Instant paidAt, RefundSummary refund,
+                              Map<String, String> prepayParams) {
     }
 
     public record RefundSummary(String refundId, String channelState, String pointReversalState,
@@ -172,7 +212,7 @@ public class RechargePaymentService {
 
     private static final String ORDER_DETAIL_COLUMNS =
             "o.id, o.order_no, o.user_id, o.plan_id, o.amount_cents, o.base_points, o.bonus_points, "
-                    + "o.payment_state, o.fulfillment_state, o.create_time, t.paid_at, "
+                    + "o.payment_state, o.fulfillment_state, o.create_time, o.prepay_params, t.paid_at, "
                     + "r.id AS refund_id, r.channel_state, r.point_reversal_state, r.amount_cents AS refund_amount_cents, r.reason "
                     + "FROM recharge_order o "
                     + "LEFT JOIN payment_transaction t ON t.order_no = o.order_no AND t.deleted = FALSE "
@@ -211,7 +251,24 @@ public class RechargePaymentService {
                 rs.getTimestamp("paid_at") == null ? null : rs.getTimestamp("paid_at").toInstant(),
                 rs.getObject("refund_id") == null ? null : new RefundSummary(rs.getString("refund_id"),
                         rs.getString("channel_state"), rs.getString("point_reversal_state"),
-                        rs.getLong("refund_amount_cents"), rs.getString("reason")));
+                        rs.getLong("refund_amount_cents"), rs.getString("reason")),
+                parsePrepayParams(rs.getString("prepay_params")));
+    }
+
+    /** T13-24：解析 prepay_params JSONB → Map；null/空/解析失败均返回 null（前端按无 payParams 处理） */
+    private Map<String, String> parsePrepayParams(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, String> map = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(json, Map.class);
+            return map;
+        } catch (Exception e) {
+            log.warn("[parsePrepayParams] prepay_params 解析失败，按 null 处理: {}", e.getMessage());
+            return null;
+        }
     }
 
     // ========== 后台管理读模型（管理端页面 09~11）==========
@@ -395,25 +452,49 @@ public class RechargePaymentService {
             throw exception(PAYMENT_ORDER_STATE_CONFLICT);
         }
         notification = paymentPort.parseNotification(headers, body);
-        try {
-            jdbcTemplate.update(
-                    "INSERT INTO payment_notification_inbox (id, channel, event_id, request_headers, body_hash, "
-                            + "normalized_payload, verify_status) VALUES (?, 'STUB', ?, CAST(? AS jsonb), ?, CAST(? AS jsonb), ?)",
-                    IdWorker.getId(), notification.getEventId(),
-                    toJsonOrNull(Map.of("count", headers.size())), sha256Hex(body), toJsonOrNull(Map.of(
-                            "orderNo", notification.getOrderNo(),
-                            "amountCents", notification.getAmountCents())), "PASSED");
-        } catch (DuplicateKeyException e) {
+
+        // T13-26 Phase 1：可靠接收 — INSERT inbox 独立事务提交。
+        // 即使 Phase 2 到账处理失败/进程崩溃，inbox 记录已持久化，
+        // recoverPendingInbox 补偿扫描可重放（分派表 §3.2 T13-26 ①）。
+        String insertOutcome = txTemplate.execute(status -> {
+            try {
+                // T13-22：channel 从 paymentPort.channel() 取，禁止硬编码 'STUB'（分派表 §8 红线 2）
+                jdbcTemplate.update(
+                        "INSERT INTO payment_notification_inbox (id, channel, event_id, request_headers, body_hash, "
+                                + "normalized_payload, verify_status) VALUES (?, ?, ?, CAST(? AS jsonb), ?, CAST(? AS jsonb), ?)",
+                        IdWorker.getId(), paymentPort.channel(), notification.getEventId(),
+                        toJsonOrNull(Map.of("count", headers.size())), sha256Hex(body), toJsonOrNull(Map.of(
+                                "orderNo", notification.getOrderNo(),
+                                "amountCents", notification.getAmountCents())), "PASSED");
+                return "INSERTED";
+            } catch (DuplicateKeyException e) {
+                return "DUPLICATE";
+            }
+        });
+        if ("DUPLICATE".equals(insertOutcome)) {
             return "DUPLICATE";
         }
+
+        // T13-26 Phase 2：到账处理 — processPaymentFact / fulfillOrder 各自持有独立 txTemplate，
+        // 与 Phase 1 的 inbox 事务解耦（分派表 §3.2 T13-26 ①“再独立事务处理到账”）。
         try {
+            // T13-27：前置校验 + 异常审计（transactionId / 金额 / 实付回退 / paidAt）
+            long declaredAmount = declaredAmount(notification.getOrderNo());
+            long effectiveAmount = factValidator.validateAndAudit(
+                    notification.getOrderNo(), notification.getEventId(),
+                    notification.getChannelTransactionId(), declaredAmount,
+                    notification.getAmountCents(), notification.getPaidAt());
             boolean paid = processPaymentFact(notification.getOrderNo(), notification.getEventId(),
-                    notification.getChannelTransactionId(), notification.getAmountCents(),
+                    notification.getChannelTransactionId(), effectiveAmount,
                     notification.getPaidAt());
             if (paid) {
                 fulfillOrder(notification.getOrderNo());
             }
-            markInbox(notification.getEventId(), paid ? "PROCESSED" : "REJECTED", null);
+            // paid==false 表示「已受理但无状态迁移」（同 orderNo 不同 eventId 的重发通知，或订单已 SUCCEEDED），
+            // 属幂等正常完成。ck_payment_inbox_status 只允许 RECEIVED/PROCESSED/FAILED，写 'REJECTED'
+            // 会触发约束违反 → 500 → 渠道无限重试，故 inbox 一律记 PROCESSED，
+            // 仅对调用方返回值区分 REJECTED 以便观测。
+            markInbox(notification.getEventId(), "PROCESSED", null);
             return paid ? "PROCESSED" : "REJECTED";
         } catch (Exception e) {
             // 处理失败：Inbox 留痕可重投（recoverPendingInbox / recoverHangingOrders 补偿）
@@ -422,25 +503,137 @@ public class RechargePaymentService {
         }
     }
 
-    private void markInbox(String eventId, String status, String error) {
-        jdbcTemplate.update(
-                "UPDATE payment_notification_inbox SET process_status = ?, last_error = ?, "
-                        + "retry_count = retry_count + 1, update_time = now() WHERE channel = 'STUB' AND event_id = ?",
-                status, error, eventId);
+    /**
+     * T13-28：处理渠道退款结果通知（入站）。
+     *
+     * <p>与 {@link #handleNotification} 对称的两阶段：Phase 1 可靠接收（INSERT inbox 独立事务，
+     * UK(channel, event_id) 幂等）；Phase 2 状态推进（{@code confirmReversal} / {@code releaseReservation}
+     * 各自持有独立事务，且内部有 {@code point_reversal_state='RESERVED'} CAS 守卫，重复调用安全）。
+     *
+     * <p>分派表 §8 红线 5：{@code PROCESSING}/{@code UNKNOWN} 既不冲正也不释放，仅落
+     * {@code refund_order.channel_state} 并保持预留，交由 {@link #reconcileRefunds()} 查单收口。
+     *
+     * @return REVERSED（已冲正）/ RELEASED（已释放预留）/ PENDING（渠道未终态，保持预留）/ DUPLICATE（重复通知）
+     */
+    public String handleRefundNotification(java.util.Map<String, String> headers, byte[] body) {
+        if (!paymentPort.verifyNotification(headers, body)) {
+            throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+        }
+        var notification = paymentPort.parseRefundNotification(headers, body);
+
+        // Phase 1：可靠接收（与支付通知共用 payment_notification_inbox，UK(channel, event_id) 幂等）
+        String insertOutcome = txTemplate.execute(status -> {
+            try {
+                jdbcTemplate.update(
+                        "INSERT INTO payment_notification_inbox (id, channel, event_id, request_headers, body_hash, "
+                                + "normalized_payload, verify_status) VALUES (?, ?, ?, CAST(? AS jsonb), ?, CAST(? AS jsonb), ?)",
+                        IdWorker.getId(), paymentPort.channel(), notification.getEventId(),
+                        toJsonOrNull(Map.of("count", headers.size())), sha256Hex(body),
+                        toJsonOrNull(Map.of(
+                                "orderNo", notification.getOrderNo(),
+                                "channelRefundId", notification.getChannelRefundId(),
+                                "state", notification.getState())), "PASSED");
+                return "INSERTED";
+            } catch (DuplicateKeyException e) {
+                return "DUPLICATE";
+            }
+        });
+        if ("DUPLICATE".equals(insertOutcome)) {
+            return "DUPLICATE";
+        }
+
+        // Phase 2：状态推进
+        try {
+            String outcome = applyRefundNotification(notification);
+            markInbox(notification.getEventId(), "PROCESSED", null);
+            return outcome;
+        } catch (Exception e) {
+            markInbox(notification.getEventId(), "FAILED", e.getMessage());
+            throw e;
+        }
     }
 
-    /** 补偿一：重投失败 Inbox（重放事件；同幂等链不重复改变事实） */
+    /**
+     * 按渠道退款终态推进本地退款单。P0 仅整单全额退款，故通知金额必须与
+     * {@code refund_order.amount_cents} 一致（分派表 §3.1 T13-28「退款金额与原订单一致性校验」）；
+     * 不符则落审计并拒绝，绝不静默吞掉。
+     */
+    private String applyRefundNotification(PaymentPort.NormalizedRefundNotification notification) {
+        // channel_refund_id 无 UK，用 order_no + channel_refund_id 联合定位并取最新一条
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT r.id, r.amount_cents, r.point_reversal_state, r.reserved_base, r.reserved_bonus, "
+                        + "o.user_id FROM refund_order r JOIN recharge_order o ON o.id = r.order_id "
+                        + "WHERE o.order_no = ? AND r.channel_refund_id = ? AND r.deleted = FALSE "
+                        + "ORDER BY r.id DESC LIMIT 1",
+                notification.getOrderNo(), notification.getChannelRefundId());
+        if (rows.isEmpty()) {
+            factValidator.audit(notification.getOrderNo(), notification.getEventId(),
+                    "REFUND_ORDER_NOT_FOUND", "REJECT", "existing refund_order",
+                    notification.getChannelRefundId(), "退款通知指向未知退款单，拒绝推进");
+            throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+        }
+        Map<String, Object> refund = rows.get(0);
+        long refundId = ((Number) refund.get("id")).longValue();
+        long userId = ((Number) refund.get("user_id")).longValue();
+        long expectedAmount = ((Number) refund.get("amount_cents")).longValue();
+        long basePoints = ((Number) refund.get("reserved_base")).longValue();
+        long bonusPoints = ((Number) refund.get("reserved_bonus")).longValue();
+
+        // 金额一致性（REJECT）：渠道退款金额必须等于本地整单全额
+        if (notification.getRefundAmountCents() != expectedAmount) {
+            factValidator.audit(notification.getOrderNo(), notification.getEventId(),
+                    "REFUND_AMOUNT_MISMATCH", "REJECT", String.valueOf(expectedAmount),
+                    String.valueOf(notification.getRefundAmountCents()),
+                    "退款通知金额与退款单不符，拒绝推进冲正/释放");
+            throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+        }
+
+        return switch (notification.getState()) {
+            case "SUCCEEDED" -> {
+                confirmReversal(refundId, userId, basePoints, bonusPoints);
+                yield "REVERSED";
+            }
+            case "FAILED" -> {
+                releaseReservation(refundId, userId, basePoints + bonusPoints);
+                yield "RELEASED";
+            }
+            // 红线 5：PROCESSING / UNKNOWN / CREATED 不冲正不释放，仅落 channel_state 等查单收口。
+            // 白名单归一：非 ck_refund_channel_state 允许值一律归 UNKNOWN，避免约束违反。
+            default -> {
+                String persisted = List.of("PROCESSING", "UNKNOWN", "CREATED").contains(notification.getState())
+                        ? notification.getState() : "UNKNOWN";
+                jdbcTemplate.update(
+                        "UPDATE refund_order SET channel_state = ?, update_time = now() WHERE id = ?",
+                        persisted, refundId);
+                log.info("[handleRefundNotification][refund={} 渠道状态 {}，保持预留并进入查单收口]",
+                        refundId, notification.getState());
+                yield "PENDING";
+            }
+        };
+    }
+
+    private void markInbox(String eventId, String status, String error) {
+        // T13-22：channel 过滤条件同样取自 paymentPort.channel()，防止 stub/real 切换时误改他渠道 Inbox
+        jdbcTemplate.update(
+                "UPDATE payment_notification_inbox SET process_status = ?, last_error = ?, "
+                        + "retry_count = retry_count + 1, update_time = now() WHERE channel = ? AND event_id = ?",
+                status, error, paymentPort.channel(), eventId);
+    }
+
+    /** 补偿一：重投失败 Inbox（重放事件；同幂等链不重复改变事实）。
+     *  T13-26 ⑤：retry_count < 10 上限，避免毒丸事件无限重试拖垮补偿线程。 */
     public int recoverPendingInbox() {
+        // T13-22：补偿扫描同样按当前 channel 隔离，避免 stub 补偿误捞 real Inbox（反之亦然）
         var failed = jdbcTemplate.queryForList(
                 "SELECT event_id, normalized_payload FROM payment_notification_inbox "
-                        + "WHERE process_status IN ('RECEIVED','FAILED') AND channel = 'STUB' "
-                        + "ORDER BY id LIMIT 50");
+                        + "WHERE process_status IN ('RECEIVED','FAILED') AND channel = ? "
+                        + "AND retry_count < 10 ORDER BY id LIMIT 50", paymentPort.channel());
         int recovered = 0;
         for (var row : failed) {
             String eventId = (String) row.get("event_id");
             String orderNo = jdbcTemplate.queryForObject(
                     "SELECT normalized_payload->>'orderNo' FROM payment_notification_inbox "
-                            + "WHERE channel = 'STUB' AND event_id = ?", String.class, eventId);
+                            + "WHERE channel = ? AND event_id = ?", String.class, paymentPort.channel(), eventId);
             try {
                 fulfillOrder(orderNo);
                 markInbox(eventId, "PROCESSED", null);
@@ -499,10 +692,13 @@ public class RechargePaymentService {
                             + "update_time = now() WHERE id = ? AND payment_state IN ('CREATED','PENDING','UNKNOWN')",
                     channelTransactionId, orderId);
             try {
+                // T13-22：channel + merchant_id 均从 paymentPort 取，写入 payment_transaction 的
+                // UK(channel, merchant_id, channel_transaction_id) 幂等键在 stub/real 之间自然隔离
                 jdbcTemplate.update(
                         "INSERT INTO payment_transaction (id, channel, merchant_id, channel_transaction_id, "
-                                + "order_no, amount_cents, paid_at) VALUES (?, 'STUB', 'stub-merchant', ?, ?, ?, ?)",
-                        IdWorker.getId(), channelTransactionId, orderNo, amountCents,
+                                + "order_no, amount_cents, paid_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        IdWorker.getId(), paymentPort.channel(), paymentPort.merchantId(),
+                        channelTransactionId, orderNo, amountCents,
                         java.sql.Timestamp.from(paidAt));
             } catch (DuplicateKeyException e) {
                 // 渠道交易已映射过本地订单：幂等
@@ -565,12 +761,11 @@ public class RechargePaymentService {
             return query.getState();
         }
         long declaredAmount = declaredAmount(orderNo);
-        long channelAmount = query.getAmountCents() == null ? declaredAmount : query.getAmountCents();
-        if (query.getAmountCents() == null) {
-            log.warn("[reconcile][order={} 渠道未返回实付金额，回退声明值 {}]", orderNo, declaredAmount);
-        }
+        // T13-27：前置校验 + 异常审计（缺实付金额时回退声明值 + AUDIT 标记）
+        long effectiveAmount = factValidator.validateAndAudit(orderNo, "reconcile-" + orderNo,
+                query.getChannelTransactionId(), declaredAmount, query.getAmountCents(), Instant.now());
         boolean moved = processPaymentFact(orderNo, "reconcile-" + orderNo,
-                query.getChannelTransactionId(), channelAmount, Instant.now());
+                query.getChannelTransactionId(), effectiveAmount, Instant.now());
         fulfillOrder(orderNo);
         return moved ? "RECOVERED" : "ALREADY_RECONCILED";
     }
@@ -660,41 +855,114 @@ public class RechargePaymentService {
     }
 
     /**
-     * 退款 UNKNOWN 收口（审查 H1）：对 channel_state=UNKNOWN/PROCESSING 且仍 RESERVED 的退款单查单，
-     * 按渠道结果推进冲正/释放/继续等待。由 ZhongshuJobDriver 定时调用。
+     * 退款 UNKNOWN 收口（审查 H1 / 分派表 §3.2 T13-29 ②）：对 channel_state=UNKNOWN/PROCESSING/CREATED
+     * 且仍 RESERVED 的退款单查单，按渠道结果推进冲正/释放/继续等待。由 {@code RefundRecoveryJob} 定时调用。
+     *
+     * <p>分派表 §8 红线 5：PROCESSING/UNKNOWN 既不冲正也不释放，仅保持预留等下一轮查单，直到渠道终态。
      */
     public int reconcileRefunds() {
-        List<Map<String, Object>> pending = jdbcTemplate.queryForList(
+        int resolved = 0;
+        for (Map<String, Object> row : queryPendingRefunds()) {
+            long refundId = ((Number) row.get("id")).longValue();
+            long orderId = ((Number) row.get("order_id")).longValue();
+            String channelRefundId = (String) row.get("channel_refund_id");
+            if (resolveRefundByQuery(refundId, orderId, channelRefundId)) {
+                resolved++;
+            }
+        }
+        return resolved;
+    }
+
+    /**
+     * T13-29 ④ 重启补偿：进程重启后重新驱动所有未终态退款单查单收口。与 {@link #reconcileRefunds()}
+     * 共用查单驱动逻辑；额外对超过 {@link #REFUND_STUCK_GRACE_MINUTES} 仍卡在非终态的退款单落
+     * {@code REFUND_STUCK} 审计（去重），供人工核对渠道退款结果。由 {@code RefundRecoveryJob}
+     * 在 {@code ApplicationReadyEvent} 时调用一次。
+     *
+     * @return 本轮收口（冲正/释放）的退款单数
+     */
+    public int recoverPendingRefunds() {
+        int resolved = 0;
+        for (Map<String, Object> row : queryPendingRefunds()) {
+            long refundId = ((Number) row.get("id")).longValue();
+            long orderId = ((Number) row.get("order_id")).longValue();
+            String channelRefundId = (String) row.get("channel_refund_id");
+            if (resolveRefundByQuery(refundId, orderId, channelRefundId)) {
+                resolved++;
+                continue;
+            }
+            // 仍未终态：若已超宽限期则落卡单审计（红线 5——审计不改变状态、不冲正不释放）
+            var order = getOrderById(orderId).orElse(null);
+            if (order != null) {
+                auditStuckRefundIfNeeded(refundId, order.orderNo());
+            }
+        }
+        return resolved;
+    }
+
+    /** 扫描未终态且仍 RESERVED 的退款单（PROCESSING/UNKNOWN/CREATED），最多 20 笔一轮。 */
+    private List<Map<String, Object>> queryPendingRefunds() {
+        return jdbcTemplate.queryForList(
                 "SELECT id, order_id, channel_refund_id FROM refund_order "
                         + "WHERE channel_state IN ('UNKNOWN','PROCESSING','CREATED') "
                         + "AND point_reversal_state = 'RESERVED' AND deleted = FALSE "
                         + "ORDER BY id LIMIT 20");
-        int resolved = 0;
-        for (Map<String, Object> row : pending) {
-            long refundId = ((Number) row.get("id")).longValue();
-            long orderId = ((Number) row.get("order_id")).longValue();
-            String channelRefundId = (String) row.get("channel_refund_id");
-            if (channelRefundId == null) {
-                continue; // CREATED 未提交渠道：等下一轮（受理方重试）
-            }
-            var order = getOrderById(orderId).orElse(null);
-            if (order == null) {
-                continue;
-            }
-            var query = paymentPort.queryRefund(order.orderNo(), channelRefundId);
-            switch (query.getState()) {
-                case "SUCCEEDED" -> {
-                    confirmReversal(refundId, order.userId(), order.basePoints(), order.bonusPoints());
-                    resolved++;
-                }
-                case "FAILED" -> {
-                    releaseReservation(refundId, order.userId(), order.basePoints() + order.bonusPoints());
-                    resolved++;
-                }
-                default -> log.info("[reconcileRefunds][refund={} 渠道仍 {}，保持预留]", refundId, query.getState());
-            }
+    }
+
+    /**
+     * 查单驱动单个退款单收口。
+     *
+     * @return true=已到终态（SUCCEEDED 冲正 / FAILED 释放）；false=仍未终态或不可处理（保持预留）
+     */
+    private boolean resolveRefundByQuery(long refundId, long orderId, String channelRefundId) {
+        if (channelRefundId == null) {
+            return false; // CREATED 未提交渠道：等下一轮（受理方重试）
         }
-        return resolved;
+        var order = getOrderById(orderId).orElse(null);
+        if (order == null) {
+            return false;
+        }
+        var query = paymentPort.queryRefund(order.orderNo(), channelRefundId);
+        return switch (query.getState()) {
+            case "SUCCEEDED" -> {
+                confirmReversal(refundId, order.userId(), order.basePoints(), order.bonusPoints());
+                yield true;
+            }
+            case "FAILED" -> {
+                releaseReservation(refundId, order.userId(), order.basePoints() + order.bonusPoints());
+                yield true;
+            }
+            // 红线 5：PROCESSING/UNKNOWN 不冲正不释放，保持预留等下一轮查单
+            default -> {
+                log.info("[reconcileRefunds][refund={} 渠道仍 {}，保持预留]", refundId, query.getState());
+                yield false;
+            }
+        };
+    }
+
+    /**
+     * 卡单审计：仅对超过宽限期仍未终态的退款单落一次 {@code REFUND_STUCK} 审计（AUDIT 级，去重）。
+     * 语义为软告警——不改变退款单状态、不冲正不释放，只为人工提供可观测入口。
+     */
+    private void auditStuckRefundIfNeeded(long refundId, String orderNo) {
+        Integer stuck = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM refund_order WHERE id = ? "
+                        + "AND channel_state IN ('PROCESSING','UNKNOWN','CREATED') "
+                        + "AND point_reversal_state = 'RESERVED' "
+                        + "AND update_time < now() - (? * interval '1 minute')",
+                Integer.class, refundId, REFUND_STUCK_GRACE_MINUTES);
+        if (stuck == null || stuck == 0) {
+            return; // 未超宽限期：正常在途，不告警
+        }
+        Integer existing = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM payment_anomaly_audit WHERE order_no = ? AND anomaly_type = 'REFUND_STUCK'",
+                Integer.class, orderNo);
+        if (existing != null && existing > 0) {
+            return; // 已告警过：去重，避免每轮补偿重复落审计
+        }
+        factValidator.audit(orderNo, "refund-stuck-" + refundId, "REFUND_STUCK", "AUDIT",
+                "terminal within " + REFUND_STUCK_GRACE_MINUTES + "min", "still non-terminal",
+                "退款长时间卡在非终态（PROCESSING/UNKNOWN），需人工核对渠道退款结果");
     }
 
     /** 渠道退款成功：冲正事务（预留扣减+两类冲正流水+退款单 CAS） */

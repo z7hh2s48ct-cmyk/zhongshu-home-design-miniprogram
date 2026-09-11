@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
@@ -51,8 +52,10 @@ public class AppRechargeOrderController {
             @Parameter(description = "幂等键")
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
-        long userId = requireAccountId(authorization);
-        var order = rechargePaymentService.createOrder(userId, Long.parseLong(planId), idempotencyKey);
+        // T13-22：openid 从会话上下文取，禁止从客户端请求参数取（防止 openid 与 userId 不匹配的越权支付）
+        IdentitySessionPort.SessionContext session = requireSession(authorization);
+        long userId = session.accountId();
+        var order = rechargePaymentService.createOrder(userId, Long.parseLong(planId), idempotencyKey, session.openid());
         // 建单后按 orderId 回读，拿到与列表/详情一致的完整读模型
         return success(rechargePaymentService.getOrderDetail(userId, order.orderId())
                 .map(this::toVo)
@@ -85,11 +88,36 @@ public class AppRechargeOrderController {
                 .orElseThrow(() -> new AccessDeniedException("订单不存在或无权访问")));
     }
 
+    /**
+     * T13-24：独立领取 payParams（恢复流程）。
+     * 场景：用户取消支付 / 签名失效 / 网络错误后，前端重新领取 payParams 继续支付，
+     * 禁止重复建单（同 orderNo 幂等）。仅当 paymentState IN ('CREATED','PENDING') 时返回；
+     * 已支付/已关闭/已失败返回 409（前端引导查看充值记录）。
+     */
+    @GetMapping("/{orderId}/pay-params")
+    @Operation(summary = "重新领取支付参数（恢复流程）；仅 CREATED/PENDING 状态可用")
+    public CommonResult<Map<String, String>> getPayParams(
+            @PathVariable("orderId") String orderId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        long userId = requireAccountId(authorization);
+        return rechargePaymentService.getPayParams(userId, Long.parseLong(orderId))
+                .map(params -> success(params))
+                .orElseThrow(() -> new IllegalStateException("订单不可支付（已支付/已关闭/已失败或无权访问）"));
+    }
+
     private long requireAccountId(String authorization) {
+        return requireSession(authorization).accountId();
+    }
+
+    /**
+     * T13-22：提取会话上下文（包含 accountId + appid + openid + restricted）。
+     * createOrder 需要 openid 传给支付渠道（JSAPI 支付必需）；其余端点仅需 accountId，走 {@link #requireAccountId}。
+     */
+    private IdentitySessionPort.SessionContext requireSession(String authorization) {
         String token = authorization != null && authorization.startsWith("Bearer ")
                 ? authorization.substring(7) : authorization;
         // 审查 H4：业务端点统一要求非受限会话（受限会话仅可查准入/协议/兑换授权码）
-        return identitySessionPort.requireUnrestricted(token).accountId();
+        return identitySessionPort.requireUnrestricted(token);
     }
 
     private AppRechargeOrderRespVO toVo(RechargePaymentService.OrderDetail order) {
@@ -107,6 +135,10 @@ public class AppRechargeOrderController {
         vo.setPaidAt(order.paidAt() == null ? null
                 : LocalDateTime.ofInstant(order.paidAt(), ZoneId.of("Asia/Shanghai")));
         vo.setAllowedActions(allowedActions(order));
+        // T13-24：payParams 仅当 paymentState IN ('CREATED','PENDING') 时下发（已支付/已关闭不下发，防止重复拉起）
+        if ("CREATED".equals(order.paymentState()) || "PENDING".equals(order.paymentState())) {
+            vo.setPayParams(order.prepayParams());
+        }
         return vo;
     }
 

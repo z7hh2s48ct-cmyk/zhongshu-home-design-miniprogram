@@ -29,7 +29,7 @@ import java.util.function.Function;
  *   <li>「启用真实服务才要求相应密钥」：某端口选择真实实现时才校验其依赖的配置（微信 real 需要 appid 与 appsecret）。</li>
  * </ul>
  * 所有违例消息<b>只回显配置键名与环境变量名，绝不回显密钥值</b>，与「日志/管理端不泄露密钥」保持一致。
- * B2（COS）、B4（微信支付）真实适配器落地时，在 {@link #REAL_MODE_REQUIREMENTS} 登记各自密钥键即可复用本校验。
+ * B2、B4 真实适配器落地时，在 {@link #REAL_MODE_REQUIREMENTS} 登记各自密钥键即可复用本校验。
  */
 public final class RealServiceWiringPolicy {
 
@@ -72,7 +72,22 @@ public final class RealServiceWiringPolicy {
             // T13-04：real 微信身份还需 AppSecret（code2session 用）。AppSecret 无开发占位值（zsdev 默认留空），
             // 故 placeholderValue=null：validate() 仅要求非空（value.equals(null) 恒 false，自动跳过占位值比对）。
             new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
-                    "zhongshu.identity.wechat-appsecret", null, "B1"));
+                    "zhongshu.identity.wechat-appsecret", null, "B1"),
+            // T13-21：real 微信支付需 merchant-id/merchant-serial-no/api-v3-key/merchant-private-key-path/notify-url
+            // （WechatPaymentAdapter 构造期与 createPrepay 消费）。AppID 复用 B1 已登记的 wechat-appid（微信支付要求
+            // 商户号绑定的 AppID 与登录 AppID 一致），不重复登记；五者均无开发占位值（zsdev/pg 默认留空），
+            // 故 placeholderValue=null，validate() 仅要求非空。refund-notify-url 与 platform-cert-path 由 SDK 自动
+            // 派生/下载覆盖，本期不单独登记。
+            new RealModeRequirement("zhongshu.commerce.payment.provider", "real",
+                    "zhongshu.commerce.payment.wechat.merchant-id", null, "B4"),
+            new RealModeRequirement("zhongshu.commerce.payment.provider", "real",
+                    "zhongshu.commerce.payment.wechat.merchant-serial-no", null, "B4"),
+            new RealModeRequirement("zhongshu.commerce.payment.provider", "real",
+                    "zhongshu.commerce.payment.wechat.api-v3-key", null, "B4"),
+            new RealModeRequirement("zhongshu.commerce.payment.provider", "real",
+                    "zhongshu.commerce.payment.wechat.merchant-private-key-path", null, "B4"),
+            new RealModeRequirement("zhongshu.commerce.payment.provider", "real",
+                    "zhongshu.commerce.payment.wechat.notify-url", null, "B4"));
 
     private RealServiceWiringPolicy() {
     }

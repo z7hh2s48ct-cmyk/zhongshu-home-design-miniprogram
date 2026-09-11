@@ -70,6 +70,9 @@ export const createRefundRequest = (orderId, data) =>
 export const getRefundOrderPage = (params) => request.get({ url: `${BASE}/refund-orders`, params })
 export const reconcileOrder = (orderId, data) =>
   request.post({ url: `${BASE}/recharge-orders/${orderId}/reconciliation`, data })
+// T13-30 前半 ③：渠道支付流水分页（复用 payment_transaction，供财务对账）
+export const getPaymentTransactionPage = (params) =>
+  request.get({ url: `${BASE}/payment-transactions`, params })
 
 // ---------- 设计点流水 / 调点 ----------
 export const getPointLedgerPage = (params) => request.get({ url: `${BASE}/point-ledger`, params })

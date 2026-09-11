@@ -112,6 +112,10 @@ module.exports = {
   getRechargeOrder: function (orderId) {
     return http.get(BASE + '/recharge-orders/' + orderId);
   },
+  // T13-24：恢复流程重新领取 payParams（禁止重复建单，同 orderNo 幂等）
+  getPayParams: function (orderId) {
+    return http.get(BASE + '/recharge-orders/' + orderId + '/pay-params');
+  },
   getPointAccount: function () {
     return http.get(BASE + '/point-account');
   },
