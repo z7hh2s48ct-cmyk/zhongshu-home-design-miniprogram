@@ -389,6 +389,17 @@ class IdentityP2AContractTest {
     }
 
     @Test
+    void closedAccountInvalidatesExistingAccessToken() {
+        // 停用账号（CLOSED）后，尚未过期的既有 access token 必须立即失效——由 validateAccessToken 的 INNER JOIN account a.status='ACTIVE' 保障，
+        // 与上一用例的 refresh 拒绝路径互补，闭合「停用账号」在 validateAccessToken 侧的实时失效验证（T13-08 §5）
+        var login = loginService.login(APPID, "closed-access-token", null);
+        assertThat(sessionService.validateAccessToken(login.accessToken())).as("停用前既有 access token 有效").isPresent();
+        jdbc.update("UPDATE account SET status = 'CLOSED'");
+        assertThat(sessionService.validateAccessToken(login.accessToken())).as("账号停用后既有 access token 立即失效").isEmpty();
+        assertThat(count("user_session", "TRUE")).isEqualTo(1);
+    }
+
+    @Test
     void refreshResponseRechecksGrantAfterActivationAndRevocation() {
         var login = loginService.login(APPID, "refresh-grant", null);
         redemptionService.redeem(APPID, login.openid(), null, createInlineBatch(1).get(0));

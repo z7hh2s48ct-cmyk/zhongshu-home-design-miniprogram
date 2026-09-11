@@ -78,6 +78,7 @@ function runtime(initialStorage = {}, opts = {}) {
   return {
     wx, calls, requests, storage, authPage, navigations, req, ok, err, drain,
     api: load('utils/api.js'),
+    access: load('utils/access.js'),
     get loginCalls() { return loginCalls; },
   };
 }
@@ -393,6 +394,54 @@ test('离页发生在登录阶段时，恢复不再发起授权查询，避免�
   assert.equal(env.req('/access-grant').length, 0, '离页后恢复不得发起授权查询');
   assert.equal(auth._leftPage, true);
   assert.equal(env.calls.filter(([t]) => t === 'redirectTo').length, 0, '离页后不得被重定向拉回激活页');
+});
+
+test('授权查询已在途时离页，迟到 401 只清会话不把用户拉回激活页（P2#1 闭环，真实请求层）', async () => {
+  // 承 T13-07 P2#1：上一个用例守住「登录阶段离页→不发 grant」；本例补其补集——grant 已在途后用户才离页，
+  // 此时迟到的 401 仍会走完请求层清会话，但 silent 必须抑制 showActivation，不把已 navigateBack 出栈的用户重定向拉回。
+  const env = runtime({ zs_access_token: 'valid', zs_refresh_token: 'valid-ref' }, { realRequest: true });
+  const auth = env.authPage();               // 令牌有效 → 恢复复用会话直接发起授权查询（不 wx.login）
+  await tick();
+  const grantReq = env.req('/access-grant')[0];
+  assert.ok(grantReq, '恢复应发起在途授权查询');
+
+  auth.continueBrowsing();                   // grant 在途时用户主动离页 → _leftPage=true, navigateBack 真实出栈 auth 页
+  assert.ok(env.calls.some(([t]) => t === 'navigateBack'), '继续浏览应触发 navigateBack（真实卸载当前页）');
+
+  env.err(grantReq, 401, 401, 'late expiry'); // 离页后授权查询迟到 401
+  await tick();
+  const refresh = env.req('/token-refresh')[0];
+  assert.ok(refresh, '迟到 401 应触发一次刷新');
+  env.err(refresh, 401, 401, 'invalid refresh'); // 刷新也失效 → 请求层清会话
+  await auth._recovery; await tick();
+
+  // 关键：navigateBack 已出栈 auth 页（getCurrentPages 顶页非 auth），若 silent 失效则 showActivation 必产生 redirectTo；
+  //   下面「无 redirect」断言因此独立证明离页后迟到 401 未把用户拉回（而非因仍在 auth 页自行短路）。
+  assert.equal(env.storage.zs_access_token, undefined, 'silent 仍清失效会话（状态同步）');
+  assert.equal(env.storage.v12Authorized, false, 'silent 仍同步授权快照');
+  assert.equal(env.loginCalls, 0, '令牌有效不登录；离页后迟到 401 也不触发强制重登（_leftPage 守卫）');
+  assert.equal(env.req('/access-grant').length, 1, '离页后不再重发授权查询');
+  assert.equal(env.calls.filter(([t]) => t === 'redirectTo').length, 0, '离页后迟到 401 不得把用户重定向拉回激活页');
+});
+
+test('后台对账 refreshFromServer 以 silent 发起，迟到 401 只清会话不把用户拉回激活页（P2#1 承 app.onShow 场景）', async () => {
+  // app.onShow 冷启动/回前台触发的 refreshFromServer 是 P2#1 最高频后台触发点：用户此刻多在首页/功能页而非激活页，
+  //   在途授权对账的迟到 401 若走非 silent 会 showActivation 把用户从当前页强制拉回激活页。此例锁定 access.js 确实传 silent。
+  const env = runtime({ zs_access_token: 'valid', zs_refresh_token: 'valid-ref' }, { realRequest: true });
+  // 不创建 auth 页：pages 为空，等价于 getCurrentPages 顶页非 auth（用户在其它页时 app 回前台）——非 silent 必触发 redirectTo。
+  const refreshing = env.access.refreshFromServer();
+  await tick();
+  const grantReq = env.req('/access-grant')[0];
+  assert.ok(grantReq, 'refreshFromServer 应发起后台授权对账');
+  env.err(grantReq, 401, 401, 'late expiry');
+  await tick();
+  const refresh = env.req('/token-refresh')[0];
+  assert.ok(refresh, '迟到 401 应触发一次刷新');
+  env.err(refresh, 401, 401, 'invalid refresh');
+  await refreshing; await tick();
+  assert.equal(env.storage.zs_access_token, undefined, 'silent 仍清失效会话（状态同步）');
+  assert.equal(env.storage.v12Authorized, false, 'silent 仍同步授权快照');
+  assert.equal(env.calls.filter(([t]) => t === 'redirectTo').length, 0, '后台对账迟到 401 不得把用户重定向拉回激活页');
 });
 
 // ---- C) 加载态视觉契约 ----

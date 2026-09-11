@@ -47,8 +47,8 @@ Page({
   // 既有令牌）再查一次；本次请求因并发操作改变的会话代际被判 SESSION_CHANGED 时，按当前令牌/在途
   // 登录复用或正常登录（非 force）后重查一次、绝不在此主动清会话（否则会作废在途重试登录）；其余
   // 失败（网络/服务端错误）静默降级到手动输码。恢复全程绝不弹错误、不清用户已输入的码、不阻断
-  // 手动路径；离页后页面自身回调不再导航、不再发起授权查询（请求层 showActivation 对已在途授权查询
-  // 迟到 401 的拉回属全局副作用，本项不改 request.js、未闭环，延后 T13-08）。
+  // 手动路径；离页后页面自身回调不再导航、不再发起授权查询；且授权查询以 silent 发起（T13-08 承 P2#1
+  // 闭环），即便 grant 已在途后离页、迟到 401 也只同步会话状态、不触发请求层 showActivation 把用户拉回。
   recoverSession() {
     if (this.recovering || this.activated || this._leftPage) return Promise.resolve();
     this.recovering = true;
@@ -57,13 +57,19 @@ Page({
       .catch(function (err) {
         if (self._leftPage || self.activated) return undefined;
         // 会话失效分两类，恢复层均不在此主动清会话。
-        //   401（身份过期）→ _recoverOnce(true)：force 忽略既有令牌强制重登再查一次授权。请求层对 401 清会话
-        //     有两条路径：①刷新失败分支——refreshError.code===401 且会话在等待期未变（request.js:115
-        //     getToken()===token 且代际未变）→ clearTokens+showActivation；②刷新成功后重放请求又 401（已 retried、
-        //     有令牌，request.js:121）→ 同样 clearTokens+showActivation。不清会话的 401：①刷新等待期会话已变
-        //     （新令牌已建立，line 115 判否）→ 抛 401、保留新令牌；②通过前置会话检查后 401 来自登录/刷新端点
-        //     （request.js:112）→ 原样抛出、不清除现有会话状态（会话于请求期间已变则先进入 :99-105 检查：命中 :100-103 同会话刷新轮换例外则重放一次，否则转 SESSION_CHANGED）。
-        //     showActivation 是否重定向还取决于当前是否已在激活页（request.js:59）。无论哪条，恢复层都不主动 clearTokens。
+        //   401（身份过期）→ _recoverOnce(true)：force 忽略既有令牌强制重登再查一次授权。请求层（request.js）对 401 的清会话
+        //     分布在三条失效路径——①「刷新失败分支」（refreshSession 的 rejection：refreshError.code===401 且会话在等待期未变
+        //     getToken()===token、代际未变 → clearTokens）；②「重放终态分支」（刷新成功后重放又 401：已 retried、有令牌 → clearTokens）；
+        //     ③「源于 401 的 SESSION_CHANGED 分支」（前台 401 迟到于会话已被并发清除 → 不再清、仅补导航）。拦截器确认 401 失效时由
+        //     invalidateSession 置位 pendingInvalidationEpoch 事件（记录被失效会话的 epoch；唯它置位，setTokens 新登录、clearTokens 登出各自复位为 null），三条路径的前台
+        //     导航统一经 foregroundInvalidateNav(silent, token, epoch, code) 四重门裁决：前台（!silent）&& 令牌快照非空（token，本请求确属某会话）
+        //     && 本响应为 401（code，排除迟到 200/500/SESSION_CHANGED）&& epoch 归属匹配（pendingInvalidationEpoch===epoch，本请求确属「被失效」的那个会话，排除跨会话/新登录/登出），才 showActivation 恰一次（消费即复位去重），silent 从不触发。
+        //     本恢复层以 { silent: true } 发起授权查询（见 _recoverOnce），故上述路径只同步会话状态（clearTokens、v12Authorized 落盘）、不触发
+        //     showActivation 全局拉回（T13-08 承 P2#1 闭环；round-4 跨会话竞态修复见 foregroundInvalidateNav 四重门 + sessionEpoch 归属；round-5 于刷新成功回调（successCb）重放前增 sessionEpoch 守卫——刷新成功→重放系独立微任务，此窗口内登录/登出致 epoch 变则不重放、转 SESSION_CHANGED）。不清会话的 401：①刷新等待期会话已变（新令牌已建立，「刷新失败分支」clearTokens 守卫
+        //     getToken()===token 判否）→ 抛 401、保留新令牌；②通过前置会话检查后 401 来自登录/刷新端点（url===REFRESH_URL 或
+        //     /auth/wechat-login）→ 原样抛出、不清会话（会话于请求期间已变则先经「重放/SESSION_CHANGED 分支」：命中同会话刷新轮换
+        //     例外 lastRotation 则重放一次，否则转 SESSION_CHANGED）。showActivation 是否真重定向还取决于当前是否已在激活页（见其内
+        //     current.route!=='pages/auth/index' 判据）。无论哪条，恢复层都不主动 clearTokens。
         //   SESSION_CHANGED（代际被并发操作改变：可能已建立更新会话、也可能已被清除）→ _recoverOnce(false)：
         //     非 force，按当前令牌/在途登录复用或正常登录后重查一次，绝不主动 clearTokens——否则会二次 bump
         //     代际、作废并发在途的重试登录，令其响应同样被判 SESSION_CHANGED、令牌终空、兑换与导航零次
@@ -80,11 +86,11 @@ Page({
     const self = this;
     return self.ensureLoggedIn(force)
       .then(function () {
-        // 登录落定后、发起授权查询前复查生命周期：用户已在登录阶段离页则不再发起 getAccessGrant，
-        // 收窄「离页后请求层迟到 401 触发 showActivation 把用户拉回」的窗口（round-3 修复 P2）；
-        // 但 grant 已在途后离页的迟到 401 拉回属 request.js 全局副作用，本项未闭环、延后 T13-08。
+        // 登录落定后、发起授权查询前复查生命周期：用户已在登录阶段离页则不再发起 getAccessGrant（round-3
+        // 修复 P2，收窄窗口）；授权查询再以 silent 发起（T13-08 承 P2#1 闭环），grant 已在途后离页的迟到 401
+        // 只同步会话状态、不再触发请求层 showActivation 全局拉回。
         if (self._leftPage || self.activated) return null;
-        return api.getAccessGrant();
+        return api.getAccessGrant({ silent: true });
       })
       .then(function (grant) {
         if (!self._leftPage && !self.activated && grant && grant.status === 'ACTIVE') {

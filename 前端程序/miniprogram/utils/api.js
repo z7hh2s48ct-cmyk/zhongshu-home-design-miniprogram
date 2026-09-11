@@ -9,8 +9,8 @@ module.exports = {
   login: function (wxCode) {
     return http.post(BASE + '/auth/wechat-login', { code: wxCode });
   },
-  getAccessGrant: function () {
-    return http.get(BASE + '/access-grant');
+  getAccessGrant: function (options) {
+    return http.get(BASE + '/access-grant', undefined, options);
   },
   redeemAccessCode: function (accessCode) {
     return http.post(BASE + '/access-code-redemptions', { accessCode: accessCode });

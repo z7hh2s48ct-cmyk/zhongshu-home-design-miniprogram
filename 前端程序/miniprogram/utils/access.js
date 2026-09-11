@@ -43,7 +43,9 @@ function setAuthorized(value) {
 function refreshFromServer() {
   if (typeof wx.request !== 'function') return Promise.resolve();
   if (!require('./request').getToken()) return Promise.resolve();
-  return api.getAccessGrant()
+  // silent：后台对账只同步授权快照，绝不让在途请求的迟到 401/受限触发全局跳转把用户从当前页拉回激活页
+  // （承 T13-07 P2#1）；导航由页面级门禁 protectedPage/checkPage 在用户进入或交互时驱动。
+  return api.getAccessGrant({ silent: true })
     .then((grant) => setAuthorized(!!grant && grant.status === 'ACTIVE'))
     .catch(() => { /* 刷新失败保持现有快照，待下次进入页面重试 */ });
 }
