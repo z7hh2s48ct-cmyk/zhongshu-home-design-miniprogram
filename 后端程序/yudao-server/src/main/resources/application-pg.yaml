@@ -69,6 +69,18 @@ zhongshu:
     driver-enabled: ${ZS_DRIVER_ENABLED:false}
     asset:
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:false}
+      # T13-11：真实 COS 私有桶所需配置——生产安全基线不给默认值；provider=cos 时必须由 ZS_COS_* 注入，
+      # 缺失即被启动守卫 RealServiceWiringPolicy 快速失败（本 profile 不声明 provider，见上方 T13-01 注释）。
+      # secret-id/secret-key 属机密，只经部署环境带外注入，绝不落库/回显（Actuator show-values=NEVER，见文件末）。
+      storage:
+        cos:
+          endpoint: ${ZS_COS_ENDPOINT:}
+          region: ${ZS_COS_REGION:}
+          bucket: ${ZS_COS_BUCKET:}
+          secret-id: ${ZS_COS_SECRET_ID:}
+          secret-key: ${ZS_COS_SECRET_KEY:}
+          path-style-access: ${ZS_COS_PATH_STYLE_ACCESS:false}
+          api-call-timeout-ms: ${ZS_COS_API_CALL_TIMEOUT_MS:20000}
 
 # T13-02：管理端不得回显密钥——将 Actuator env/configprops 端点的值回显显式设为安全默认值 NEVER。
 # Spring Boot 3.5 默认即 never（值以 ****** 呈现），此处在生产安全基线显式声明，令「不回显密钥」不依赖框架默认。

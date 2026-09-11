@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.server;
 
 import cn.iocoder.yudao.module.commerce.payment.StubPaymentPortAdapter;
+import cn.iocoder.yudao.module.design.asset.CosObjectStorageAdapter;
 import cn.iocoder.yudao.module.design.asset.LocalObjectStorageAdapter;
+import cn.iocoder.yudao.module.design.asset.ObjectStoragePort;
 import cn.iocoder.yudao.module.design.asset.StubContentModerationAdapter;
 import cn.iocoder.yudao.module.identity.wechat.RealWechatIdentityAdapter;
 import cn.iocoder.yudao.module.identity.wechat.StubWechatIdentityAdapter;
@@ -99,6 +101,31 @@ class DevelopmentAdaptersContractTest {
             assertThat(context.getBeansOfType(RealWechatIdentityAdapter.class)).hasSize(1);
             assertThat(context.getBeansOfType(StubWechatIdentityAdapter.class)).isEmpty();
             assertThat(context.getBeansOfType(WechatIdentityPort.class))
+                    .as("每端口只装配一个实现").hasSize(1);
+        }
+    }
+
+    /**
+     * T13-11：COS 存储端口选 cos 时装配 CosObjectStorageAdapter、且 LocalObjectStorageAdapter 不装配——
+     * 证明真实/本地互斥、每端口只装配一个实现（B2 真实适配器已就位，由装配合同锁定）。
+     * 构造期仅本地构建 S3Client/S3Presigner 对象（不发起任何网络调用），故用虚构 endpoint/凭据即可确定性验证装配；
+     * context 关闭时经 {@code @PreDestroy} 释放 SDK 客户端。
+     */
+    @Test
+    void cosStorageProviderAssemblesCosAdapterOnly() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("cos-storage",
+                    Map.of("zhongshu.design.asset.storage.provider", "cos",
+                            "zhongshu.design.asset.storage.cos.endpoint", "https://cos.ap-test.myqcloud.com",
+                            "zhongshu.design.asset.storage.cos.region", "ap-test",
+                            "zhongshu.design.asset.storage.cos.bucket", "test-bucket-1250000000",
+                            "zhongshu.design.asset.storage.cos.secret-id", "test-cos-secret-id",
+                            "zhongshu.design.asset.storage.cos.secret-key", "test-cos-secret-key")));
+            context.register(LocalObjectStorageAdapter.class, CosObjectStorageAdapter.class);
+            context.refresh();
+            assertThat(context.getBeansOfType(CosObjectStorageAdapter.class)).hasSize(1);
+            assertThat(context.getBeansOfType(LocalObjectStorageAdapter.class)).isEmpty();
+            assertThat(context.getBeansOfType(ObjectStoragePort.class))
                     .as("每端口只装配一个实现").hasSize(1);
         }
     }

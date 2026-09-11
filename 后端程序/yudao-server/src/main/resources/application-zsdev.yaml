@@ -49,6 +49,18 @@ zhongshu:
       storage:
         # T13-01 实现选择：local=本地文件（本 profile 默认）；cos=B2 腾讯云 COS 私有桶
         provider: local
+        # T13-11：切 provider=cos 时由 CosObjectStorageAdapter 消费。本 profile 默认 local，故以下留空即可；
+        # 逐项联调用环境变量覆盖（如 ZS_COS_ENDPOINT/ZS_COS_REGION/ZS_COS_BUCKET）。机密 secret-id/secret-key
+        # 只经部署环境带外注入，绝不写入本文件；留空且 provider=cos 时启动守卫 RealServiceWiringPolicy 拒绝。
+        # path-style-access：腾讯 COS 用虚拟主机式（false，SDK 自动拼 {bucket}.{endpoint}）；MinIO 兼容端用 true。
+        cos:
+          endpoint: ${ZS_COS_ENDPOINT:}
+          region: ${ZS_COS_REGION:}
+          bucket: ${ZS_COS_BUCKET:}
+          secret-id: ${ZS_COS_SECRET_ID:}
+          secret-key: ${ZS_COS_SECRET_KEY:}
+          path-style-access: ${ZS_COS_PATH_STYLE_ACCESS:false}
+          api-call-timeout-ms: ${ZS_COS_API_CALL_TIMEOUT_MS:20000}
       moderation:
         # T13-01 实现选择：stub=直通（内容审核 B3 后置，本期不接真实审核）；real=后续批次真实审核
         provider: stub

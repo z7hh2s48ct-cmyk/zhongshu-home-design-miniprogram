@@ -45,6 +45,63 @@
     </appender>
     -->
 
+    <!--
+      AWS SDK 日志级别加固（B2 T13-10/11 COS 私有桶适配器，铁律 1：密钥/签名 URL 绝不进日志）。
+      字节码实证链（awssdk 2.54.7，javap -c）：
+        CosObjectStorageAdapter.abortQuietly()
+          -> ResponseInputStream.abort()
+               0-17: timeoutTask.cancel(false)
+              18-29: abortable.abort()
+              34-41: IoUtils.closeQuietlyV2(in, log)
+          -> IoUtils.closeQuietlyV2(AutoCloseable, Logger)
+                 5: AutoCloseable.close()
+                13: catch Exception -> astore_2（原始异常）
+                27: invokedynamic Supplier（lambda$closeQuietlyV2$0 返回常量
+                     "Ignore failure in closing the Closeable"）
+                33: Logger.debug(Supplier, Throwable)  // Throwable = aload_2 原始异常
+      泄露载体是 Throwable 的消息/异常链（可能含签名 URL），不是 Supplier 内容。
+      ResponseInputStream.static{} 中 log = Logger.loggerFor(ResponseInputStream.class)
+        -> LoggerFactory.getLogger(Class)，故 logger 名即该类全限定名；
+      Logger.debug(Supplier, Throwable) 内部先判 isDebugEnabled() 再调用，
+      因此该 logger 有效级别 >= INFO 时，Supplier 不求值、Throwable 不交给任何 appender，
+      泄露路径为结构性关闭——不依赖 root 默认级别（一个 logging.level.root=DEBUG
+      环境变量即可绕过 root 默认，故必须显式钉级别）。
+      钉整个 software.amazon.awssdk 命名空间为纵深防御：SDK 其它 DEBUG/TRACE 路径
+      同样可能输出请求 URI。运维若确需开启 SDK DEBUG 诊断，途径不止修改下列 XML 行——
+      Spring Boot 的针对性 logging.level.software.amazon.awssdk=DEBUG（或运行时
+      LoggingSystem.setLogLevel）同样能覆盖本加固；且仅改命名空间父 logger 不会覆盖仍显式
+      声明为 INFO 的 ResponseInputStream 子 logger（反之亦然），须一并调整。无论哪种途径，
+      开启即重新引入签名 URL 入日志的风险——这一摩擦是有意为之。
+      由 SdkLoggingHardeningContractTest 锁定，防止被误删后静默回退。
+    -->
+    <logger name="software.amazon.awssdk" level="INFO"/>
+    <logger name="software.amazon.awssdk.core.ResponseInputStream" level="INFO"/>
+
+    <!--
+      Apache HttpClient5 传输层日志加固（B2 T13-10/11，codex round-5 P1，铁律 1）。
+      上面的 awssdk 钉级别只封堵了 SDK 自身命名空间；但 AWS SDK v2 2.54.7 的默认同步 HTTP
+      客户端是 apache5-client（services-2.54.7.pom 以 runtime 作用域引入，
+      ClasspathSdkHttpServiceProvider 将 Apache5 排在同步客户端首位），而
+      CosObjectStorageAdapter.buildS3() 未覆写 httpClient，故实际走该默认传输层。
+      证据链（javap）：Apache5HttpClient -> SafePoolingHttpClientConnectionManager ->
+        ManagedHttpClientConnectionFactory.INSTANCE -> DefaultManagedHttpClientConnection
+        .onRequestSubmitted()：偏移 7 判 HEADER_LOG.isDebugEnabled()、偏移 38 getHeaders()，
+        随后逐个 debug("{} >> {}", id, header)，对 Authorization 头不做脱敏；其静态 logger 名为
+        org.apache.hc.client5.http.headers（请求/响应头）与 org.apache.hc.client5.http.wire
+        （完整线路内容），二者均不在 software.amazon.awssdk 命名空间下，不受上面钉级别约束。
+      AbstractAws4Signer.buildAuthorizationHeader() 拼接 accessKeyId()（COS 用作 access-key-id
+        的即 secret-id）、"Credential=" 与 ", Signature="；故仅设 logging.level.root=DEBUG，
+        普通 COS HEAD/GET/PUT 请求就会把 secret-id 与请求签名写入日志，无需显式开启任何 AWS logger。
+      处置：显式钉 org.apache.hc.client5.http（父）为 INFO——Logback 有效级别取最近的已声明级别
+        祖先，故 .headers/.wire 子 logger 继承 INFO，root=DEBUG 不覆盖（同上面 awssdk 的推理）；
+        再显式列出 .headers/.wire 便于按名搜索到加固意图。Apache 的 header/wire 日志仅在 DEBUG
+        输出，INFO 即结构性关闭该泄露面。此加固同样覆盖 infra S3FileClient（同一 SDK/传输层），
+        符合铁律 1 优先于诊断便利。由 SdkLoggingHardeningContractTest 锁定。
+    -->
+    <logger name="org.apache.hc.client5.http" level="INFO"/>
+    <logger name="org.apache.hc.client5.http.headers" level="INFO"/>
+    <logger name="org.apache.hc.client5.http.wire" level="INFO"/>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
         <!-- 本地环境下，如果不想【FILE】打印日志，可以注释掉本行 -->

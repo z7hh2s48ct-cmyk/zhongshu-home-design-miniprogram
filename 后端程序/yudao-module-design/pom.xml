@@ -26,6 +26,14 @@
             <version>${revision}</version>
         </dependency>
 
+        <!-- B2 T13-11：真实腾讯云 COS 私有桶对象存储适配器（CosObjectStorageAdapter）直接用 AWS S3 SDK v2。
+             复用 yudao-dependencies BOM 已锁定的 software.amazon.awssdk:s3（infra 的 S3FileClient 同一依赖），
+             不新增第二套同用途 SDK（计划 §2）；版本由 BOM 统一管理，此处不声明 version。 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
         <!-- Web 安全（传递引入 web starter，提供 CommonResult/异常/接口文档） -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>

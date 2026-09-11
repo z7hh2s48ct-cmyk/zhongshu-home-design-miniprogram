@@ -29,7 +29,7 @@ import java.util.function.Function;
  *   <li>「启用真实服务才要求相应密钥」：某端口选择真实实现时才校验其依赖的配置（微信 real 需要 appid 与 appsecret）。</li>
  * </ul>
  * 所有违例消息<b>只回显配置键名与环境变量名，绝不回显密钥值</b>，与「日志/管理端不泄露密钥」保持一致。
- * B2、B4 真实适配器落地时，在 {@link #REAL_MODE_REQUIREMENTS} 登记各自密钥键即可复用本校验。
+ * B2 COS 与 B4（微信支付）真实适配器的密钥键均已在 {@link #REAL_MODE_REQUIREMENTS} 登记；后续新增真实服务在此登记各自密钥键即可复用本校验。
  */
 public final class RealServiceWiringPolicy {
 
@@ -62,9 +62,10 @@ public final class RealServiceWiringPolicy {
 
     /**
      * 「启用真实实现才要求相应配置/密钥」的登记（T13-02 验收核心）。微信身份 real 需要 appid（AppAuthController 消费）
-     * 与 appsecret（T13-04 RealWechatIdentityAdapter 的 code2session 消费）；此处只登记<b>已被消费</b>的键，
-     * 不发明未消费变量（T12 约束）。B2（COS secret-id/secret-key/region/bucket）、B4（商户号/API v3 密钥/商户私钥）
-     * 真实适配器落地时在此追加。
+     * 与 appsecret（T13-04 RealWechatIdentityAdapter 的 code2session 消费）；COS 存储 cos 需要 endpoint/region/
+     * bucket/secret-id/secret-key（T13-11 CosObjectStorageAdapter 构造期校验消费）。此处只登记<b>已被消费</b>的键，
+     * 不发明未消费变量（T12 约束）。B4 微信支付 real 需要 merchant-id/merchant-serial-no/api-v3-key/
+     * merchant-private-key-path/notify-url（T13-21 WechatPaymentAdapter 消费），亦已在此登记。
      */
     private static final List<RealModeRequirement> REAL_MODE_REQUIREMENTS = List.of(
             new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
@@ -73,6 +74,19 @@ public final class RealServiceWiringPolicy {
             // 故 placeholderValue=null：validate() 仅要求非空（value.equals(null) 恒 false，自动跳过占位值比对）。
             new RealModeRequirement("zhongshu.identity.wechat.provider", "real",
                     "zhongshu.identity.wechat-appsecret", null, "B1"),
+            // T13-11：cos 对象存储需 endpoint/region/bucket/secret-id/secret-key（CosObjectStorageAdapter 构造期校验消费）。
+            // 五者均无开发占位值（zsdev/pg 默认留空），故 placeholderValue=null，validate() 仅要求非空；
+            // path-style-access/api-call-timeout-ms 有安全默认值（false/20000），非必填，故不登记。
+            new RealModeRequirement("zhongshu.design.asset.storage.provider", "cos",
+                    "zhongshu.design.asset.storage.cos.endpoint", null, "B2"),
+            new RealModeRequirement("zhongshu.design.asset.storage.provider", "cos",
+                    "zhongshu.design.asset.storage.cos.region", null, "B2"),
+            new RealModeRequirement("zhongshu.design.asset.storage.provider", "cos",
+                    "zhongshu.design.asset.storage.cos.bucket", null, "B2"),
+            new RealModeRequirement("zhongshu.design.asset.storage.provider", "cos",
+                    "zhongshu.design.asset.storage.cos.secret-id", null, "B2"),
+            new RealModeRequirement("zhongshu.design.asset.storage.provider", "cos",
+                    "zhongshu.design.asset.storage.cos.secret-key", null, "B2"),
             // T13-21：real 微信支付需 merchant-id/merchant-serial-no/api-v3-key/merchant-private-key-path/notify-url
             // （WechatPaymentAdapter 构造期与 createPrepay 消费）。AppID 复用 B1 已登记的 wechat-appid（微信支付要求
             // 商户号绑定的 AppID 与登录 AppID 一致），不重复登记；五者均无开发占位值（zsdev/pg 默认留空），

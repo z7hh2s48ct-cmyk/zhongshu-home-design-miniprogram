@@ -43,6 +43,12 @@ class RealServiceWiringPolicyTest {
         p.put("zhongshu.identity.wechat-appid", "wx-test-real-appid");
         // T13-04：real 微信身份还需 appsecret（code2session 消费）
         p.put("zhongshu.identity.wechat-appsecret", "test-real-appsecret");
+        // T13-11：cos 对象存储所需 endpoint/region/bucket/secret-id/secret-key（值仅测试用虚构配置，非真实凭据）
+        p.put("zhongshu.design.asset.storage.cos.endpoint", "https://cos.ap-test.myqcloud.com");
+        p.put("zhongshu.design.asset.storage.cos.region", "ap-test");
+        p.put("zhongshu.design.asset.storage.cos.bucket", "test-bucket-1250000000");
+        p.put("zhongshu.design.asset.storage.cos.secret-id", "test-cos-secret-id");
+        p.put("zhongshu.design.asset.storage.cos.secret-key", "test-cos-secret-key");
         // T13-21：B4 微信支付 real 模式所需 merchant-id/merchant-serial-no/api-v3-key/merchant-private-key-path/notify-url
         // （值仅测试用虚构凭据，非真实密钥；AppID 复用 zhongshu.identity.wechat-appid，不重复登记）
         p.put("zhongshu.commerce.payment.wechat.merchant-id", "test-mch-1234567890");
@@ -240,7 +246,63 @@ class RealServiceWiringPolicyTest {
                 .hasMessageContaining("zhongshu.identity.wechat-appsecret");
     }
 
+    // ===== T13-11：cos 对象存储真实模式依赖配置（endpoint/region/bucket/secret-id/secret-key，消息不回显密钥值） =====
 
+    @Test
+    void realCosStorageProviderRequiresSecrets() {
+        // T13-11：启用 cos 对象存储但缺 COS 配置（endpoint/region/bucket/secret-id/secret-key）→ 快速失败
+        Map<String, String> p = allStub();
+        p.put("zhongshu.design.asset.storage.provider", "cos");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.design.asset.storage.cos.endpoint")
+                .hasMessageContaining("zhongshu.design.asset.storage.cos.secret-id")
+                .hasMessageContaining("zhongshu.design.asset.storage.cos.secret-key");
+    }
+
+    @Test
+    void realCosStorageProviderRejectsBlankSecretKey() {
+        // T13-11：cos 存储 secret-key 为空白等同缺失（无开发占位值，仅校验非空）
+        Map<String, String> p = allStub();
+        p.put("zhongshu.design.asset.storage.provider", "cos");
+        p.put("zhongshu.design.asset.storage.cos.endpoint", "https://cos.ap-test.myqcloud.com");
+        p.put("zhongshu.design.asset.storage.cos.region", "ap-test");
+        p.put("zhongshu.design.asset.storage.cos.bucket", "test-bucket-1250000000");
+        p.put("zhongshu.design.asset.storage.cos.secret-id", "test-cos-secret-id");
+        p.put("zhongshu.design.asset.storage.cos.secret-key", "   ");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.design.asset.storage.cos.secret-key");
+    }
+
+    @Test
+    void devRealCosStorageWithAllKeysPasses() {
+        // 开发环境启用 cos 对象存储并给出全部必需配置，其余端口仍用开发替身：放行
+        Map<String, String> p = allStub();
+        p.put("zhongshu.design.asset.storage.provider", "cos");
+        p.put("zhongshu.design.asset.storage.cos.endpoint", "https://cos.ap-test.myqcloud.com");
+        p.put("zhongshu.design.asset.storage.cos.region", "ap-test");
+        p.put("zhongshu.design.asset.storage.cos.bucket", "test-bucket-1250000000");
+        p.put("zhongshu.design.asset.storage.cos.secret-id", "test-cos-secret-id");
+        p.put("zhongshu.design.asset.storage.cos.secret-key", "test-cos-secret-key");
+        assertThatCode(() -> RealServiceWiringPolicy.validate(DEV, p::get)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void cosErrorMessageNeverEchoesSecretKeyValue() {
+        // T13-11：缺 endpoint 触发违例时，聚合消息只回显键名，绝不回显已配置的 secret-key 值
+        Map<String, String> p = allStub();
+        p.put("zhongshu.design.asset.storage.provider", "cos");
+        // 故意缺 endpoint 触发违例
+        p.put("zhongshu.design.asset.storage.cos.region", "ap-test");
+        p.put("zhongshu.design.asset.storage.cos.bucket", "test-bucket-1250000000");
+        p.put("zhongshu.design.asset.storage.cos.secret-id", "test-cos-secret-id");
+        p.put("zhongshu.design.asset.storage.cos.secret-key", "SUPER-SECRET-KEY-VALUE-DO-NOT-ECHO");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(DEV, p::get))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("zhongshu.design.asset.storage.cos.endpoint")
+                .hasMessageNotContaining("SUPER-SECRET-KEY-VALUE-DO-NOT-ECHO");
+    }
 
     // ===== T13-21：B4 微信支付 real 模式依赖配置（merchant-id/serial-no/api-v3-key/private-key-path/notify-url，消息不回显密钥值） =====
 
