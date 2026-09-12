@@ -76,7 +76,7 @@ jobs:
           cache: maven
           cache-dependency-path: 后端程序/**/pom.xml
 
-      - name: 执行众墅后端合同测试
+      - name: 执行后端普通单元与集成测试
         run: node scripts/verify.mjs backend
 
       - name: 上传 Surefire 测试报告

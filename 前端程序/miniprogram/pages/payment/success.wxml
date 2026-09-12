@@ -4,5 +4,6 @@
   <view wx:if="{{error}}" class="v12-card receipt"><text>{{error}}</text></view>
   <view class="v12-card receipt"><view><text>支付金额</text><span>¥{{price}}</span></view><view><text>基础设计点</text><span>{{base}}</span></view><view class="bonus"><text>赠送设计点</text><span>{{bonus}}</span></view><view class="total"><text>到账设计点</text><span>{{total}}</span></view><view><text>支付方式</text><span>微信支付</span></view><view><text>订单状态</text><span class="done">{{paymentStateText}}</span></view></view>
   <view class="v12-primary-button" bindtap="backAi">返回AI设计</view><view class="v12-secondary-button" bindtap="viewPoints">查看设计点</view><text class="foot-note">如余额未更新，可稍后刷新或联系客服</text>
-  <button class="v12-secondary-button" bindtap="refresh" disabled="{{polling}}">{{polling ? '正在确认订单…' : '刷新订单状态'}}</button><button class="v12-secondary-button" bindtap="records">充值记录</button>
+  <button wx:if="{{canPay}}" class="v12-primary-button" bindtap="resumePayment" disabled="{{paying}}">{{paying ? '正在准备支付…' : '继续支付此订单'}}</button>
+  <button class="v12-secondary-button" bindtap="refresh" disabled="{{polling || paying}}">{{polling ? '正在确认订单…' : '刷新订单状态'}}</button><button class="v12-secondary-button" bindtap="records">充值记录</button>
 </view>

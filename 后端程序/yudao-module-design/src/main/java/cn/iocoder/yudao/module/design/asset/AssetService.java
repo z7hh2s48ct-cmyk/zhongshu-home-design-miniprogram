@@ -42,7 +42,8 @@ public class AssetService {
     }
 
     private record AssetRow(long id, long ownerUserId, String assetType, String objectKey,
-                            String declaredMime, long sizeBytes, String sha256, String uploadStatus) {
+                            String declaredMime, long sizeBytes, String sha256, String uploadStatus,
+                            String validationToken) {
     }
 
     private static final long UPLOAD_TICKET_TTL_SECONDS = 900;
@@ -102,7 +103,7 @@ public class AssetService {
             case "application/pdf" -> ".pdf";
             default -> ".bin";
         };
-        String objectKey = policy.keyPrefix() + "/" + userId + "/" + assetId + ext;
+        String objectKey = "uploads/" + policy.keyPrefix() + "/" + userId + "/" + assetId + ext;
         txTemplate.execute(status -> {
             jdbcTemplate.update(
                     "INSERT INTO asset (id, object_key, owner_user_id, asset_type, source_type, sha256, "
@@ -140,10 +141,12 @@ public class AssetService {
                     && !("VALIDATING".equals(row.uploadStatus()) && isStale(row.id()))) {
                 throw exception(ASSET_VALIDATION_FAILED);
             }
+            String validationToken = java.util.UUID.randomUUID().toString();
             jdbcTemplate.update(
-                    "UPDATE asset SET upload_status = 'VALIDATING', update_time = now() WHERE id = ?",
-                    assetId);
-            return row;
+                    "UPDATE asset SET upload_status = 'VALIDATING', validation_token = ?, update_time = now() WHERE id = ?",
+                    validationToken, assetId);
+            return new AssetRow(row.id(), row.ownerUserId(), row.assetType(), row.objectKey(),
+                    row.declaredMime(), row.sizeBytes(), row.sha256(), "VALIDATING", validationToken);
         });
         if (asset == null) {
             return "ACCEPTED";
@@ -157,7 +160,12 @@ public class AssetService {
         }
         if (rejectReason == null) {
             try (InputStream in = storage.getObject(asset.objectKey())) {
-                content = in.readAllBytes();
+                // HEAD is only a hint: the upload URL can replace the raw object concurrently.
+                int limit = Math.toIntExact(AssetTypePolicy.valueOf(asset.assetType()).maxBytes());
+                content = in.readNBytes(limit + 1);
+                if (content.length != asset.sizeBytes() || content.length > limit) {
+                    rejectReason = "SIZE_MISMATCH: 实际读取大小与申报不一致";
+                }
             } catch (IOException e) {
                 rejectReason = "READ_FAILED: 对象读取失败";
             }
@@ -183,6 +191,16 @@ public class AssetService {
         final boolean finalModerationFailed = moderationFailed;
         final AssetContentScanner.ScanReport finalReport = report;
         final byte[] sanitized = report == null ? null : report.sanitizedContent();
+        // The original PUT URL must never address the approved object. Every attempt writes
+        // a unique server-only key outside the DB transaction; CAS chooses the winning version.
+        final String acceptedKey = "accepted/" + assetId + "/" + asset.validationToken()
+                + switch (asset.declaredMime()) {
+                    case "image/jpeg" -> ".jpg";
+                    case "image/png" -> ".png";
+                    case "application/pdf" -> ".pdf";
+                    default -> ".bin";
+                };
+        if (rejectReason == null && !moderationFailed) storage.putObject(acceptedKey, sanitized);
         return txTemplate.execute(status -> {
             int updated;
             if (finalReport != null) {
@@ -192,8 +210,8 @@ public class AssetService {
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET upload_status = 'REJECTED', security_scan_status = 'REJECTED', "
                                 + "rejected_reason = ?, update_time = now() "
-                                + "WHERE id = ? AND upload_status = 'VALIDATING'",
-                        finalRejectReason, assetId);
+                                + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                        finalRejectReason, assetId, asset.validationToken());
                 if (updated == 1) {
                     log.warn("[completeUpload][asset={} REJECTED 原因={}]", assetId, finalRejectReason);
                     return "REJECTED";
@@ -205,21 +223,22 @@ public class AssetService {
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET moderation_status = 'REJECTED', upload_status = 'REJECTED', "
                                 + "rejected_reason = 'CONTENT_MODERATION', update_time = now() "
-                                + "WHERE id = ? AND upload_status = 'VALIDATING'", assetId);
-                return updated == 1 ? "REJECTED" : null;
+                                + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                        assetId, asset.validationToken());
+                if (updated != 1) throw exception(ASSET_VALIDATION_FAILED);
+                return "REJECTED";
             }
             if (finalReport.exifDetected()) {
                 // EXIF 剥离不是拒绝：检测留痕审计，元数据已随重编码消失
                 recordScan(assetId, "EXIF_STRIP", "PASSED", "元数据已随重编码剥离");
             }
-            storage.putObject(asset.objectKey(), sanitized);
             updated = jdbcTemplate.update(
                     "UPDATE asset SET upload_status = 'ACCEPTED', security_scan_status = 'PASSED', "
-                            + "moderation_status = 'PASSED', size_bytes = ?, width = ?, height = ?, "
+                            + "moderation_status = 'PASSED', object_key = ?, size_bytes = ?, width = ?, height = ?, "
                             + "page_count = ?, stored_sha256 = ?, stored_size = ?, update_time = now() "
-                            + "WHERE id = ? AND upload_status = 'VALIDATING'",
-                    (long) sanitized.length, finalReport.width(), finalReport.height(),
-                    finalReport.pageCount(), sha256Hex(sanitized), (long) sanitized.length, assetId);
+                            + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                    acceptedKey, (long) sanitized.length, finalReport.width(), finalReport.height(),
+                    finalReport.pageCount(), sha256Hex(sanitized), (long) sanitized.length, assetId, asset.validationToken());
             if (updated == 1) {
                 log.info("[completeUpload][asset={} ACCEPTED size={} type={}]",
                         assetId, sanitized.length, asset.assetType());
@@ -391,7 +410,7 @@ public class AssetService {
 
     private AssetRow loadForUpdate(long assetId) {
         List<AssetRow> rows = jdbcTemplate.query(
-                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status "
+                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status, validation_token "
                         + "FROM asset WHERE id = ? AND deleted = FALSE FOR UPDATE",
                 (rs, i) -> mapRow(rs), assetId);
         if (rows.isEmpty()) {
@@ -402,7 +421,7 @@ public class AssetService {
 
     private AssetRow load(long assetId) {
         List<AssetRow> rows = jdbcTemplate.query(
-                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status "
+                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status, validation_token "
                         + "FROM asset WHERE id = ? AND deleted = FALSE",
                 (rs, i) -> mapRow(rs), assetId);
         if (rows.isEmpty()) {
@@ -414,7 +433,7 @@ public class AssetService {
     private AssetRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new AssetRow(rs.getLong("id"), rs.getLong("owner_user_id"), rs.getString("asset_type"),
                 rs.getString("object_key"), rs.getString("declared_mime"), rs.getLong("size_bytes"),
-                rs.getString("sha256"), rs.getString("upload_status"));
+                rs.getString("sha256"), rs.getString("upload_status"), rs.getString("validation_token"));
     }
 
     private boolean isStale(long assetId) {

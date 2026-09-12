@@ -43,7 +43,7 @@ node scripts/verify.mjs all
 node scripts/verify.mjs e2e
 ```
 
-`all` 固定按“小程序测试 → 管理端类型检查/Lint/生产构建 → 25 个后端众墅合同测试文件”执行；`e2e` 在已启动的 `local,pg,zsdev` 后端上执行当前登记的 54 个三端全链检查点；`full` 依次执行两组验证。后端合同测试和 E2E 都需要 JDK 17 与可用的 Docker daemon。也可用 `mini`、`admin`、`backend` 参数单独复跑，E2E 运行说明见 [`e2e/README.md`](e2e/README.md)。
+`all` 固定按“小程序测试 → 管理端测试/类型检查/Lint/生产构建 → 后端普通单元与集成测试（*Test）”执行；后端包含所选业务模块及 Maven `-am` 依赖模块，默认排除 `real-acceptance` 标签，不触发真实渠道消费。`test-baseline.json` 登记小程序、管理端及五个众墅模块的测试源码数量，实际运行/跳过数量以测试报告为准。`e2e` 在已启动的 `local,pg,zsdev` 后端上执行 54 个三端全链检查点；`full` 依次执行两组验证。后端与 E2E 需要 JDK 17、Docker；Windows 可用 `scripts/verify-isolated-e2e.ps1` 创建独立数据库、验证重复启动并在结束后清理该测试项目。也可用 `mini`、`admin`、`backend` 参数单独复跑，详见 [`e2e/README.md`](e2e/README.md)。
 
 环境自检只输出敏感变量的“已设置/未设置”状态，不打印变量值。CI 与本地复用这组命令。
 

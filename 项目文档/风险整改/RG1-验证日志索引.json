@@ -1,0 +1,22 @@
+[
+  {
+    "path": "artifacts/risk-remediation/rg1-all-final.log",
+    "sha256": "3AB2D37326ADC715BA80125524860C384B4719880487A735B1AB7A94C30D9D5D",
+    "bytes": 578622
+  },
+  {
+    "path": "artifacts/risk-remediation/rg1-payment-final.log",
+    "sha256": "EB8B91CB4994E34A49B66C1B2E2D0C119E7C870066603A9C3006B143D60D095F",
+    "bytes": 61342
+  },
+  {
+    "path": "artifacts/risk-remediation/rg1-e2e/run.log",
+    "sha256": "28AB562F23A415F35B4B713564EFEE626C3132A080ED7B69129A21DBD6E6C0CA",
+    "bytes": 2971
+  },
+  {
+    "path": "artifacts/risk-remediation/rg1-admin-install.log",
+    "sha256": "75A6BB3ABFCEAEC240F5B45CEA2BB124361C485CB1AB9D4DC50D14108A2C3C56",
+    "bytes": 4052
+  }
+]

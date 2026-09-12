@@ -104,7 +104,10 @@ public class RechargePaymentService {
                     "SELECT id FROM recharge_order WHERE user_id = ? AND idempotency_key = ?",
                     (rs, i) -> rs.getLong("id"), userId, idempotencyKey);
             if (!existing.isEmpty()) {
-                return getOrderById(existing.get(0)).orElseThrow();
+                var detail = getOrderDetail(userId, existing.get(0)).orElseThrow();
+                if (detail.planId() != planId) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+                ensurePrepay(userId, detail.orderId(), openid, false);
+                return getOrderById(detail.orderId()).orElseThrow();
             }
         }
         // 快照方案（事务内）
@@ -119,35 +122,83 @@ public class RechargePaymentService {
             }
             long orderId = IdWorker.getId();
             String orderNo = "R" + orderId;
-            jdbcTemplate.update(
+            int inserted = jdbcTemplate.update(
                     "INSERT INTO recharge_order (id, order_no, user_id, plan_id, plan_snapshot, amount_cents, "
-                            + "base_points, bonus_points, payment_state, fulfillment_state, idempotency_key) "
-                            + "VALUES (?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, 'CREATED', 'NOT_READY', ?)",
+                            + "base_points, bonus_points, payment_state, fulfillment_state, idempotency_key, "
+                            + "payer_openid, payment_channel, payment_merchant) "
+                            + "VALUES (?, ?, ?, ?, CAST(? AS jsonb), ?, ?, ?, 'CREATED', 'NOT_READY', ?, ?, ?, ?) "
+                            + "ON CONFLICT (user_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING",
                     orderId, orderNo, userId, planId,
                     planJson(plan), ((Number) plan.get("amount_cents")).longValue(),
                     ((Number) plan.get("base_points")).longValue(),
                     ((Number) plan.get("bonus_points")).longValue(),
-                    idempotencyKey);
+                    idempotencyKey, openid, paymentPort.channel(), paymentPort.merchantId());
+            if (inserted == 0) {
+                Long existingId = jdbcTemplate.queryForObject(
+                        "SELECT id FROM recharge_order WHERE user_id=? AND idempotency_key=?",
+                        Long.class, userId, idempotencyKey);
+                var detail = getOrderDetail(userId, existingId).orElseThrow();
+                if (detail.planId() != planId) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+                return getOrderById(existingId).orElseThrow();
+            }
             return new OrderSnapshot(orderId, orderNo, userId,
                     ((Number) plan.get("amount_cents")).longValue(),
                     ((Number) plan.get("base_points")).longValue(),
                     ((Number) plan.get("bonus_points")).longValue(), "CREATED", "NOT_READY");
         });
 
-        // 预下单在事务外（合同：事务内不得等待渠道）
-        // T13-22：openid 由 Controller 从 IdentitySessionPort.SessionContext 取，禁止客户端请求参数传入
-        var prepay = paymentPort.createPrepay(created.orderNo(), created.amountCents(), "充值", openid);
-        // T13-24：持久化 payParams（JSAPI 六参数），供 createOrder 响应下发与 pay-params 恢复端点重新领取
-        String prepayParamsJson = toJson(prepay.getCallParams());
-        txTemplate.execute(status -> {
-            jdbcTemplate.update(
-                    "UPDATE recharge_order SET payment_state = 'PENDING', prepay_params = CAST(? AS jsonb), update_time = now() "
-                            + "WHERE id = ? AND payment_state = 'CREATED'",
-                    prepayParamsJson, created.orderId());
-            return null;
+        ensurePrepay(userId, created.orderId(), openid, false);
+        return getOrderById(created.orderId()).orElseThrow();
+    }
+
+    private record PrepayClaim(OrderSnapshot order, String openid, String token) { }
+
+    /** Short lease transaction, external call, fenced update. Retries keep the same merchant order. */
+    private void ensurePrepay(long userId, long orderId, String sessionOpenid, boolean refresh) {
+        PrepayClaim claim = txTemplate.execute(status -> {
+            var rows = jdbcTemplate.queryForList("SELECT *, (prepay_expires_at > now()) AS fresh, "
+                    + "(prepay_lease_until > now()) AS busy FROM recharge_order "
+                    + "WHERE id=? AND user_id=? AND deleted=FALSE FOR UPDATE", orderId, userId);
+            if (rows.isEmpty()) return null;
+            var row = rows.get(0);
+            if (!List.of("CREATED", "PENDING", "UNKNOWN").contains(row.get("payment_state"))) return null;
+            String payer = (String) row.get("payer_openid");
+            if (payer != null && sessionOpenid != null && !payer.equals(sessionOpenid)) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+            if (payer == null) payer = sessionOpenid;
+            if (payer == null || payer.isBlank()) return null;
+            if (row.get("payment_channel") != null && (!paymentPort.channel().equals(row.get("payment_channel"))
+                    || !paymentPort.merchantId().equals(row.get("payment_merchant")))) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+            if ((!refresh && Boolean.TRUE.equals(row.get("fresh")) && row.get("prepay_params") != null)
+                    || Boolean.TRUE.equals(row.get("busy"))) return null;
+            String token = java.util.UUID.randomUUID().toString();
+            jdbcTemplate.update("UPDATE recharge_order SET payer_openid=?, payment_channel=?, payment_merchant=?, "
+                    + "prepay_lease_token=?, prepay_lease_until=now()+interval '60 seconds', prepay_expires_at=NULL "
+                    + "WHERE id=?", payer, paymentPort.channel(), paymentPort.merchantId(), token, orderId);
+            return new PrepayClaim(getOrderById(orderId).orElseThrow(), payer, token);
         });
-        return new OrderSnapshot(created.orderId(), created.orderNo(), created.userId(),
-                created.amountCents(), created.basePoints(), created.bonusPoints(), "PENDING", "NOT_READY");
+        if (claim == null) return;
+        try {
+            var prepay = paymentPort.createPrepay(claim.order().orderNo(), claim.order().amountCents(), "充值", claim.openid());
+            var params = prepay.getCallParams();
+            if (params != null && "ALREADY_PAID".equals(params.get("state"))) {
+                reconcile(claim.order().orderNo());
+                return;
+            }
+            if (params == null || params.isEmpty() || params.containsKey("state")) {
+                throw new cn.iocoder.yudao.framework.common.exception.ServiceException(409, "支付参数尚未就绪，请稍后重试原订单");
+            }
+            if ("WECHAT".equals(paymentPort.channel()) && List.of("appId", "timeStamp", "nonceStr", "package", "signType", "paySign")
+                    .stream().anyMatch(k -> params.get(k) == null || params.get(k).isBlank())) {
+                throw new cn.iocoder.yudao.framework.common.exception.ServiceException(409, "支付参数不完整，请稍后重试原订单");
+            }
+            jdbcTemplate.update("UPDATE recharge_order SET payment_state='PENDING', prepay_params=CAST(? AS jsonb), "
+                    + "prepay_expires_at=now()+interval '5 minutes', update_time=now() "
+                    + "WHERE id=? AND prepay_lease_token=? AND payment_state IN ('CREATED','PENDING','UNKNOWN')",
+                    toJson(params), orderId, claim.token());
+        } finally {
+            jdbcTemplate.update("UPDATE recharge_order SET prepay_lease_token=NULL, prepay_lease_until=NULL "
+                    + "WHERE id=? AND prepay_lease_token=?", orderId, claim.token());
+        }
     }
 
     private String planJson(Map<String, Object> plan) {
@@ -176,6 +227,15 @@ public class RechargePaymentService {
      * 已支付/已关闭/已失败订单返回 empty（前端引导查看充值记录，不重复拉起支付）。
      */
     public Optional<Map<String, String>> getPayParams(long userId, long orderId) {
+        return getPayParams(userId, orderId, null);
+    }
+
+    /** sessionOpenid is obtained from the authenticated identity port, never from client input. */
+    public Optional<Map<String, String>> getPayParams(long userId, long orderId, String sessionOpenid) {
+        ensurePrepay(userId, orderId, sessionOpenid, false);
+        Integer fresh = jdbcTemplate.queryForObject("SELECT count(*) FROM recharge_order WHERE id=? AND user_id=? "
+                + "AND prepay_expires_at > now() AND deleted=FALSE", Integer.class, orderId, userId);
+        if (fresh == null || fresh == 0) return Optional.empty();
         return getOrderDetail(userId, orderId)
                 .filter(detail -> "CREATED".equals(detail.paymentState()) || "PENDING".equals(detail.paymentState()))
                 .map(OrderDetail::prepayParams)
@@ -212,7 +272,8 @@ public class RechargePaymentService {
 
     private static final String ORDER_DETAIL_COLUMNS =
             "o.id, o.order_no, o.user_id, o.plan_id, o.amount_cents, o.base_points, o.bonus_points, "
-                    + "o.payment_state, o.fulfillment_state, o.create_time, o.prepay_params, t.paid_at, "
+                    + "o.payment_state, o.fulfillment_state, o.create_time, "
+                    + "CASE WHEN o.prepay_expires_at > now() THEN o.prepay_params END AS prepay_params, t.paid_at, "
                     + "r.id AS refund_id, r.channel_state, r.point_reversal_state, r.amount_cents AS refund_amount_cents, r.reason "
                     + "FROM recharge_order o "
                     + "LEFT JOIN payment_transaction t ON t.order_no = o.order_no AND t.deleted = FALSE "
@@ -647,15 +708,30 @@ public class RechargePaymentService {
 
     /** 补偿二：主动查单收口「已支付未到账」悬挂订单（合同：通知丢失主动查单兜底） */
     public int recoverHangingOrders() {
-        var hanging = jdbcTemplate.queryForList(
-                "SELECT order_no, amount_cents FROM recharge_order "
-                        + "WHERE payment_state IN ('PENDING','UNKNOWN') AND fulfillment_state <> 'CREDITED' "
-                        + "AND deleted = FALSE ORDER BY id LIMIT 50");
+        var hanging = txTemplate.execute(status -> jdbcTemplate.queryForList(
+                "WITH due AS (SELECT id FROM recharge_order WHERE payment_state IN ('CREATED','PENDING','UNKNOWN','SUCCEEDED') "
+                        + "AND fulfillment_state <> 'CREDITED' AND deleted=FALSE AND recovery_after <= now() "
+                        + "AND payment_channel=? AND payment_merchant=? ORDER BY recovery_after,id "
+                        + "LIMIT 50 FOR UPDATE SKIP LOCKED) UPDATE recharge_order o SET "
+                        + "recovery_after=now()+interval '60 seconds', recovery_attempts=recovery_attempts+1 "
+                        + "FROM due WHERE o.id=due.id RETURNING o.id,o.order_no,o.user_id,o.payment_state",
+                paymentPort.channel(), paymentPort.merchantId()));
         int recovered = 0;
         for (var row : hanging) {
             String orderNo = (String) row.get("order_no");
-            if (!"REJECTED".equals(reconcile(orderNo))) {
-                recovered++;
+            try {
+                if ("SUCCEEDED".equals(row.get("payment_state"))) {
+                    if (fulfillOrder(orderNo)) recovered++;
+                    continue;
+                }
+                String outcome = reconcile(orderNo);
+                if (List.of("RECOVERED", "ALREADY_RECONCILED", "CLOSED", "FAILED").contains(outcome)) recovered++;
+                else if ("CREATED".equals(row.get("payment_state"))) {
+                    ensurePrepay(((Number) row.get("user_id")).longValue(), ((Number) row.get("id")).longValue(), null, false);
+                }
+            } catch (Exception e) {
+                // Per-order isolation: a poison record never skips the rest of this batch.
+                log.warn("[recoverHangingOrders][order={} retry scheduled, failureType={}]", orderNo, e.getClass().getSimpleName());
             }
         }
         return recovered;
@@ -758,6 +834,11 @@ public class RechargePaymentService {
     public String reconcile(String orderNo) {
         var query = paymentPort.queryOrder(orderNo);
         if (!"SUCCEEDED".equals(query.getState())) {
+            if (List.of("CLOSED", "FAILED").contains(query.getState())) {
+                jdbcTemplate.update("UPDATE recharge_order SET payment_state=?, prepay_params=NULL, prepay_expires_at=NULL, "
+                        + "update_time=now() WHERE order_no=? AND payment_state IN ('CREATED','PENDING','UNKNOWN') "
+                        + "AND fulfillment_state <> 'CREDITED'", query.getState(), orderNo);
+            }
             return query.getState();
         }
         long declaredAmount = declaredAmount(orderNo);

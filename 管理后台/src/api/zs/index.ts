@@ -20,7 +20,12 @@ export const getCaseAsset = async (caseId, assetId): Promise<Blob> => {
 export const createCase = (data) => request.post({ url: `${BASE}/cases`, data })
 export const updateCase = (caseId, data) => request.patch({ url: `${BASE}/cases/${caseId}`, data })
 export const uploadCaseImage = (caseId: string, data: FormData) =>
-  request.post({ url: `${BASE}/cases/${encodeURIComponent(caseId)}/images`, data, headersType: 'multipart/form-data', timeout: 120000 })
+  request.post({
+    url: `${BASE}/cases/${encodeURIComponent(caseId)}/images`,
+    data,
+    headersType: 'multipart/form-data',
+    timeout: 120000
+  })
 export const publishCase = (caseId) => request.post({ url: `${BASE}/cases/${caseId}/publications` })
 export const offlineCase = (caseId, data) =>
   request.post({ url: `${BASE}/cases/${caseId}/withdrawals`, data })

@@ -2,7 +2,7 @@
 # 启用方式：--spring.profiles.active=local,pg,zsdev
 #
 # ⚠️ 本文件内的密钥是公开的占位值，仅用于本机联调，严禁用于任何共享或生产环境。
-# 生产只启用 local,pg（或 prod,pg），需注册真实外部服务适配器并从环境注入密钥。
+# 生产只启用 pg,prod，需注册真实外部服务适配器并从环境注入密钥；禁止组合 local/dev/zsdev。
 # T13-01：真实/Stub 由各端口 provider 键选择——本 profile 默认全部 stub/local（字面值，便于 @ConditionalOnProperty 直接判定）；
 # 逐项联调用环境变量覆盖对应端口（松散绑定，优先级高于本文件），如 ZHONGSHU_IDENTITY_WECHAT_PROVIDER=real；
 # 只填密钥不会切换实现。生产启用 stub/local 会被启动守卫 ZhongshuWiringEnvironmentPostProcessor 拒绝。

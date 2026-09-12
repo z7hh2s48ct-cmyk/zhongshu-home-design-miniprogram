@@ -48,7 +48,7 @@ public final class RealServiceWiringPolicy {
                     List.of("stub", "real"), List.of("stub"), "后续审核批次"));
 
     /** 生产禁止启用的开发便利 profile：携带公开占位密钥、种子数据与开发端点（对应 T12 B05「生产不得启用 zsdev」）。 */
-    private static final List<String> PRODUCTION_FORBIDDEN_PROFILES = List.of("zsdev");
+    private static final List<String> PRODUCTION_FORBIDDEN_PROFILES = List.of("zsdev", "local", "dev");
 
     /**
      * 生产必须提供、且当前已被代码消费的核心机密（值属机密，校验只回显键名/环境变量名，绝不回显值）。
@@ -137,6 +137,20 @@ public final class RealServiceWiringPolicy {
 
         // (2) 生产禁止开发便利 profile：zsdev 携带公开占位密钥/种子数据/开发端点，生产启用即等于用公开值冒充正式配置。
         if (production) {
+            for (String key : List.of("yudao.security.mock-enable", "zhongshu.design.seed-dev-data",
+                    "zhongshu.design.asset.dev-content-endpoint", "spring.datasource.druid.stat-view-servlet.enabled")) {
+                if (!"false".equalsIgnoreCase(propertyResolver.apply(key))) {
+                    violations.add("生产环境必须显式关闭 " + key + "，禁止缺省或开发开关覆盖");
+                }
+            }
+            for (String key : List.of("management.endpoint.env.show-values", "management.endpoint.configprops.show-values")) {
+                if (!"never".equalsIgnoreCase(propertyResolver.apply(key))) violations.add("生产环境必须设置 " + key + "=NEVER");
+            }
+            String exposure = propertyResolver.apply("management.endpoints.web.exposure.include");
+            if (exposure == null || java.util.Arrays.stream(exposure.split(","))
+                    .map(String::trim).anyMatch(e -> !List.of("health", "info", "prometheus").contains(e))) {
+                violations.add("生产 Actuator 暴露范围仅允许 health,info,prometheus：management.endpoints.web.exposure.include");
+            }
             for (String forbidden : PRODUCTION_FORBIDDEN_PROFILES) {
                 if (effectiveProfiles.contains(forbidden)) {
                     violations.add(String.format(

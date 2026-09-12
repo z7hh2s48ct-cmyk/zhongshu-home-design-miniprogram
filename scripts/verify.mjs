@@ -253,11 +253,11 @@ function verifyBackend() {
   ].join(",");
   runStep(
     "backend",
-    "众墅后端合同测试（*ContractTest）",
+    "众墅后端普通单元/集成测试（*Test，排除真实消费标签）",
     wrapper,
     [
       "-B",
-      "-Dtest=*ContractTest",
+      "-Dtest=*Test",
       "-Dsurefire.failIfNoSpecifiedTests=false",
       "-pl",
       modules,

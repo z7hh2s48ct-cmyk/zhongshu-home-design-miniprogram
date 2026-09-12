@@ -29,6 +29,8 @@ const modules = [
 const backendFiles = modules.flatMap((module) =>
   walk(join(root, "后端程序", module, "src", "test"), "ContractTest.java"),
 );
+const allBackendFiles = modules.flatMap(module => walk(join(root, "后端程序", module, "src", "test"), "Test.java"));
+const ordinaryBackendFiles = allBackendFiles.filter(p => !/@Tag\("real-acceptance"\)/.test(text(p)));
 const e2eList =
   text(join(root, "e2e", "zs-e2e.mjs")).match(
     /const names = \[([\s\S]*?)\n\]/,
@@ -42,6 +44,9 @@ const actual = {
     ),
   },
   backend: {
+    ordinaryFiles: ordinaryBackendFiles.length,
+    declaredOrdinaryTestMethods: ordinaryBackendFiles.reduce((n,p) => n + count(text(p), /@Test\b/g), 0),
+    excludedRealAcceptanceFiles: allBackendFiles.length - ordinaryBackendFiles.length,
     contractFiles: backendFiles.length,
     testMethods: backendFiles.reduce(
       (n, p) => n + count(text(p), /@Test\b/g),

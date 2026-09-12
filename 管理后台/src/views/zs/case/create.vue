@@ -331,19 +331,23 @@ const saveAndPublish = () => save(true)
 .zs-form {
   max-width: 760px;
 }
+
 .case-images {
   width: 100%;
 }
+
 .case-images p {
-  color: var(--el-text-color-secondary);
   line-height: 1.6;
+  color: var(--el-text-color-secondary);
 }
+
 .case-images .el-checkbox {
   display: flex;
   height: auto;
   margin: 12px 0;
   white-space: normal;
 }
+
 .case-image-slot {
   display: flex;
   flex-direction: column;
@@ -351,11 +355,13 @@ const saveAndPublish = () => save(true)
   gap: 8px;
   margin: 16px 0;
 }
+
 .case-image-slot .el-image {
   width: 100%;
-  max-width: 360px;
   height: 180px;
+  max-width: 360px;
 }
+
 .case-image-slot input {
   max-width: 100%;
 }

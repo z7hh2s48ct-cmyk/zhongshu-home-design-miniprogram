@@ -347,12 +347,14 @@ onMounted(load)
 .zs-link {
   margin-right: 12px;
 }
+
 .case-preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
+
 .case-preview-grid .el-image {
   width: 100%;
   height: 280px;

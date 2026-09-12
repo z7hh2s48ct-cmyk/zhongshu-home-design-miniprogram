@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RealServiceWiringPolicyTest {
 
     private static final List<String> DEV = List.of("local", "pg", "zsdev");
-    private static final List<String> PROD = List.of("local", "pg", "prod");
+    private static final List<String> PROD = List.of("pg", "prod");
     private static final String PEPPER_VALUE = "test-pepper-0123456789abcdef-0123456789";
 
     /** 全部端口选择开发替身。 */
@@ -32,6 +32,11 @@ class RealServiceWiringPolicyTest {
     /** 全部端口选择真实实现，并齐备真实实现所需的核心机密、appid 与 appsecret（生产放行的完整正确配置）。 */
     private Map<String, String> allReal() {
         Map<String, String> p = new HashMap<>();
+        for (String key : List.of("yudao.security.mock-enable", "zhongshu.design.seed-dev-data",
+                "zhongshu.design.asset.dev-content-endpoint", "spring.datasource.druid.stat-view-servlet.enabled")) p.put(key, "false");
+        p.put("management.endpoint.env.show-values", "NEVER");
+        p.put("management.endpoint.configprops.show-values", "NEVER");
+        p.put("management.endpoints.web.exposure.include", "health,info");
         p.put("zhongshu.identity.wechat.provider", "real");
         p.put("zhongshu.commerce.payment.provider", "real");
         p.put("zhongshu.design.asset.storage.provider", "cos");
@@ -62,6 +67,22 @@ class RealServiceWiringPolicyTest {
     @Test
     void devWithStubProvidersPasses() {
         assertThatCode(() -> RealServiceWiringPolicy.validate(DEV, allStub()::get)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void productionRejectsEffectiveDevelopmentSettingsAndProfiles() {
+        for (String key : List.of("yudao.security.mock-enable", "zhongshu.design.seed-dev-data",
+                "zhongshu.design.asset.dev-content-endpoint", "spring.datasource.druid.stat-view-servlet.enabled")) {
+            var p = allReal(); p.put(key, "true");
+            assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD,p::get)).hasMessageContaining(key);
+            p.remove(key);
+            assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD,p::get)).hasMessageContaining(key);
+        }
+        for (String profile : List.of("local", "dev", "zsdev")) {
+            assertThatThrownBy(() -> RealServiceWiringPolicy.validate(List.of("prod",profile),allReal()::get)).hasMessageContaining(profile);
+        }
+        var p = allReal(); p.put("management.endpoints.web.exposure.include", "*");
+        assertThatThrownBy(() -> RealServiceWiringPolicy.validate(PROD,p::get)).hasMessageContaining("exposure.include");
     }
 
     @Test

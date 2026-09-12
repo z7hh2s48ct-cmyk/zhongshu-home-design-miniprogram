@@ -99,10 +99,10 @@ public class AppRechargeOrderController {
     public CommonResult<Map<String, String>> getPayParams(
             @PathVariable("orderId") String orderId,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
-        long userId = requireAccountId(authorization);
-        return rechargePaymentService.getPayParams(userId, Long.parseLong(orderId))
+        var session = requireSession(authorization);
+        return rechargePaymentService.getPayParams(session.accountId(), Long.parseLong(orderId), session.openid())
                 .map(params -> success(params))
-                .orElseThrow(() -> new IllegalStateException("订单不可支付（已支付/已关闭/已失败或无权访问）"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(409, "订单暂不可支付，请刷新订单状态后重试"));
     }
 
     private long requireAccountId(String authorization) {
