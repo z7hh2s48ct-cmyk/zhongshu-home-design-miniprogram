@@ -168,6 +168,21 @@
       "result": "Backend binary digest linked to actual scanned JAR",
       "bytes": 1397,
       "sha256": "81f85045f83f68d90c07a2c7ae1b39ff42ecb5647386387f7a1bc0a2e7b9f9ee"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-postmerge-mini.log",
+      "command": "node scripts/verify.mjs mini",
+      "result": "219/219 PASS after LF normalization gate fix",
+      "bytes": 24624,
+      "sha256": "4fad3d1cd88b7177b92ddb67c21aa26aa605623069efc8b38846d3f9f7516163"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-postmerge-hash-contract.log",
+      "command": "Fixture validation of LF, CRLF, content edit; both RG3 and existing main checked",
+      "result": "LF and CRLF accepted; content tampering rejected",
+      "bytes": 110,
+      "sha256": "fa49496af5ee2bdf92f6c3013b796fa302db5011b0b467cb58c2fd7ffb82979f"
     }
-  ]
+  ],
+  "postMergeVerification": "Windows working-tree CRLF normalized only for source text integrity gate; application code, dependency versions and SBOM content unchanged"
 }
