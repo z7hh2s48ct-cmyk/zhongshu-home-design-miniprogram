@@ -1,0 +1,185 @@
+{
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 10,
+      "high": 2,
+      "critical": 0
+    },
+    "dependencies": 605,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 605
+  },
+  "advisories": [
+    {
+      "package": "wangeditor",
+      "severity": "high",
+      "title": "Cross-Site Scripting in wangeditor",
+      "url": "https://github.com/advisories/GHSA-g7mw-5cq6-fv82",
+      "vulnerable": ">=0",
+      "patched": "<0.0.0",
+      "versions": [
+        "4.7.15"
+      ],
+      "paths": [
+        ".>@form-create/designer>@form-create/component-wangeditor>wangeditor"
+      ]
+    },
+    {
+      "package": "fast-xml-parser",
+      "severity": "moderate",
+      "title": "fast-xml-parser XMLBuilder: XML Comment and CDATA Injection via Unescaped Delimiters",
+      "url": "https://github.com/advisories/GHSA-gh4j-gqv2-49f6",
+      "vulnerable": "<5.7.0",
+      "patched": ">=5.7.0",
+      "versions": [
+        "4.5.7"
+      ],
+      "paths": [
+        ".>fast-xml-parser"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Prototype pollution auth subfields can inject Basic auth",
+      "url": "https://github.com/advisories/GHSA-xj6q-8x83-jv6g",
+      "vulnerable": ">=1.15.2 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Prototype pollution gadgets can alter axios request construction",
+      "url": "https://github.com/advisories/GHSA-mmx7-hfxf-jppx",
+      "vulnerable": ">=1.0.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Deep formToJSON Key Recursion Can Cause Denial of Service",
+      "url": "https://github.com/advisories/GHSA-pmv8-rq9r-6j72",
+      "vulnerable": ">=1.0.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: HTTP/2 streamed uploads bypass `maxBodyLength`",
+      "url": "https://github.com/advisories/GHSA-mwf2-3pr3-8698",
+      "vulnerable": ">=1.13.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "high",
+      "title": "Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning",
+      "url": "https://github.com/advisories/GHSA-gcfj-64vw-6mp9",
+      "vulnerable": ">=1.15.2 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Nested axios option objects can consume polluted prototype values",
+      "url": "https://github.com/advisories/GHSA-7q8q-rj6j-mhjq",
+      "vulnerable": ">=1.0.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Fetch adapter `ReadableStream` uploads bypass `maxBodyLength`",
+      "url": "https://github.com/advisories/GHSA-jqh4-m9w3-8hp9",
+      "vulnerable": ">=1.7.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: NO_PROXY bypass for 0.0.0.0 local addresses in axios",
+      "url": "https://github.com/advisories/GHSA-f4gw-2p7v-4548",
+      "vulnerable": ">=1.15.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios: Excessive recursion in formDataToJSON can cause denial of service",
+      "url": "https://github.com/advisories/GHSA-42h9-826w-cgv3",
+      "vulnerable": ">=1.0.0 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    },
+    {
+      "package": "axios",
+      "severity": "moderate",
+      "title": "Axios form serializer maxDepth bypass via {} metatoken",
+      "url": "https://github.com/advisories/GHSA-hcpx-6fm6-wx23",
+      "vulnerable": ">=1.15.1 <1.18.0",
+      "patched": ">=1.18.0",
+      "versions": [
+        "1.16.0"
+      ],
+      "paths": [
+        ".>axios"
+      ]
+    }
+  ]
+}

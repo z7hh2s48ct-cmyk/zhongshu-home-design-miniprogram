@@ -1,10 +1,10 @@
 <view class="v12-page message-page" wx:if="{{accessReady}}">
   <v12-navbar title="消息中心" show-back show-brand="{{false}}" />
   <view class="v12-content">
-    <view wx:if="{{loading}}" class="v12-card message-empty">消息加载中…</view>
-    <view wx:elif="{{!messages.length}}" class="v12-card message-empty">暂无消息，任务与审核动态会在这里通知你</view>
+    <v12-state wx:if="{{loading}}" status="loading" text="消息加载中…" />
+    <v12-state wx:elif="{{!messages.length}}" status="empty" text="暂无消息，任务与审核动态会在这里通知你" />
     <view class="v12-card message {{item.read ? '' : 'unread'}}" wx:for="{{messages}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap"><view class="message-icon"><t-icon name="notification" size="25px" color="#8a4a1a" /></view><view><text>{{item.title}}</text><text>{{item.content}}</text></view><span>{{item.time}}</span></view>
-    <view wx:if="{{error}}" class="v12-card message-empty" bindtap="retry">{{error}} · 点击重试</view>
-    <view wx:elif="{{nextCursor}}" class="v12-card message-empty" bindtap="loadMore">{{loadingMore ? '加载中…' : '加载更多消息'}}</view>
+    <v12-state wx:if="{{error}}" status="error" text="{{error}}" action-text="点击重试" bind:action="retry" />
+    <v12-state wx:elif="{{nextCursor}}" status="{{loadingMore ? 'loading' : 'empty'}}" text="{{loadingMore ? '加载中…' : '加载更多消息'}}" action-text="{{loadingMore ? '' : '加载更多消息'}}" bind:action="loadMore" />
   </view>
 </view>

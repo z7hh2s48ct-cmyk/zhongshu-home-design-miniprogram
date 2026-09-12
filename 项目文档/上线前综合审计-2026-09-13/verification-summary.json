@@ -1,0 +1,110 @@
+{
+  "auditDate": "2026-09-13",
+  "head": "ef195160142e43a7a37d44d71216cf6db085b456",
+  "workingTree": true,
+  "environment": {
+    "node": "24.19.0",
+    "pnpmObserved": "10.34.5",
+    "pnpmRequired": "11.19.0",
+    "javaUsed": "OpenJDK 25.0.3 (Android Studio JBR)",
+    "javaTarget": "17",
+    "docker": "29.7.2"
+  },
+  "mini": {
+    "files": 18,
+    "passed": 205,
+    "failed": 0,
+    "log": "mini-tests.log"
+  },
+  "admin": {
+    "files": 10,
+    "passed": 76,
+    "failed": 0,
+    "typecheck": "pass",
+    "eslint": "pass",
+    "stylelintErrors": 10,
+    "prettierFiles": 1,
+    "build": "pass"
+  },
+  "backend": {
+    "classes": 47,
+    "passed": 527,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "contractClasses": 35,
+    "contractTests": 329,
+    "modules": {
+      "identity": {
+        "classes": 7,
+        "tests": 71,
+        "failures": 0
+      },
+      "commerce": {
+        "classes": 7,
+        "tests": 109,
+        "failures": 0
+      },
+      "ai-orchestration": {
+        "classes": 3,
+        "tests": 23,
+        "failures": 0
+      },
+      "design": {
+        "classes": 17,
+        "tests": 195,
+        "failures": 0
+      },
+      "server": {
+        "classes": 13,
+        "tests": 130,
+        "failures": 1
+      }
+    },
+    "package": "pass"
+  },
+  "e2e": {
+    "registered": 54,
+    "executed": 0,
+    "result": "blocked_before_http_suite",
+    "reason": "DevDataSeeder demo case missing PUBLIC_DISPLAY grant",
+    "isolatedResourcesRemoved": true
+  },
+  "probes": {
+    "count": 5,
+    "expectedDefectsReproduced": 5,
+    "liveChannelsUsed": false,
+    "log": "risk-probes.log"
+  },
+  "dependencyAudit": {
+    "productionDependencies": 605,
+    "critical": 0,
+    "high": 2,
+    "moderate": 10,
+    "scope": "admin pnpm only"
+  },
+  "releaseCheck": {
+    "violations": 2,
+    "reason": "localhost and plain HTTP"
+  },
+  "standardFullGate": "not passed; pnpm mismatch, lint failures, expanded backend failure, clean startup failure",
+  "concurrentConfigurationFollowup": {
+    "classes": 2,
+    "tests": 34,
+    "passed": 34,
+    "failed": 0,
+    "log": "backend-config-followup.log",
+    "scope": "Later additive AI provider configuration only; original 528-test run and startup failure are retained as earlier evidence"
+  },
+  "notExecuted": [
+    "real WeChat identity",
+    "real COS acceptance",
+    "real WeChat money flow",
+    "real AI Runtime",
+    "Mini Program developer-tool compilation/upload",
+    "real-device UI automation",
+    "load/penetration test",
+    "production backup restore",
+    "Maven/container SCA"
+  ]
+}

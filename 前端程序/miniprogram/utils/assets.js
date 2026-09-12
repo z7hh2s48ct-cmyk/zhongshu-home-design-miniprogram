@@ -28,7 +28,7 @@ function fetchAssetDataUrl(assetId) {
   pending[assetId] = api.createDownloadTicket(assetId).then(function (ticket) {
     return new Promise(function (resolve, reject) {
       wx.request({
-        url: config.apiBase + '/app-api/design/v1/assets/' + assetId + '/content?ticket='
+        url: config.apiBase + api.assetContentUrl(assetId) + '?ticket='
           + encodeURIComponent(ticket.ticketId || ''),
         responseType: 'arraybuffer',
         header: { 'Authorization': 'Bearer ' + http.getToken(), 'tenant-id': String(config.tenantId) },

@@ -23,6 +23,14 @@ module.exports = {
     if (avatarAssetId) body.avatarAssetId = String(avatarAssetId);
     return http.patch(BASE + '/profile', body);
   },
+  // 用户偏好：字段白名单由服务端决定，白名单外的键丢弃（PATCH /profile/preferences）
+  updatePreferences: function (preferences) {
+    return http.patch(BASE + '/profile/preferences', preferences || {});
+  },
+  // 客服入口配置（C06）：未配置时后端下发空串，前端据此隐藏入口，不展示打不通的假号码
+  getSupportEntry: function () {
+    return http.get(BASE + '/support-entry');
+  },
 
   // ---- 首页 / 户型库 ----
   getHome: function () {
@@ -148,6 +156,13 @@ module.exports = {
   resolveDownload: function (assetId, ticket) {
     return http.post(BASE + '/assets/' + encodeURIComponent(assetId) + '/downloads', { ticket: ticket });
   },
+  // 开发期资产字节端点 URL 构造器（GET 下载 / POST multipart 直传共用同一路径）。
+  // 该端点是二进制/multipart，不走 http 的 JSON 封装；此处仅收敛散落在
+  // assets.js / ai-design/index.js / avatar-upload.js 的硬编码路径，调用方自行
+  // 用 wx.request/wx.uploadFile 拼 config.apiBase + 本 URL。切 COS 预签名后此路径退役。
+  assetContentUrl: function (assetId) {
+    return BASE + '/assets/' + encodeURIComponent(assetId) + '/content';
+  },
 
   // ---- 预算 ----
   getBudgetInputs: function (projectId, resultVersionId) {
@@ -203,5 +218,20 @@ module.exports = {
   },
   acceptPrivacyConsents: function () {
     return http.post(BASE + '/privacy-consents');
+  },
+
+  // ---- 数据主体请求（M10：数据导出 / 账号关闭）----
+  // P0 后端只登记与查询进度；导出包生成与关闭编排的执行链随后端接入（WS5/6/7）。
+  createDataExportRequest: function () {
+    return http.post(BASE + '/data-export-requests');
+  },
+  getDataExportRequest: function (requestId) {
+    return http.get(BASE + '/data-export-requests/' + encodeURIComponent(requestId));
+  },
+  createAccountClosureRequest: function () {
+    return http.post(BASE + '/account-closure-requests');
+  },
+  getAccountClosureRequest: function (requestId) {
+    return http.get(BASE + '/account-closure-requests/' + encodeURIComponent(requestId));
   }
 };

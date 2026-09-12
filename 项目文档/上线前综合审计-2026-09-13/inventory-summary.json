@@ -1,0 +1,321 @@
+{
+  "metrics": {
+    "miniOwn": {
+      "files": 114,
+      "lines": 5574,
+      "largest": [
+        {
+          "path": "前端程序/miniprogram/pages/budget/input.js",
+          "lines": 252,
+          "bytes": 15597
+        },
+        {
+          "path": "前端程序/miniprogram/utils/api.js",
+          "lines": 238,
+          "bytes": 10381
+        },
+        {
+          "path": "前端程序/miniprogram/utils/request.js",
+          "lines": 213,
+          "bytes": 15611
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-selection.js",
+          "lines": 208,
+          "bytes": 12077
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-view.js",
+          "lines": 182,
+          "bytes": 18058
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-draft.js",
+          "lines": 166,
+          "bytes": 7978
+        },
+        {
+          "path": "前端程序/miniprogram/pages/ai-design/index.js",
+          "lines": 155,
+          "bytes": 6922
+        },
+        {
+          "path": "前端程序/miniprogram/utils/access.js",
+          "lines": 151,
+          "bytes": 5945
+        },
+        {
+          "path": "前端程序/miniprogram/pages/auth/index.js",
+          "lines": 150,
+          "bytes": 9920
+        },
+        {
+          "path": "前端程序/miniprogram/pages/library/detail.js",
+          "lines": 134,
+          "bytes": 7218
+        },
+        {
+          "path": "前端程序/miniprogram/pages/wallet/recharge.js",
+          "lines": 133,
+          "bytes": 5375
+        },
+        {
+          "path": "前端程序/miniprogram/pages/library/index.js",
+          "lines": 111,
+          "bytes": 4421
+        }
+      ]
+    },
+    "adminBusiness": {
+      "files": 26,
+      "lines": 6983,
+      "largest": [
+        {
+          "path": "管理后台/src/views/zs/budget/detail.vue",
+          "lines": 1041,
+          "bytes": 38896
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/index.vue",
+          "lines": 666,
+          "bytes": 23671
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/quote.vue",
+          "lines": 444,
+          "bytes": 16500
+        },
+        {
+          "path": "管理后台/src/views/zs/points/ledger/index.vue",
+          "lines": 409,
+          "bytes": 13991
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/revision-form.ts",
+          "lines": 380,
+          "bytes": 14424
+        },
+        {
+          "path": "管理后台/src/views/zs/case/create.vue",
+          "lines": 363,
+          "bytes": 12504
+        },
+        {
+          "path": "管理后台/src/views/zs/case/index.vue",
+          "lines": 361,
+          "bytes": 11738
+        },
+        {
+          "path": "管理后台/src/views/zs/dashboard/index.vue",
+          "lines": 354,
+          "bytes": 10531
+        },
+        {
+          "path": "管理后台/src/views/zs/recharge/order/index.vue",
+          "lines": 334,
+          "bytes": 12964
+        },
+        {
+          "path": "管理后台/src/views/zs/review/detail.vue",
+          "lines": 268,
+          "bytes": 8576
+        },
+        {
+          "path": "管理后台/src/views/zs/user/index.vue",
+          "lines": 263,
+          "bytes": 8821
+        },
+        {
+          "path": "管理后台/src/views/zs/export/index.vue",
+          "lines": 228,
+          "bytes": 7347
+        }
+      ]
+    },
+    "backendBusiness": {
+      "files": 200,
+      "lines": 18918,
+      "largest": [
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RechargePaymentService.java",
+          "lines": 1032,
+          "bytes": 57565
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/project/DesignProjectService.java",
+          "lines": 672,
+          "bytes": 37384
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/catalog/CaseCatalogService.java",
+          "lines": 550,
+          "bytes": 31381
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/CosObjectStorageAdapter.java",
+          "lines": 519,
+          "bytes": 32682
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/AdminBudgetRevisionService.java",
+          "lines": 493,
+          "bytes": 41482
+        },
+        {
+          "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/job/AiJobOrchestrationService.java",
+          "lines": 490,
+          "bytes": 27411
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/submission/SubmissionReviewService.java",
+          "lines": 475,
+          "bytes": 29124
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/BudgetCatalogService.java",
+          "lines": 456,
+          "bytes": 34427
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/AssetService.java",
+          "lines": 455,
+          "bytes": 23704
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/ItemizedBudgetService.java",
+          "lines": 362,
+          "bytes": 29773
+        },
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/wechat/WechatPaymentAdapter.java",
+          "lines": 355,
+          "bytes": 19030
+        },
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/points/PointAccountService.java",
+          "lines": 336,
+          "bytes": 16132
+        }
+      ]
+    },
+    "backendInfra": {
+      "files": 22,
+      "lines": 880,
+      "largest": [
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/JdbcDeliveryPort.java",
+          "lines": 190,
+          "bytes": 8988
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/OutboxDispatcherService.java",
+          "lines": 112,
+          "bytes": 5693
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/event/JdbcReliableEventPort.java",
+          "lines": 49,
+          "bytes": 1835
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/audit/AuditEventMessage.java",
+          "lines": 42,
+          "bytes": 859
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/audit/JdbcAuditPort.java",
+          "lines": 42,
+          "bytes": 1644
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/api/AiJobPort.java",
+          "lines": 41,
+          "bytes": 1621
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/ExportJobSnapshot.java",
+          "lines": 41,
+          "bytes": 621
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/DeliveryPort.java",
+          "lines": 38,
+          "bytes": 1794
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/api/IdentitySessionPort.java",
+          "lines": 35,
+          "bytes": 1508
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/TicketConsumption.java",
+          "lines": 34,
+          "bytes": 680
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/event/OutboxEventMessage.java",
+          "lines": 34,
+          "bytes": 804
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/ExportJobRequest.java",
+          "lines": 31,
+          "bytes": 689
+        }
+      ]
+    },
+    "backendServer": {
+      "files": 9,
+      "lines": 1247,
+      "largest": [
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/SensitiveLoggingPolicy.java",
+          "lines": 422,
+          "bytes": 32373
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/RealServiceWiringPolicy.java",
+          "lines": 212,
+          "bytes": 15465
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuExportWorker.java",
+          "lines": 165,
+          "bytes": 7834
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuJobDriver.java",
+          "lines": 156,
+          "bytes": 8103
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/DevDataSeeder.java",
+          "lines": 146,
+          "bytes": 7230
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/ZhongshuWiringEnvironmentPostProcessor.java",
+          "lines": 53,
+          "bytes": 3192
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/resources/db/migration/platform/V20260905.004__zhongshu_admin_menus.sql",
+          "lines": 45,
+          "bytes": 3714
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/YudaoServerApplication.java",
+          "lines": 37,
+          "bytes": 1792
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/resources/db/migration-undo/platform/V20260905.004__undo_zhongshu_admin_menus.sql",
+          "lines": 11,
+          "bytes": 372
+        }
+      ]
+    }
+  },
+  "controllerFiles": 38,
+  "endpoints": 144
+}

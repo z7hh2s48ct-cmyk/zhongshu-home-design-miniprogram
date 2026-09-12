@@ -1,1 +1,1 @@
-{ "navigationStyle": "custom", "usingComponents": { "v12-navbar": "/components/v12-navbar/index" } }
+{ "navigationStyle": "custom", "usingComponents": { "v12-navbar": "/components/v12-navbar/index", "v12-state": "/components/v12-state/index" } }

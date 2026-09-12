@@ -34,7 +34,7 @@ function uploadAvatar(filePath) {
           wx.request({ url: ticket.uploadUrl, method: 'PUT', data, header: { 'Content-Type': mime }, success,
             fail: () => reject(Error('头像上传失败，请检查网络')) });
         } else if (/^local:\/\//.test(ticket.uploadUrl)) {
-          wx.uploadFile({ url: http.config.apiBase + '/app-api/design/v1/assets/' + ticket.assetId + '/content',
+          wx.uploadFile({ url: http.config.apiBase + api.assetContentUrl(ticket.assetId),
             filePath, name: 'file', header: { Authorization: 'Bearer ' + token, 'tenant-id': String(http.config.tenantId) },
             success, fail: () => reject(Error('头像上传失败，请检查网络')) });
         } else reject(Error('头像上传地址不可用'));

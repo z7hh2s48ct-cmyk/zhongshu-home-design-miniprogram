@@ -1,0 +1,51 @@
+{
+  "scope": "literal referenced v12 assets only; not official compiled upload size",
+  "files": 11,
+  "bytes": 3760189,
+  "assets": [
+    {
+      "path": "/assets/v12/home-hero-scene.png",
+      "bytes": 1958804
+    },
+    {
+      "path": "/assets/v12/elevation-b.png",
+      "bytes": 495623
+    },
+    {
+      "path": "/assets/v12/villa-classic.jpg",
+      "bytes": 316695
+    },
+    {
+      "path": "/assets/v12/villa-modern.jpg",
+      "bytes": 313441
+    },
+    {
+      "path": "/assets/v12/elevation-a.png",
+      "bytes": 165568
+    },
+    {
+      "path": "/assets/v12/generating-plan-1.png",
+      "bytes": 123938
+    },
+    {
+      "path": "/assets/v12/budget-sketch.png",
+      "bytes": 123756
+    },
+    {
+      "path": "/assets/v12/generating-plan-2.png",
+      "bytes": 117515
+    },
+    {
+      "path": "/assets/v12/plan-b-1.png",
+      "bytes": 65064
+    },
+    {
+      "path": "/assets/v12/plan-b-2.png",
+      "bytes": 60516
+    },
+    {
+      "path": "/assets/v12/brand-logo.png",
+      "bytes": 19269
+    }
+  ]
+}

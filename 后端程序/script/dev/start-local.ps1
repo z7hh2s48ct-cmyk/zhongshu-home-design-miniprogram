@@ -41,10 +41,10 @@ foreach ($rawLine in Get-Content -LiteralPath $envFile) {
 
 $javaVersionText = (& java -version 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or $javaVersionText -notmatch 'version "(?<major>\d+)') {
-    throw '未检测到可用 JDK；请安装 JDK 17 并配置 PATH/JAVA_HOME。'
+    throw '未检测到可用 JDK；请安装 JDK 17 或更高并配置 PATH/JAVA_HOME。'
 }
-if ([int]$Matches.major -ne 17) {
-    throw "当前 Java 主版本为 $($Matches.major)，项目要求 JDK 17。"
+if ([int]$Matches.major -lt 17) {
+    throw "当前 Java 主版本为 $($Matches.major)，项目要求 JDK 17 或更高。"
 }
 
 docker info --format '{{.ServerVersion}}' | Out-Null

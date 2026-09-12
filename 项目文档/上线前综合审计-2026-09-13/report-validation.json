@@ -1,0 +1,25 @@
+{
+  "validatedAt": "2026-09-12T17:17:34.355Z",
+  "headUnchanged": true,
+  "sourceFilesChecked": 2230,
+  "changedSourceFiles": [
+    "后端程序/yudao-server/src/main/resources/application-pg.yaml",
+    "后端程序/yudao-server/src/main/resources/application-zsdev.yaml"
+  ],
+  "preexistingStatusUnchanged": false,
+  "documentedConcurrentChangesOnly": true,
+  "addedStatus": [
+    " M 后端程序/.env.example",
+    " M 后端程序/yudao-server/src/main/resources/application-pg.yaml",
+    " M 后端程序/yudao-server/src/main/resources/application-zsdev.yaml",
+    " M 项目文档/项目状态看板.md"
+  ],
+  "removedStatus": [],
+  "markdownFiles": 5,
+  "localLinksChecked": 270,
+  "badLinks": [],
+  "tableErrors": [],
+  "badEvidenceLines": [],
+  "flowRows": 52,
+  "riskRows": 18
+}

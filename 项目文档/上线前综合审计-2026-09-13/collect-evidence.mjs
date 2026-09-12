@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+const out=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(out,'../..');
+const tracked=execFileSync('git',['ls-files','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean);
+const files=[...new Set(execFileSync('git',['ls-files','-co','--exclude-standard','-z'],{cwd:root,encoding:'utf8'}).split('\0').filter(Boolean))].filter(p=>!p.startsWith('.claude/')&&!p.startsWith('项目文档/上线前综合审计-2026-09-13/')&&fs.existsSync(path.join(root,p)));
+const snapshots=files.filter(p=>/^(前端程序|管理后台|后端程序|scripts|\.github)\//.test(p)&&/\.(java|js|mjs|ts|vue|json|xml|yaml|yml|wxml|scss|sql)$/.test(p)).map(p=>({path:p,sha256:createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex')}));
+const checks=[['private-key-block',/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],['tencent-akid',/\bAKID[A-Za-z0-9]{28,}\b/],['openai-key',/\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b/],['github-token',/\b(?:ghp_[A-Za-z0-9]{32,}|github_pat_[A-Za-z0-9_]{40,})\b/]];
+const secretFindings=[];let scanned=0;
+for(const p of tracked){if(p.startsWith('.claude/')||!fs.existsSync(path.join(root,p))||! /\.(java|js|ts|mjs|json|xml|yaml|yml|env|properties|sql|md|txt)$/.test(p))continue;const txt=fs.readFileSync(path.join(root,p),'utf8');scanned++;txt.split(/\r?\n/).forEach((line,i)=>{for(const [kind,re] of checks)if(re.test(line))secretFindings.push({path:p,line:i+1,kind,context: p.includes('/src/test/')?'test-source':'needs-review'});});}
+const migrations=files.filter(p=>p.includes('/src/main/resources/db/migration/')&&p.endsWith('.sql'));
+const miniFiles=files.filter(p=>p.startsWith('前端程序/miniprogram/'));
+const stats={head:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),branch:execFileSync('git',['branch','--show-current'],{cwd:root,encoding:'utf8'}).trim(),snapshotAt:new Date().toISOString(),status:execFileSync('git',['-c','core.quotepath=false','status','--short'],{cwd:root,encoding:'utf8'}).split('\n').filter(x=>x&&!x.includes('上线前综合审计-2026-09-13')),snapshots,migrations,miniPhysicalBytes:miniFiles.reduce((s,p)=>s+fs.statSync(path.join(root,p)).size,0),miniLargest:miniFiles.map(p=>({path:p,bytes:fs.statSync(path.join(root,p)).size})).sort((a,b)=>b.bytes-a.bytes).slice(0,8)};
+fs.writeFileSync(path.join(out,'scope-snapshot.json'),JSON.stringify(stats,null,2)+'\n');
+fs.writeFileSync(path.join(out,'secret-format-scan.json'),JSON.stringify({scope:'Tracked current-tree text only, high-confidence key formats; no historical/untracked/local credential audit; values never printed',scanned,findings:secretFindings},null,2)+'\n');
+const dep=JSON.parse(fs.readFileSync(path.join(out,'dependency-audit.json'),'utf8'));
+const summaries=Object.values(dep.advisories||{}).map(a=>({package:a.module_name,severity:a.severity,title:a.title,url:a.url,vulnerable:a.vulnerable_versions,patched:a.patched_versions,versions:a.findings.map(f=>f.version),paths:a.findings.flatMap(f=>f.paths)}));
+fs.writeFileSync(path.join(out,'dependency-summary.json'),JSON.stringify({metadata:dep.metadata,advisories:summaries},null,2)+'\n');
+console.log(JSON.stringify({migrations:migrations.length,miniPhysicalBytes:stats.miniPhysicalBytes,miniLargest:stats.miniLargest,secretScan:{scanned,findings:secretFindings},workingTreeEntries:stats.status.length},null,2));

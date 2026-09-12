@@ -55,6 +55,17 @@ zhongshu:
     # C6：internal-api 服务签名密钥——生产必须配置，空值时 internal 端点全部拒绝（快速失败）
     internal-secret: ${ZS_INTERNAL_SECRET:}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+    # D-11（EXT-05）AI Provider 配置面，2026-09-12 冻结：apilio.ai，OpenAI 兼容 /v1/chat/completions。
+    # ⚠️ 本仓库 ai-orchestration 只做编排/租约/结算，无出站生成引擎——真实 Provider 调用由外部 AI Runtime（P4D）承担，
+    #    Runtime 不在本仓库。故本块为「前向声明的配置面」：AiProviderProperties 仅启动绑定、不装配任何客户端、当前无消费者。
+    # 遵 T12「只登记已被消费的键」纪律：api-key 暂不纳入 RealServiceWiringPolicy 强制启动守卫（无消费者时纳入会令生产为无用键失败）。
+    # 安全基线：本 profile 不给任何默认值；api-key 属机密，只经部署环境 ZS_AI_API_KEY 带外注入，绝不落文件/提交；
+    #    Actuator env/configprops show-values=NEVER（见文件末）兜底不回显。
+    provider:
+      base-url: ${ZS_AI_BASE_URL:}
+      api-key: ${ZS_AI_API_KEY:}
+      model: ${ZS_AI_MODEL:}
+      temperature: ${ZS_AI_TEMPERATURE:}
   identity:
     wechat-appid: ${ZS_WX_APPID:}
     # T13-04：真实 code2session AppSecret——生产安全基线不给默认值；provider=real 时必须由 ZS_WX_APPSECRET 注入，

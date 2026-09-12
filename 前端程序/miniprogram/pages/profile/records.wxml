@@ -7,8 +7,8 @@
       <text class="record-hint">{{item.hint}}</text>
       <view class="record-bottom"><text class="record-status">{{item.status}}</text><text>{{item.time}}</text></view>
     </view>
-    <view wx:if="{{error}}" class="v12-card record-empty"><text>{{error}}</text><button class="record-button" bindtap="retry" disabled="{{loading}}">重试</button></view>
-    <view wx:elif="{{!loading && !rows.length}}" class="v12-card record-empty"><t-icon name="file" size="36px" color="#9a6d39" /><text>{{emptyText}}</text></view>
+    <v12-state wx:if="{{error}}" status="error" text="{{error}}" action-text="重试" bind:action="retry" />
+    <v12-state wx:elif="{{!loading && !rows.length}}" status="empty" icon="file" text="{{emptyText}}" />
     <view class="record-footer"><text wx:if="{{loading}}">正在读取…</text><button wx:elif="{{hasMore && !error}}" class="record-button" bindtap="more">加载更多</button><text wx:elif="{{rows.length && !error}}">已显示全部记录</text></view>
   </view>
 </view>

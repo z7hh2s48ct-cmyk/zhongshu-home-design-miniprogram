@@ -65,7 +65,7 @@ protectedPage({
       success: function (res) {
         api.getUploadTicket('USER_SKETCH', mime, file.size, sha256.sha256Hex(res.data))
           .then(function (ticket) {
-            return self.putObject(ticket, file.tempFilePath, mime).then(function () {
+            return self.putObject(ticket, file.tempFilePath, res.data, mime).then(function () {
               return api.completeUpload(ticket.assetId);
             }).then(function (accepted) {
               if (!accepted) throw { msg: '图片校验未通过，请更换图片' };
@@ -87,24 +87,31 @@ protectedPage({
       }
     });
   },
-  // COS 凭据到位前 uploadUrl 是 local:// 内部地址，走开发期直传端点（multipart POST）。
-  // 注意：wx.uploadFile 只支持 multipart POST，切 COS 时预签名 PUT 需改用 wx.request 二进制体，届时一并处理
-  putObject(ticket, filePath, mime) {
-    const isHttpUrl = /^https?:\/\//.test(ticket.uploadUrl || '');
-    const url = isHttpUrl ? ticket.uploadUrl
-      : config.apiBase + '/app-api/design/v1/assets/' + ticket.assetId + '/content';
+  // COS 直传分流（与 utils/avatar-upload.js 一致）：
+  //  · https:// 预签名地址 → wx.request PUT 发二进制体；签名对象 PUT 绝不能带应用 Bearer（会破坏签名/越权），
+  //    Content-Type 必须与申请票据时申报的 mime 一致，否则与后端签名不匹配被拒。
+  //  · local:// 开发期地址 → wx.uploadFile multipart POST 到字节端点，带 Bearer + tenant-id（Content-Type 由 wx 自动置 multipart 边界）。
+  putObject(ticket, filePath, data, mime) {
+    const uploadUrl = ticket.uploadUrl || '';
     return new Promise(function (resolve, reject) {
-      wx.uploadFile({
-        url: url,
-        filePath: filePath,
-        name: 'file',
-        header: { 'Content-Type': mime, 'Authorization': 'Bearer ' + http.getToken(), 'tenant-id': String(config.tenantId) },
-        success: function (res) {
-          if (res.statusCode >= 400) reject({ msg: '上传失败(' + res.statusCode + ')' });
-          else resolve();
-        },
-        fail: function () { reject({ msg: '上传失败，请检查网络' }); }
-      });
+      const success = function (res) {
+        if (res.statusCode < 200 || res.statusCode >= 300) reject({ msg: '上传失败(' + res.statusCode + ')' });
+        else resolve();
+      };
+      const fail = function () { reject({ msg: '上传失败，请检查网络' }); };
+      if (/^https:\/\//.test(uploadUrl)) {
+        wx.request({ url: uploadUrl, method: 'PUT', data: data, header: { 'Content-Type': mime }, success: success, fail: fail });
+      } else if (/^local:\/\//.test(uploadUrl)) {
+        wx.uploadFile({
+          url: config.apiBase + api.assetContentUrl(ticket.assetId),
+          filePath: filePath,
+          name: 'file',
+          header: { 'Authorization': 'Bearer ' + http.getToken(), 'tenant-id': String(config.tenantId) },
+          success: success, fail: fail
+        });
+      } else {
+        reject({ msg: '上传地址不可用' });
+      }
     });
   },
 

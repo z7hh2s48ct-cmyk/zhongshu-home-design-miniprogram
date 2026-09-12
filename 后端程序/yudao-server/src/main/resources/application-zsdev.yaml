@@ -15,6 +15,14 @@ zhongshu:
     # C6 internal-api 签名联调占位值；生产由密钥托管注入，缺失时 internal 端点全部拒绝
     internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+    # D-11（EXT-05）AI Provider 配置面，2026-09-12 冻结：apilio.ai，OpenAI 兼容。开发默认值只给非机密项（base-url/model/temperature）；
+    # api-key 属机密，本 profile 留空——P4D 外部 Runtime 联调时由环境变量 ZS_AI_API_KEY 带外注入，绝不写入本文件。
+    # ⚠️ 当前本仓库无 Java 消费者（生成引擎在外部 Runtime），本块仅为配置面前向声明（AiProviderProperties 仅绑定不装配客户端）。
+    provider:
+      base-url: ${ZS_AI_BASE_URL:https://api.apilio.ai/v1}
+      api-key: ${ZS_AI_API_KEY:}
+      model: ${ZS_AI_MODEL:gpt-5.6-sol}
+      temperature: ${ZS_AI_TEMPERATURE:0.7}
   identity:
     # 填真实 AppID 不会自动切换实现；需同时把下方 wechat.provider 设为 real（B1 就绪后）
     wechat-appid: ${ZS_WX_APPID:stub-appid}

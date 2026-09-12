@@ -132,8 +132,11 @@ function checkBackend() {
   const java = runCaptured(stage, "java", ["-version"], backendDirectory);
   const javaOutput = `${java.stdout}\n${java.stderr}`;
   const javaMajor = javaOutput.match(/version "(?<major>\d+)/)?.groups?.major;
-  if (java.status !== 0 || javaMajor !== "17") {
-    fail(stage, `JDK 版本不满足要求：当前 ${javaMajor ?? "不可用"}，需要 17`);
+  if (java.status !== 0 || javaMajor === undefined || Number(javaMajor) < 17) {
+    fail(
+      stage,
+      `JDK 版本不满足要求：当前 ${javaMajor ?? "不可用"}，需要主版本 >= 17`,
+    );
   }
 
   const wrapper = join(backendDirectory, isWindows ? "mvnw.cmd" : "mvnw");
