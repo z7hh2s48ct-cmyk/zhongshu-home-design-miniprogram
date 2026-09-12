@@ -37,6 +37,8 @@ import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.GENERATION
 @Slf4j
 @Service
 public class DesignProjectService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     public record ProjectSnapshot(long projectId, long userId, String sourceType, Long refCaseId,
                                   String stage, String status) {
@@ -74,6 +76,7 @@ public class DesignProjectService {
                               Map<String, Object> requirementInputs) {
         Map<String, Object> validatedInputs = BudgetInputs.validateRequirementInputs(requirementInputs);
         return txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             Long refVersionId = null;
             if ("CASE_REFERENCE".equals(sourceType)) {
                 if (refCaseId == null) {

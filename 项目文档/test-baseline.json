@@ -3,12 +3,12 @@
   "asOf": "2026-09-13",
   "inventory": {
     "mini": {
-      "executableFiles": 19,
-      "declaredTestCalls": 213
+      "executableFiles": 22,
+      "declaredTestCalls": 221
     },
     "backend": {
-      "ordinaryFiles": 48,
-      "declaredOrdinaryTestMethods": 533,
+      "ordinaryFiles": 50,
+      "declaredOrdinaryTestMethods": 548,
       "excludedRealAcceptanceFiles": 3,
       "contractFiles": 35,
       "testMethods": 329,

@@ -19,9 +19,8 @@ import java.util.Optional;
  * identity 模块。模块间无 Maven 依赖，仅共享同一个 PostgreSQL 库；
  * 若后续要严格归属，需新迁移搬表，不在本服务内处理。
  *
- * P0 边界：EXPORT 请求只登记不生成导出包（异步导出执行器随部署接入，
- * 届时写 download_ticket 并推进 COMPLETED）；CLOSE_ACCOUNT 只登记请求，
- * 账号关闭编排（吊销会话、依法留存账务）随后续包接入。
+ * 本模块管理同意事实和申请；server PrivacyLifecycleService 负责跨域导出、
+ * 受权处理关闭及会话吊销，下载票据独立签发且仅存哈希。
  */
 @Slf4j
 @Service
@@ -42,9 +41,11 @@ public class PrivacyService {
     }
 
     private final JdbcTemplate jdbcTemplate;
+    private final org.springframework.transaction.support.TransactionTemplate tx;
 
     public PrivacyService(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.tx = new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
     }
 
     // ========== 协议同意 ==========
@@ -71,7 +72,8 @@ public class PrivacyService {
                 continue;
             }
             jdbcTemplate.update(
-                    "INSERT INTO privacy_consent (id, user_id, policy_type, version) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO privacy_consent (id, user_id, policy_type, version) VALUES (?, ?, ?, ?) "
+                            + "ON CONFLICT (user_id,policy_type,version) WHERE deleted=FALSE DO NOTHING",
                     IdWorker.getId(), userId, policyType, CURRENT_PRIVACY_VERSION);
         }
         log.info("[acceptCurrentConsents][user={} version={}]", userId, CURRENT_PRIVACY_VERSION);
@@ -90,6 +92,11 @@ public class PrivacyService {
 
     /** 登记 EXPORT / CLOSE_ACCOUNT 请求；同类型存在未完结请求时幂等返回既有请求 */
     public SubjectRequest createSubjectRequest(long userId, String requestType) {
+        if (requestType == null || !List.of("EXPORT", "CLOSE_ACCOUNT").contains(requestType)) throw new cn.iocoder.yudao.framework.common.exception.ServiceException(400, "请求类型无效");
+        return tx.execute(status -> {
+        // Serialize requests with closure and with concurrent requests from another instance.
+        var account = jdbcTemplate.queryForList("SELECT status FROM account WHERE id=? AND deleted=FALSE FOR UPDATE", String.class,userId);
+        if (account.isEmpty() || !"ACTIVE".equals(account.get(0))) throw new cn.iocoder.yudao.framework.common.exception.ServiceException(403, "账号已停用或关闭");
         List<SubjectRequest> open = jdbcTemplate.query(
                 "SELECT id, request_type, status, create_time, completed_at, download_ticket "
                         + "FROM data_subject_request WHERE user_id = ? AND request_type = ? "
@@ -105,6 +112,14 @@ public class PrivacyService {
                 requestId, userId, requestType);
         log.info("[createSubjectRequest][user={} type={} id={}]", userId, requestType, requestId);
         return new SubjectRequest(requestId, requestType, "PENDING", Instant.now(), null, null);
+        });
+    }
+
+    public List<java.util.Map<String,Object>> listRequests(long userId) {
+        var rows = jdbcTemplate.queryForList("SELECT id::text AS \"requestId\",request_type AS \"requestType\",status, "
+                + "create_time AS \"createdAt\",completed_at AS \"completedAt\",error_code AS \"errorCode\", "
+                + "(file_expires_at>now()) AS \"downloadable\" FROM data_subject_request WHERE user_id=? AND deleted=FALSE ORDER BY id DESC LIMIT 50",userId);
+        return rows;
     }
 
     public Optional<SubjectRequest> getSubjectRequest(long userId, long requestId) {

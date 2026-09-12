@@ -165,7 +165,7 @@ test('非布尔有效状态和读取失败不能放行业务，但首页仍能�
 });
 
 test('未激活直达任何业务页时不展示页面，也不初始化业务', () => {
-  for (const route of config.pages.filter((route) => !['pages/home/index', 'pages/profile/index', 'pages/profile/services', 'pages/auth/index'].includes(route))) {
+  for (const route of config.pages.filter((route) => !['pages/home/index', 'pages/profile/index', 'pages/profile/services', 'pages/profile/privacy', 'pages/auth/index'].includes(route))) {
     const env = runtime();
     const page = env.page(route, { stage: 'elevation', count: '4' });
     assert.equal(page.data.accessReady, false, route);

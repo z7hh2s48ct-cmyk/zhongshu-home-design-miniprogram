@@ -34,4 +34,9 @@ public interface DeliveryPort {
     /** 原子消费一次性下载票据 */
     TicketConsumption consumeDownloadTicket(String token, String consumerId);
 
+    /** Match owner, purpose and business reference atomically before consuming a private ticket. */
+    default TicketConsumption consumeOwnedDownloadTicket(String token, long ownerId, String purpose, String bizRef) {
+        throw new UnsupportedOperationException("owned download tickets require an enforcing adapter");
+    }
+
 }

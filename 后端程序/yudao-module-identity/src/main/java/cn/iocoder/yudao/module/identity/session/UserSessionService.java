@@ -52,6 +52,8 @@ public class UserSessionService {
         String accessToken = randomToken();
         String refreshToken = randomToken();
         Long sessionId = txTemplate.execute(status -> {
+            var accounts = jdbcTemplate.queryForList("SELECT status FROM account WHERE id=? AND deleted=FALSE FOR SHARE", String.class, accountId);
+            if (accounts.isEmpty() || !"ACTIVE".equals(accounts.get(0))) throw new cn.iocoder.yudao.framework.common.exception.ServiceException(403, "账号已停用或关闭");
             long id = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO user_session (id, account_id, appid, openid, token_hash, refresh_token_hash, "
@@ -94,6 +96,9 @@ public class UserSessionService {
         return txTemplate.execute(status -> {
             // Lock before reading/revoking. A concurrent refresh must observe the
             // revoked row after waiting, rather than issuing a second token pair.
+            var active = jdbcTemplate.queryForList("SELECT id FROM account WHERE id=(SELECT account_id FROM user_session "
+                    + "WHERE refresh_token_hash=? AND deleted=FALSE LIMIT 1) AND status='ACTIVE' AND deleted=FALSE FOR SHARE",Long.class,sha256Hex(refreshToken));
+            if (active.isEmpty()) return Optional.empty(); // account -> session lock order matches closure
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                     "SELECT s.id, s.account_id, s.appid, s.openid "
                             + "FROM user_session s JOIN account a ON a.id = s.account_id "

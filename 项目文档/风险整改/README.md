@@ -10,8 +10,8 @@
 
 |组|分支 / worktree|六项风险|状态|
 |---|---|---|---|
-|RG1|task/RG1-risk-remediation / E:/众墅之家设计平台/zs-rg1|R03、R04、R05、R06、R08、R09|开发中|
-|RG2|待第一组合并后从 main 创建|R07、R10、R11、R12、R13、R14|待执行|
+|RG1|task/RG1-risk-remediation / E:/众墅之家设计平台/zs-rg1|R03、R04、R05、R06、R08、R09|代码回归通过；开发 9413807，main 合并 3eb2b1e|
+|RG2|task/RG2-risk-remediation / E:/众墅之家设计平台/zs-rg2，从 main 3eb2b1e 创建|R07、R10、R11、R12、R13、R14|代码、复测及 54/54 E2E 通过；待本地提交合并|
 |RG3|待第二组合并后从 main 创建|R15、R16、R17、R18、R01、R02|待执行|
 
 每组保留开发提交、测试命令与日志摘要、代码复核记录和本地 main 合并提交。测试日志在 artifacts/risk-remediation 下，不提交本地缓存、依赖、凭据或构建产物。

@@ -5,6 +5,7 @@
   "description": "众墅之家设计小程序 V1.2 原生前端",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check:release": "node scripts/check-release.js"
+    "check:release": "node scripts/check-release.js",
+    "build:release": "node scripts/build-release.js"
   }
 }

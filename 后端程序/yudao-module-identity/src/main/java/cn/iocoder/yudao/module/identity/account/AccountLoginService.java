@@ -182,7 +182,7 @@ public class AccountLoginService {
         }
         return jdbcTemplate.update(
                 "UPDATE account SET preferences = CAST(? AS jsonb), update_time = now() "
-                        + "WHERE id = ? AND deleted = FALSE",
+                        + "WHERE id = ? AND status='ACTIVE' AND deleted = FALSE",
                 toJson(filtered), accountId) == 1;
     }
 

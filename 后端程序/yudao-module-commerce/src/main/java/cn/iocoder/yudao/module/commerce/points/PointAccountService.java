@@ -32,6 +32,8 @@ import static cn.iocoder.yudao.module.commerce.enums.ErrorCodeConstants.POINTS_I
 @Slf4j
 @Service
 public class PointAccountService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     public record PointAccount(long userId, long availablePoints, long reservedPoints, long version) {
     }
@@ -95,6 +97,8 @@ public class PointAccountService {
         }
         try {
             return txTemplate.execute(status -> {
+                // Manual grants are new business writes; payment/refund replay remains governed by its order state.
+                if ("MANUAL_CREDIT".equals(type) && accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
                 ensureAccountInTx(userId);
                 BalanceAfter after = updateBalance(userId, "available_points = available_points + ?", delta);
                 return insertLedger(userId, type, delta, after, bizType, bizId, idempotencyKey, operatorId, reason);
@@ -126,6 +130,7 @@ public class PointAccountService {
         }
         try {
             return txTemplate.execute(status -> {
+                if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
                 ensureAccountInTx(userId);
                 BalanceAfter after = updateBalanceGuarded(userId,
                         "available_points = available_points - ?", amount, "available_points >= ?");

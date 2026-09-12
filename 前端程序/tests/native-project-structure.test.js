@@ -77,6 +77,7 @@ const flowPages = [
   'pages/payment/success',
   'pages/messagecenter/messagecenter',
   'pages/profile/services',
+  'pages/profile/privacy',
   'pages/profile/edit',
   'pages/profile/records',
   'pages/profile/record',

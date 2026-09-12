@@ -35,6 +35,8 @@ import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.SUBMISSION
 @Slf4j
 @Service
 public class SubmissionReviewService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     public String publicationStatus(Long caseId) {
         if (caseId == null) return null;
@@ -188,6 +190,7 @@ public class SubmissionReviewService {
         }
         return txTemplate.execute(status -> {
             if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+                if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
                 List<Long> existing = jdbcTemplate.query(
                         "SELECT id FROM case_submission WHERE idempotency_key = ?",
                         (rs, i) -> rs.getLong("id"), idempotencyKey);
@@ -195,6 +198,7 @@ public class SubmissionReviewService {
                     return existing.get(0);
                 }
             }
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             long submissionId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO case_submission (id, project_id, user_id, result_version_id, current_round, "
@@ -299,6 +303,7 @@ public class SubmissionReviewService {
             throw new ServiceException(1_071_000_002, "重提说明或请求编号过长");
         }
         return txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             Map<String, Object> submission = jdbcTemplate.queryForMap(
                     "SELECT id, user_id, status, current_round, result_version_id, "
                             + "public_display_granted, generation_reference_granted FROM case_submission "
@@ -388,6 +393,10 @@ public class SubmissionReviewService {
      */
     public long publishApprovedAsCase(long submissionId, String operator) {
         return txTemplate.execute(status -> {
+            // Account before submission: a queued admin action cannot republish a closed account.
+            var owners = jdbcTemplate.queryForList("SELECT user_id FROM case_submission WHERE id=? AND deleted=FALSE", Long.class, submissionId);
+            if (owners.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(owners.get(0));
             Map<String, Object> submission = jdbcTemplate.queryForMap(
                     "SELECT id, user_id, status, result_version_id, public_display_granted, generation_reference_granted "
                             + "FROM case_submission WHERE id = ? AND deleted = FALSE FOR UPDATE", submissionId);
@@ -465,7 +474,7 @@ public class SubmissionReviewService {
             reliableEventPort.append(OutboxEventMessage.builder()
                     .eventType("SUBMISSION_PUBLISHED").bizType("case_submission")
                     .bizId(String.valueOf(submissionId))
-                    .payload(Map.of("submissionId", submissionId, "caseId", caseId)).build());
+                    .payload(Map.of("submissionId", submissionId, "caseId", caseId, "userId", userId)).build());
             log.info("[publishApprovedAsCase][submission={} → AI 案例 {}]", submissionId, caseId);
             return caseId;
         });

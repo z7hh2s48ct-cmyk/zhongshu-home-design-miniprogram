@@ -13,6 +13,12 @@ const zsRouter: RouteRecordRaw[] = [
     meta: { hidden: false },
     children: [
       {
+        path: 'privacy',
+        component: () => import('@/views/zs/privacy/index.vue'),
+        name: 'ZsPrivacy',
+        meta: { title: '隐私申请', icon: 'ep:lock', noCache: true }
+      },
+      {
         path: 'dashboard',
         component: () => import('@/views/zs/dashboard/index.vue'),
         name: 'ZsDashboard',

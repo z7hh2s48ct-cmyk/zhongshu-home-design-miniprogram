@@ -37,6 +37,8 @@ import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.ASSET_VALI
 @Slf4j
 @Service
 public class AssetService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     public record UploadTicket(long assetId, String uploadUrl) {
     }
@@ -105,6 +107,7 @@ public class AssetService {
         };
         String objectKey = "uploads/" + policy.keyPrefix() + "/" + userId + "/" + assetId + ext;
         txTemplate.execute(status -> {
+            if (assetType.startsWith("USER_") && accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             jdbcTemplate.update(
                     "INSERT INTO asset (id, object_key, owner_user_id, asset_type, source_type, sha256, "
                             + "declared_mime, size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

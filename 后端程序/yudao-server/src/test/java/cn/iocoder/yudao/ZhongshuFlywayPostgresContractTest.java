@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ZhongshuFlywayPostgresContractTest {
 
     /** platform 目录下的迁移总数（新增平台迁移时同步更新） */
-    private static final int MIGRATION_COUNT = 4;
+    private static final int MIGRATION_COUNT = 5;
 
     @Container
     static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>(
@@ -154,6 +154,9 @@ class ZhongshuFlywayPostgresContractTest {
         assertThat(tableExists("zhongshu_baseline_probe")).isTrue();
         assertThat(indexExists("idx_zhongshu_baseline_probe_create_time")).isTrue();
         assertThat(historyCount()).isEqualTo(MIGRATION_COUNT);
+        // RG2 export recovery schema is part of a fresh platform database.
+        exec("INSERT INTO export_job(job_type,requester_type,requester_user_id,lease_token,lease_expires_at,attempts) "
+                + "VALUES('POINT_LEDGER','ADMIN',1,'lease-fixture',now(),1)");
     }
 
     @Test
@@ -257,8 +260,9 @@ class ZhongshuFlywayPostgresContractTest {
         }
 
         // 种子可重复执行（DELETE + INSERT 幂等）：重放迁移不会产生重复行
-        exec("DELETE FROM flyway_schema_history WHERE version = '20260905.004'");
-        flyway().migrate();
+        // Later platform migrations now exist. Replay only the menu script to test its idempotency;
+        // do not corrupt Flyway history or relax production out-of-order validation.
+        execSqlFile("db/migration/platform/V20260905.004__zhongshu_admin_menus.sql");
         try (Connection c = newConnection();
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery("SELECT count(*) FROM system_menu WHERE id BETWEEN 9500 AND 9519")) {

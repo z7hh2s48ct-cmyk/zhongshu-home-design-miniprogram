@@ -39,11 +39,12 @@ public class ExportAuditAdminController {
     @Operation(summary = "创建异步导出任务（大批量不占请求线程；记录申请人、过滤条件、字段范围）")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
     public CommonResult<Map<String, Object>> createExportJob(@RequestBody Map<String, Object> command) {
+        var filters = cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportFilters.validate(command);
         long jobId = deliveryPort.createExportJob(cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobRequest.builder()
-                .jobType(String.valueOf(command.getOrDefault("jobType", "GENERIC")))
+                .jobType(String.valueOf(filters.get("jobType")))
                 .requesterType("ADMIN")
                 .requesterUserId(SecurityFrameworkUtils.getLoginUserId())
-                .filterSnapshot(command)
+                .filterSnapshot(filters)
                 .build());
         return success(Map.of("exportJobId", String.valueOf(jobId), "status", "PENDING"));
     }
@@ -79,9 +80,12 @@ public class ExportAuditAdminController {
     }
 
     private Map<String, Object> exportView(cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot job) {
+        String error = job.getError();
+        if (error != null && !java.util.Set.of("EXPORT_ROW_LIMIT", "EXPORT_SIZE_LIMIT", "EXPORT_RETRY_LIMIT", "EXPORT_LEASE_LOST").contains(error)) error = "EXPORT_FAILED";
         return Map.of("exportJobId", String.valueOf(job.getJobId()), "jobType", job.getJobType(),
                 "status", exportStatus(job), "createdAt", job.getCreateTime() == null ? "" : job.getCreateTime().toString(),
-                "expiresAt", job.getExpiresAt() == null ? "" : job.getExpiresAt().toString());
+                "expiresAt", job.getExpiresAt() == null ? "" : job.getExpiresAt().toString(),
+                "error", error == null ? "" : error);
     }
 
     private cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot requireDownloadableJob(long id) {
@@ -119,8 +123,8 @@ public class ExportAuditAdminController {
             @RequestParam("ticket") String ticket) {
         long jobId = Long.parseLong(exportJobId);
         var job = requireDownloadableJob(jobId);
-        var consumption = deliveryPort.consumeDownloadTicket(ticket,
-                String.valueOf(SecurityFrameworkUtils.getLoginUserId()));
+        var consumption = deliveryPort.consumeOwnedDownloadTicket(ticket,
+                SecurityFrameworkUtils.getLoginUserId(), "EXPORT_FILE", String.valueOf(jobId));
         if (consumption.getOutcome() != cn.iocoder.yudao.module.infra.zhongshu.delivery.TicketConsumption.Outcome.CONSUMED_NOW
                 || !"EXPORT_FILE".equals(consumption.getPurpose())
                 || !String.valueOf(jobId).equals(consumption.getBizRef())) {
@@ -128,8 +132,12 @@ public class ExportAuditAdminController {
         }
         byte[] content;
         try (java.io.InputStream in = storage.getObject(job.getFileAssetId())) {
-            content = in.readAllBytes();
-        } catch (java.io.IOException | IllegalStateException e) {
+            content = in.readNBytes(10 * 1024 * 1024 + 1);
+            String digest = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(content));
+            if (content.length > 10 * 1024 * 1024 || !digest.equals(job.getFileSha256())) {
+                throw new org.springframework.security.access.AccessDeniedException("文件校验失败，请重新导出");
+            }
+        } catch (java.io.IOException | java.security.NoSuchAlgorithmException | IllegalStateException e) {
             throw new org.springframework.security.access.AccessDeniedException("导出文件读取失败");
         }
         var headers = new org.springframework.http.HttpHeaders();

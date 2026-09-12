@@ -21,7 +21,7 @@ public class AccountProfileService {
             throw new IllegalArgumentException("昵称须为1至32个字符，不能包含控制字符");
         }
         if (avatarAssetId == null) {
-            return jdbc.update("UPDATE account SET nickname = ?, update_time = now() WHERE id = ? AND deleted = FALSE",
+            return jdbc.update("UPDATE account SET nickname = ?, update_time = now() WHERE id = ? AND status='ACTIVE' AND deleted = FALSE",
                     name, accountId) == 1;
         }
         if (!avatarAssetId.matches("[1-9][0-9]{0,18}")) throw new IllegalArgumentException("头像编号无效");
@@ -30,7 +30,7 @@ public class AccountProfileService {
         catch (NumberFormatException e) { throw new IllegalArgumentException("头像编号无效"); }
         avatars.requireOwnedAcceptedAvatar(accountId, assetId);
         // Reuse the existing avatar field; persist an asset reference, never an expiring URL or local temp path.
-        return jdbc.update("UPDATE account SET nickname = ?, avatar = ?, update_time = now() WHERE id = ? AND deleted = FALSE",
+        return jdbc.update("UPDATE account SET nickname = ?, avatar = ?, update_time = now() WHERE id = ? AND status='ACTIVE' AND deleted = FALSE",
                 name, "asset:" + assetId, accountId) == 1;
     }
 

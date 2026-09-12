@@ -216,6 +216,8 @@ module.exports = {
   getPrivacyConsents: function () {
     return http.get(BASE + '/privacy-consents');
   },
+  listPrivacyRequests: function () { return http.get(BASE + '/privacy-requests'); },
+  createPrivacyDownloadTicket: function (id) { return http.post(BASE + '/privacy-requests/' + encodeURIComponent(id) + '/download-tickets'); },
   acceptPrivacyConsents: function () {
     return http.post(BASE + '/privacy-consents');
   },

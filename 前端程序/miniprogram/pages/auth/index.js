@@ -145,5 +145,6 @@ Page({
   },
 
   continueBrowsing() { this._leftPage = true; wx.navigateBack({ fail: returnHome }); },
-  contact() { wx.showToast({ title: '请联系授权管理员', icon: 'none' }); }
+  openPrivacy() { return this.ensureLoggedIn().then(() => wx.navigateTo({ url: '/pages/profile/privacy' })).catch(() => wx.showToast({ title: '请重试微信登录', icon: 'none' })); },
+  contact() { return require('../../utils/support').contact(); }
 });
