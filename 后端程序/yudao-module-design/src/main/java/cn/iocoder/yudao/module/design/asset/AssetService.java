@@ -42,7 +42,8 @@ public class AssetService {
     }
 
     private record AssetRow(long id, long ownerUserId, String assetType, String objectKey,
-                            String declaredMime, long sizeBytes, String sha256, String uploadStatus) {
+                            String declaredMime, long sizeBytes, String sha256, String uploadStatus,
+                            String validationToken) {
     }
 
     private static final long UPLOAD_TICKET_TTL_SECONDS = 900;
@@ -102,7 +103,7 @@ public class AssetService {
             case "application/pdf" -> ".pdf";
             default -> ".bin";
         };
-        String objectKey = policy.keyPrefix() + "/" + userId + "/" + assetId + ext;
+        String objectKey = "uploads/" + policy.keyPrefix() + "/" + userId + "/" + assetId + ext;
         txTemplate.execute(status -> {
             jdbcTemplate.update(
                     "INSERT INTO asset (id, object_key, owner_user_id, asset_type, source_type, sha256, "
@@ -116,7 +117,15 @@ public class AssetService {
         return new UploadTicket(assetId, storage.presignUploadUrl(objectKey, UPLOAD_TICKET_TTL_SECONDS));
     }
 
-    /** 上传完成：三段式——短事务领取校验（PENDING→VALIDATING）→ 事务外扫描 → 短事务固化终态 */
+    /** 管理端上传复用相同资产策略、私有存储和完整扫描链路，不接受客户端对象地址。 */
+    public long uploadCompanyImage(long adminId, String mime, byte[] content) {
+        var ticket = createUploadTicket(adminId, "CASE_IMAGE", mime, content.length, sha256Hex(content));
+        storage.putObject(load(ticket.assetId()).objectKey(), content);
+        if (!"ACCEPTED".equals(completeUpload(adminId, ticket.assetId()))) throw exception(ASSET_VALIDATION_FAILED);
+        return ticket.assetId();
+    }
+
+    /** 上传完成：短事务领取 → 事务外扫描 → 短事务固化终态。 */
     public String completeUpload(long userId, long assetId) {
         // (a) 短事务：对象级权限 + 领取校验任务
         AssetRow asset = txTemplate.execute(status -> {
@@ -132,10 +141,12 @@ public class AssetService {
                     && !("VALIDATING".equals(row.uploadStatus()) && isStale(row.id()))) {
                 throw exception(ASSET_VALIDATION_FAILED);
             }
+            String validationToken = java.util.UUID.randomUUID().toString();
             jdbcTemplate.update(
-                    "UPDATE asset SET upload_status = 'VALIDATING', update_time = now() WHERE id = ?",
-                    assetId);
-            return row;
+                    "UPDATE asset SET upload_status = 'VALIDATING', validation_token = ?, update_time = now() WHERE id = ?",
+                    validationToken, assetId);
+            return new AssetRow(row.id(), row.ownerUserId(), row.assetType(), row.objectKey(),
+                    row.declaredMime(), row.sizeBytes(), row.sha256(), "VALIDATING", validationToken);
         });
         if (asset == null) {
             return "ACCEPTED";
@@ -149,7 +160,12 @@ public class AssetService {
         }
         if (rejectReason == null) {
             try (InputStream in = storage.getObject(asset.objectKey())) {
-                content = in.readAllBytes();
+                // HEAD is only a hint: the upload URL can replace the raw object concurrently.
+                int limit = Math.toIntExact(AssetTypePolicy.valueOf(asset.assetType()).maxBytes());
+                content = in.readNBytes(limit + 1);
+                if (content.length != asset.sizeBytes() || content.length > limit) {
+                    rejectReason = "SIZE_MISMATCH: 实际读取大小与申报不一致";
+                }
             } catch (IOException e) {
                 rejectReason = "READ_FAILED: 对象读取失败";
             }
@@ -175,6 +191,16 @@ public class AssetService {
         final boolean finalModerationFailed = moderationFailed;
         final AssetContentScanner.ScanReport finalReport = report;
         final byte[] sanitized = report == null ? null : report.sanitizedContent();
+        // The original PUT URL must never address the approved object. Every attempt writes
+        // a unique server-only key outside the DB transaction; CAS chooses the winning version.
+        final String acceptedKey = "accepted/" + assetId + "/" + asset.validationToken()
+                + switch (asset.declaredMime()) {
+                    case "image/jpeg" -> ".jpg";
+                    case "image/png" -> ".png";
+                    case "application/pdf" -> ".pdf";
+                    default -> ".bin";
+                };
+        if (rejectReason == null && !moderationFailed) storage.putObject(acceptedKey, sanitized);
         return txTemplate.execute(status -> {
             int updated;
             if (finalReport != null) {
@@ -184,8 +210,8 @@ public class AssetService {
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET upload_status = 'REJECTED', security_scan_status = 'REJECTED', "
                                 + "rejected_reason = ?, update_time = now() "
-                                + "WHERE id = ? AND upload_status = 'VALIDATING'",
-                        finalRejectReason, assetId);
+                                + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                        finalRejectReason, assetId, asset.validationToken());
                 if (updated == 1) {
                     log.warn("[completeUpload][asset={} REJECTED 原因={}]", assetId, finalRejectReason);
                     return "REJECTED";
@@ -197,21 +223,22 @@ public class AssetService {
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET moderation_status = 'REJECTED', upload_status = 'REJECTED', "
                                 + "rejected_reason = 'CONTENT_MODERATION', update_time = now() "
-                                + "WHERE id = ? AND upload_status = 'VALIDATING'", assetId);
-                return updated == 1 ? "REJECTED" : null;
+                                + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                        assetId, asset.validationToken());
+                if (updated != 1) throw exception(ASSET_VALIDATION_FAILED);
+                return "REJECTED";
             }
             if (finalReport.exifDetected()) {
                 // EXIF 剥离不是拒绝：检测留痕审计，元数据已随重编码消失
                 recordScan(assetId, "EXIF_STRIP", "PASSED", "元数据已随重编码剥离");
             }
-            storage.putObject(asset.objectKey(), sanitized);
             updated = jdbcTemplate.update(
                     "UPDATE asset SET upload_status = 'ACCEPTED', security_scan_status = 'PASSED', "
-                            + "moderation_status = 'PASSED', size_bytes = ?, width = ?, height = ?, "
+                            + "moderation_status = 'PASSED', object_key = ?, size_bytes = ?, width = ?, height = ?, "
                             + "page_count = ?, stored_sha256 = ?, stored_size = ?, update_time = now() "
-                            + "WHERE id = ? AND upload_status = 'VALIDATING'",
-                    (long) sanitized.length, finalReport.width(), finalReport.height(),
-                    finalReport.pageCount(), sha256Hex(sanitized), (long) sanitized.length, assetId);
+                            + "WHERE id = ? AND upload_status = 'VALIDATING' AND validation_token = ?",
+                    acceptedKey, (long) sanitized.length, finalReport.width(), finalReport.height(),
+                    finalReport.pageCount(), sha256Hex(sanitized), (long) sanitized.length, assetId, asset.validationToken());
             if (updated == 1) {
                 log.info("[completeUpload][asset={} ACCEPTED size={} type={}]",
                         assetId, sanitized.length, asset.assetType());
@@ -282,6 +309,71 @@ public class AssetService {
 
     public record DownloadContent(byte[] content, String mimeType) {}
 
+    /** 调用端必须具有投稿审核权限；票据绑定管理员和投稿内的冻结资产。 */
+    public IssuedTicket requestReviewTicket(long reviewerId, long submissionId, long assetId) {
+        requireReviewAsset(submissionId, assetId);
+        return deliveryPort.issueDownloadTicket("SUBMISSION_PREVIEW", reviewerId + ":" + submissionId + ":" + assetId, reviewerId, 300);
+    }
+
+    public DownloadContent readReviewTicket(long reviewerId, long submissionId, long assetId, String ticket) {
+        var asset = requireReviewAsset(submissionId, assetId);
+        var consumed = deliveryPort.consumeDownloadTicket(ticket, String.valueOf(reviewerId));
+        if (consumed.getOutcome() != TicketConsumption.Outcome.CONSUMED_NOW
+                || !"SUBMISSION_PREVIEW".equals(consumed.getPurpose())
+                || !(reviewerId + ":" + submissionId + ":" + assetId).equals(consumed.getBizRef())) {
+            throw exception(RESOURCE_FORBIDDEN);
+        }
+        try (InputStream in = storage.getObject(asset.objectKey())) {
+            return new DownloadContent(in.readAllBytes(), asset.declaredMime());
+        } catch (IOException | IllegalStateException e) {
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(
+                    ASSET_VALIDATION_FAILED.getCode(), "图纸文件不可读取，请核对存储后重试");
+        }
+    }
+
+    /** 管理端案例预览只允许当前案例关联的已校验资产，不授予公开访问权。 */
+    public IssuedTicket requestCasePreviewTicket(long adminId, long caseId, long assetId) {
+        requireCaseAsset(caseId, assetId);
+        return deliveryPort.issueDownloadTicket("CASE_PREVIEW", adminId + ":" + caseId + ":" + assetId, adminId, 300);
+    }
+
+    public DownloadContent readCasePreviewTicket(long adminId, long caseId, long assetId, String ticket) {
+        var asset = requireCaseAsset(caseId, assetId);
+        var consumed = deliveryPort.consumeDownloadTicket(ticket, String.valueOf(adminId));
+        if (consumed.getOutcome() != TicketConsumption.Outcome.CONSUMED_NOW
+                || !"CASE_PREVIEW".equals(consumed.getPurpose())
+                || !(adminId + ":" + caseId + ":" + assetId).equals(consumed.getBizRef())) throw exception(RESOURCE_FORBIDDEN);
+        try (InputStream in = storage.getObject(asset.objectKey())) {
+            return new DownloadContent(in.readAllBytes(), asset.declaredMime());
+        } catch (IOException | IllegalStateException e) {
+            throw new ServiceException(ASSET_VALIDATION_FAILED.getCode(), "案例图纸读取失败，请核对存储后重试");
+        }
+    }
+
+    private AssetRow requireCaseAsset(long caseId, long assetId) {
+        Integer linked = jdbcTemplate.queryForObject("SELECT count(*) FROM design_case c "
+                + "JOIN design_case_asset a ON a.case_version_id = c.current_version_id "
+                + "WHERE c.id = ? AND c.deleted = FALSE AND a.deleted = FALSE AND a.asset_id = ?",
+                Integer.class, caseId, assetId);
+        if (linked == null || linked == 0) throw exception(RESOURCE_FORBIDDEN);
+        var asset = load(assetId);
+        requireUsable(asset);
+        return asset;
+    }
+
+    private AssetRow requireReviewAsset(long submissionId, long assetId) {
+        Integer linked = jdbcTemplate.queryForObject("SELECT count(*) FROM case_submission sub "
+                + "JOIN design_result_version v ON v.id=sub.result_version_id AND v.project_id=sub.project_id AND v.deleted=FALSE "
+                + "JOIN design_selection s ON s.id IN(v.flat_selection_id,v.elevation_selection_id) AND s.project_id=v.project_id AND s.deleted=FALSE "
+                + "JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=v.project_id AND c.deleted=FALSE "
+                + "JOIN asset a ON a.id=c.asset_id AND a.owner_user_id=sub.user_id "
+                + "WHERE sub.id=? AND sub.deleted=FALSE AND c.asset_id=?", Integer.class, submissionId, assetId);
+        if (linked == null || linked == 0) throw exception(RESOURCE_FORBIDDEN);
+        var asset = load(assetId);
+        requireUsable(asset);
+        return asset;
+    }
+
     /**
      * 开发/联调直传：本地适配器的 local:// 上传地址无法被小程序 wx.uploadFile 访问，
      * 与开发期内容端点同开关管理（zhongshu.design.asset.dev-content-endpoint）。
@@ -318,7 +410,7 @@ public class AssetService {
 
     private AssetRow loadForUpdate(long assetId) {
         List<AssetRow> rows = jdbcTemplate.query(
-                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status "
+                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status, validation_token "
                         + "FROM asset WHERE id = ? AND deleted = FALSE FOR UPDATE",
                 (rs, i) -> mapRow(rs), assetId);
         if (rows.isEmpty()) {
@@ -329,7 +421,7 @@ public class AssetService {
 
     private AssetRow load(long assetId) {
         List<AssetRow> rows = jdbcTemplate.query(
-                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status "
+                "SELECT id, owner_user_id, asset_type, object_key, declared_mime, size_bytes, sha256, upload_status, validation_token "
                         + "FROM asset WHERE id = ? AND deleted = FALSE",
                 (rs, i) -> mapRow(rs), assetId);
         if (rows.isEmpty()) {
@@ -341,7 +433,7 @@ public class AssetService {
     private AssetRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new AssetRow(rs.getLong("id"), rs.getLong("owner_user_id"), rs.getString("asset_type"),
                 rs.getString("object_key"), rs.getString("declared_mime"), rs.getLong("size_bytes"),
-                rs.getString("sha256"), rs.getString("upload_status"));
+                rs.getString("sha256"), rs.getString("upload_status"), rs.getString("validation_token"));
     }
 
     private boolean isStale(long assetId) {

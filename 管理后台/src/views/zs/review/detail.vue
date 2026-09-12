@@ -8,37 +8,108 @@
       <el-button @click="$router.back()">返回</el-button>
     </div>
 
-    <el-row :gutter="16">
-      <el-col :span="14">
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
+    <el-button v-if="loadError" @click="load">重新读取</el-button>
+    <el-descriptions v-if="submission" :column="2" border class="mb-16px">
+      <el-descriptions-item label="审核状态">{{
+        statusText[submission.status] || submission.status
+      }}</el-descriptions-item>
+      <el-descriptions-item label="当前轮次">{{ submission.currentRound }}</el-descriptions-item>
+      <el-descriptions-item label="发布状态">{{
+        submission.publicationStatus || '尚未发布'
+      }}</el-descriptions-item>
+      <el-descriptions-item label="审核意见">{{
+        submission.reviewComment || '暂无审核意见'
+      }}</el-descriptions-item>
+      <el-descriptions-item label="投稿说明">{{
+        submission.note || '未填写'
+      }}</el-descriptions-item>
+    </el-descriptions>
+    <el-row :gutter="16" v-loading="loading">
+      <el-col :xs="24" :md="14">
         <div class="zs-table-card">
           <div class="zs-panel-title">设计方案预览</div>
           <div class="zs-preview-grid">
             <div class="zs-preview-item" v-for="(asset, i) in previewAssets" :key="i">
-              <img v-if="asset.url" :src="asset.url" />
-              <div class="zs-preview-placeholder" v-else>资产 {{ asset.assetId }}</div>
+              <el-image
+                v-if="asset.url"
+                :src="asset.url"
+                fit="contain"
+                :preview-src-list="[asset.url]"
+                preview-teleported
+                :alt="asset.label"
+              />
+              <div class="zs-preview-placeholder" v-else>
+                {{ asset.error || '正在读取图纸…' }}
+                <el-button v-if="asset.error" link @click="loadAsset(asset)">重试</el-button>
+              </div>
               <span>{{ asset.label }}</span>
             </div>
-            <el-empty v-if="!previewAssets.length" description="暂无预览（联调后显示方案图）" :image-size="80" />
+            <el-empty
+              v-if="!previewAssets.length"
+              description="该冻结版本没有可用图纸，请核对投稿资料"
+              :image-size="80"
+            />
           </div>
         </div>
       </el-col>
-      <el-col :span="10">
+      <el-col :xs="24" :md="10">
         <div class="zs-table-card">
           <div class="zs-panel-title">审核操作</div>
-          <el-form label-position="top">
+          <el-form v-if="canReview" label-position="top">
             <el-form-item label="审核意见">
-              <el-input v-model="comment" type="textarea" :rows="4" placeholder="通过/退回时给出的说明（退回必填）" />
+              <el-input
+                v-model="comment"
+                type="textarea"
+                :rows="4"
+                maxlength="1024"
+                show-word-limit
+                placeholder="通过/退回时给出的说明（退回必填）"
+              />
             </el-form-item>
             <el-form-item>
               <div class="zs-review-actions">
-                <el-button class="zs-btn-primary" :loading="saving" @click="decide('APPROVE')">通过</el-button>
-                <el-button type="warning" :loading="saving" @click="decide('CHANGES_REQUESTED')">要求修改</el-button>
-                <el-button type="danger" :loading="saving" @click="decide('REJECT')">拒绝</el-button>
+                <el-button
+                  v-if="allows('APPROVE')"
+                  class="zs-btn-primary"
+                  :disabled="saving"
+                  :loading="saving"
+                  @click="decide('APPROVE')"
+                  >通过</el-button
+                >
+                <el-button
+                  v-if="allows('CHANGES_REQUESTED')"
+                  type="warning"
+                  :disabled="saving"
+                  :loading="saving"
+                  @click="decide('CHANGES_REQUESTED')"
+                  >要求修改</el-button
+                >
+                <el-button
+                  v-if="allows('REJECT')"
+                  type="danger"
+                  :disabled="saving"
+                  :loading="saving"
+                  @click="decide('REJECT')"
+                  >拒绝</el-button
+                >
               </div>
             </el-form-item>
-            <el-alert type="info" :closable="false"
-              title="发布是独立命令" description="审核通过后还需在案例库中对 AI 案例执行上架；生成参考授权不随审核自动获得。" />
           </el-form>
+          <el-button
+            v-if="allows('PUBLISH')"
+            class="zs-btn-primary mb-16px"
+            :loading="saving"
+            :disabled="saving"
+            @click="publish"
+            >发布至户型库</el-button
+          >
+          <el-alert
+            type="info"
+            :closable="false"
+            title="发布是独立命令"
+            description="通过后请在此单独点击发布；只发布投稿冻结版本。生成参考许可不随审核自动授予。已审结轮次不可再次审核。"
+          />
         </div>
       </el-col>
     </el-row>
@@ -56,9 +127,61 @@ const submissionId = String(route.params.submissionId || route.query.id || '')
 const comment = ref('')
 const saving = ref(false)
 const previewAssets = ref<any[]>([])
+const submission = ref<any>(null)
+const loading = ref(false)
+const loadError = ref('')
+const statusText = {
+  SUBMITTED: '待审核',
+  RESUBMITTED: '重提待审核',
+  IN_REVIEW: '审核中',
+  APPROVED: '已通过',
+  CHANGES_REQUESTED: '待用户修改',
+  REJECTED: '已拒绝'
+}
+const allows = (action: string) => submission.value?.allowedActions?.includes(action)
+const canReview = computed(() => ['APPROVE', 'CHANGES_REQUESTED', 'REJECT'].some(allows))
+let generation = 0
+const clearImages = () => {
+  previewAssets.value.forEach((a) => {
+    if (a.url) URL.revokeObjectURL(a.url)
+  })
+}
+const loadAsset = async (asset: any) => {
+  const seq = generation
+  asset.error = ''
+  try {
+    const blob = await ZsApi.getSubmissionAsset(submissionId, asset.assetId)
+    if (seq !== generation) return
+    if (!(blob instanceof Blob) || !blob.type.startsWith('image/')) throw Error('图纸格式不可预览')
+    if (asset.url) URL.revokeObjectURL(asset.url)
+    asset.url = URL.createObjectURL(blob)
+  } catch (error: any) {
+    if (seq === generation) asset.error = error?.msg || error?.message || '图纸读取失败'
+  }
+}
+const load = async () => {
+  const seq = ++generation
+  clearImages()
+  previewAssets.value = []
+  submission.value = null
+  loading.value = true
+  loadError.value = ''
+  try {
+    const sub = await ZsApi.getSubmission(submissionId)
+    if (seq !== generation) return
+    submission.value = sub
+    previewAssets.value = (sub.previewAssets || []).map((a) => ({ ...a, url: '', error: '' }))
+    await Promise.all(previewAssets.value.map(loadAsset))
+  } catch (e: any) {
+    if (seq === generation) loadError.value = e?.msg || '投稿读取失败，请重试'
+  } finally {
+    if (seq === generation) loading.value = false
+  }
+}
 
 const decide = async (decision: string) => {
-  if (decision === 'CHANGES_REQUESTED' && !comment.value) {
+  if (saving.value || !allows(decision)) return
+  if (decision === 'CHANGES_REQUESTED' && !comment.value.trim()) {
     message.error('退回时请填写修改意见')
     return
   }
@@ -66,7 +189,8 @@ const decide = async (decision: string) => {
   try {
     await ZsApi.reviewDecision(submissionId, { decision, comment: comment.value })
     message.success('审核决定已提交')
-    history.back()
+    comment.value = ''
+    await load()
   } catch (e: any) {
     message.error(e?.msg || '提交失败')
   } finally {
@@ -74,12 +198,28 @@ const decide = async (decision: string) => {
   }
 }
 
-onMounted(async () => {
+const publish = async () => {
+  if (saving.value || !allows('PUBLISH')) return
   try {
-    const sub = await ZsApi.getSubmission(submissionId)
-    // 候选资产预览：按项目候选拉取（联调后由详情端点返回；此处以结果版本挂接）
-    previewAssets.value = sub?.previewAssets || []
-  } catch {}
+    await message.confirm('确认将该投稿的冻结图纸发布至户型库？')
+  } catch {
+    return
+  }
+  saving.value = true
+  try {
+    await ZsApi.publishSubmission(submissionId)
+    message.success('已发布至户型库')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '发布失败，请核对版本和许可')
+  } finally {
+    saving.value = false
+  }
+}
+onMounted(load)
+onBeforeUnmount(() => {
+  generation++
+  clearImages()
 })
 </script>
 
@@ -90,26 +230,25 @@ onMounted(async () => {
   gap: 14px;
 
   .zs-preview-item {
-    background: #faf6f0;
-    border-radius: 8px;
     overflow: hidden;
-    text-align: center;
     font-size: 13px;
     color: #6f6f6f;
+    text-align: center;
+    background: #faf6f0;
+    border-radius: 8px;
 
-    img {
-      width: 100%;
-      height: 150px;
-      object-fit: cover;
+    .el-image {
       display: block;
+      width: 100%;
+      height: 260px;
     }
 
     .zs-preview-placeholder {
-      height: 150px;
       display: flex;
+      height: 150px;
+      color: #b8b0a4;
       align-items: center;
       justify-content: center;
-      color: #b8b0a4;
     }
 
     span {
@@ -121,6 +260,7 @@ onMounted(async () => {
 
 .zs-review-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   width: 100%;
 }

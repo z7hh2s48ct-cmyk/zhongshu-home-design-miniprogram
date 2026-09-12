@@ -6,7 +6,7 @@ const assets = require('../../utils/assets');
 protectedPage({
   data: { selected: -1, candidates: [], projectId: null, loading: true, submitting: false },
   onLoad(query) {
-    const projectId = query && query.projectId ? Number(query.projectId) : Number(getApp().globalData.projectId);
+    const projectId = require('../../utils/record-view').id(query && query.projectId || getApp().globalData.projectId);
     if (!projectId) {
       wx.showToast({ title: '请先创建设计任务', icon: 'none' });
       wx.switchTab({ url: '/pages/ai-design/index' });
@@ -67,13 +67,19 @@ protectedPage({
     });
   },
   regenerate() {
+    if (this._regenerating) return;
+    this._regenerating = true;
+    const count = this.data.candidates.length || 2;
     const self = this;
     const idemKey = 'flat-regen-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-    api.createFlatJob(this.data.projectId, this.data.candidates.length || 2, idemKey).then(function (job) {
+    require('../../utils/generation-price').confirm('FLAT', count).then(function (price) {
+      return api.createFlatJob(self.data.projectId, count, idemKey, price);
+    }).then(function (job) {
       getApp().globalData.jobId = job.jobId;
-      wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + (self.data.candidates.length || 2) });
+      wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + count });
     }).catch(function (err) {
-      wx.showToast({ title: (err && err.msg) || '重新生成失败', icon: 'none' });
+      if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '重新生成失败', icon: 'none' });
+      self._regenerating = false;
     });
   }
 });

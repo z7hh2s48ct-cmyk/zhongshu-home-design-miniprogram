@@ -45,7 +45,9 @@ public class AiJobOrchestrationService {
     }
 
     public record JobSnapshot(long jobId, long userId, String phase, String status, int requestedCount,
-                              int acceptedCount, int progress, String cancelState) {
+                              int acceptedCount, int progress, String cancelState, String projectRef,
+                              Long unitPointCost, Long totalPointCost, Long refundedPointCost,
+                              java.time.Instant createdAt, java.time.Instant finishedAt) {
     }
 
     private final JdbcTemplate jdbcTemplate;
@@ -112,14 +114,18 @@ public class AiJobOrchestrationService {
     }
 
     public Optional<JobSnapshot> getJob(long jobId) {
-        List<JobSnapshot> rows = jdbcTemplate.query(
-                "SELECT id, user_id, phase, status, requested_count, accepted_count, progress, cancel_seq "
-                        + "FROM ai_job WHERE id = ? AND deleted = FALSE",
-                (rs, i) -> new JobSnapshot(rs.getLong("id"), rs.getLong("user_id"), rs.getString("phase"),
-                        rs.getString("status"), rs.getInt("requested_count"), rs.getInt("accepted_count"),
-                        rs.getInt("progress"), rs.getObject("cancel_seq") == null ? "ACTIVE" : "CANCEL_REQUESTED"),
+        List<JobSnapshot> rows = jdbcTemplate.query(AiJobQueryService.baseSelect()
+                        + " WHERE id = ? AND deleted = FALSE",
+                (rs, i) -> AiJobQueryService.mapRow(rs),
                 jobId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    public Optional<JobSnapshot> latestJob(long userId, long projectId, String phase) {
+        List<Long> ids = jdbcTemplate.queryForList("SELECT id FROM ai_job WHERE user_id=? AND project_ref=? "
+                + "AND phase=? AND deleted=FALSE ORDER BY create_time DESC, id DESC LIMIT 1",
+                Long.class, userId, String.valueOf(projectId), phase);
+        return ids.isEmpty() ? Optional.empty() : getJob(ids.get(0));
     }
 
     // ========== Runtime：领取 / 续租 / 回写 ==========

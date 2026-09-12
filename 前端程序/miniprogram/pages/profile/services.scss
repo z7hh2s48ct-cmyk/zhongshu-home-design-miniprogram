@@ -1,0 +1,4 @@
+@import './index.scss';
+.services-content { padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); }
+.group-title { display: block; padding: 34rpx 14rpx 14rpx; color: #777; font-size: 24rpx; }
+.services-content .menu-card { margin-top: 0; padding: 0 30rpx; }

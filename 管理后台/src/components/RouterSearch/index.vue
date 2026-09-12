@@ -42,6 +42,8 @@
 
 <script lang="ts" setup>
 import { propTypes } from '@/utils/propTypes'
+import { usePermissionStore } from '@/store/modules/permission'
+import { searchProjectMenus } from '@/utils/projectNavigation'
 defineProps({
   isModal: {
     type: Boolean,
@@ -55,24 +57,9 @@ const showSearch = ref(false) // 是否显示弹框
 const showTopSearch = ref(false) // 是否显示顶部搜索框
 const value: Ref = ref('') // 用户输入的值
 
-const routers = router.getRoutes() // 路由对象
-const options = computed(() => {
-  // 提示选项
-  if (!value.value) {
-    return []
-  }
-  const list = routers.filter((item: any) => {
-    if (item.meta.title?.indexOf(value.value) > -1 || item.path.indexOf(value.value) > -1) {
-      return true
-    }
-  })
-  return list.map((item) => {
-    return {
-      label: `${item.meta.title}${item.path}`,
-      value: item.path
-    }
-  })
-})
+const permissionStore = usePermissionStore()
+// 与侧边栏同源，不能从全部已注册路由中重新搜出无关模块或隐藏详情页。
+const options = computed(() => searchProjectMenus(permissionStore.getRouters, value.value))
 
 function remoteMethod(data) {
   // 这里可以执行相应的操作（例如打开搜索框等）

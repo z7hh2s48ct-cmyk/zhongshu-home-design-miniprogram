@@ -1,0 +1,55 @@
+-- Catalog-only replay receipts: a command, its mutation and its audit event commit together.
+-- No production prices or enabled configurations are seeded by this migration.
+CREATE TABLE budget_catalog_command (
+    tenant_id BIGINT NOT NULL DEFAULT 0,
+    actor_id BIGINT NOT NULL,
+    operation VARCHAR(32) NOT NULL,
+    idempotency_key VARCHAR(64) NOT NULL,
+    request_hash VARCHAR(64) NOT NULL,
+    response JSONB,
+    create_time TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT pk_budget_catalog_command PRIMARY KEY (tenant_id, actor_id, operation, idempotency_key),
+    CONSTRAINT ck_budget_catalog_command_actor CHECK (actor_id > 0),
+    CONSTRAINT ck_budget_catalog_command_key CHECK (length(trim(idempotency_key)) > 0),
+    CONSTRAINT ck_budget_catalog_command_hash CHECK (request_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_budget_catalog_command_response CHECK (response IS NULL OR jsonb_typeof(response) = 'object')
+);
+
+-- Workbook-backed option drafts only. source_reference preserves source and suggested training rate;
+-- regional price records must still be created and explicitly published by an authorized administrator.
+INSERT INTO budget_option (id, item_id, code, label, selection_group, unit, quantity_source, quantity_key, source_reference, sort_order) VALUES
+    (208001, 207001, 'STRIP', '条形基础', 'FOUNDATION', 'SQM', 'FOOTPRINT_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B3:C3；初始参考520元/㎡，待地区核定', 10),
+    (208002, 207001, 'INDEPENDENT', '独立基础+预制板', 'FOUNDATION', 'SQM', 'FOOTPRINT_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B4:C4；初始参考680元/㎡，待地区核定', 20),
+    (208003, 207001, 'RAFT', '筏板基础', 'FOUNDATION', 'SQM', 'FOOTPRINT_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B5:C5；初始参考750元/㎡，待地区核定', 30),
+    (208004, 207001, 'PILE', '打桩+预制板基础', 'FOUNDATION', 'SQM', 'FOOTPRINT_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B6:C6；初始参考850元/㎡，待地区核定', 40),
+    (208005, 207002, 'BRICK', '砖混结构', 'STRUCTURE', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B8:C8；初始参考850元/㎡，待地区核定', 10),
+    (208006, 207002, 'FRAME', '框架结构', 'STRUCTURE', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B9:C9；初始参考980元/㎡，待地区核定', 20),
+    (208007, 207002, 'FRAME_SHEAR', '框剪结构', 'STRUCTURE', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B10:C10；初始参考1100元/㎡，待地区核定', 30),
+    (208008, 207003, 'WOOD', '木屋面', 'ROOF', 'SQM', 'ROOF_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B12:C12；初始参考480元/㎡，待地区核定', 10),
+    (208009, 207003, 'CAST_SINGLE', '单层现浇', 'ROOF', 'SQM', 'ROOF_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B13:C13；初始参考520元/㎡，待地区核定', 20),
+    (208010, 207003, 'CAST_DOUBLE', '双层现浇', 'ROOF', 'SQM', 'ROOF_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B14:C14；初始参考980元/㎡，待地区核定', 30),
+    (208011, 207003, 'FLAT', '平顶', 'ROOF', 'SQM', 'ROOF_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B15:C15；初始参考300元/㎡，待地区核定', 40),
+    (208012, 207004, 'MODERN', '现代', 'DECORATION', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B17:C17；初始参考120元/㎡，待地区核定', 10),
+    (208013, 207004, 'SU', '苏式', 'DECORATION', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B18:C18；初始参考120元/㎡，待地区核定', 20),
+    (208014, 207004, 'CHINESE', '新中式', 'DECORATION', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B19:C19；初始参考120元/㎡，待地区核定', 30),
+    (208015, 207005, 'ALUMINUM', '全铝门', 'DOOR', 'HOUSEHOLD', 'PROJECT_QUANTITY', 'DOOR_HOUSEHOLDS', '2026预算公式培训上线.xlsx Sheet1 B21:C21；初始参考18000元/户，待地区核定', 10),
+    (208016, 207005, 'CARVED', '全铝精雕', 'DOOR', 'HOUSEHOLD', 'PROJECT_QUANTITY', 'DOOR_HOUSEHOLDS', '2026预算公式培训上线.xlsx Sheet1 B22:C22；初始参考26000元/户，待地区核定', 20),
+    (208017, 207005, 'STEEL_COPPER', '钢铜门', 'DOOR', 'HOUSEHOLD', 'PROJECT_QUANTITY', 'DOOR_HOUSEHOLDS', '2026预算公式培训上线.xlsx Sheet1 B23:C23；原文刚铜门；初始参考15000元/户，待地区核定', 30),
+    (208018, 207005, 'COPPER', '纯铜门', 'DOOR', 'HOUSEHOLD', 'PROJECT_QUANTITY', 'DOOR_HOUSEHOLDS', '2026预算公式培训上线.xlsx Sheet1 B24:C24；初始参考36000元/户，待地区核定', 40),
+    (208019, 207005, 'ALU_14', '1.4壁厚', 'WINDOW', 'SQM', 'WINDOW_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B26:C26；初始参考450元/㎡，待地区核定', 50),
+    (208020, 207005, 'ALU_18', '1.8壁厚', 'WINDOW', 'SQM', 'WINDOW_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B27:C27；初始参考490元/㎡，待地区核定', 60),
+    (208021, 207005, 'SYSTEM_20', '2.0系统窗', 'WINDOW', 'SQM', 'WINDOW_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B28:C28；初始参考660元/㎡，待地区核定', 70),
+    (208022, 207006, 'STONE_PAINT', '真石漆', 'WALL_PAINT', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B30:C30；初始参考85元/㎡，待地区核定', 10),
+    (208023, 207006, 'SAND_BLACK', '黑线水包砂', 'WALL_PAINT', 'SQM', 'BUILDING_AREA', NULL, '2026预算公式培训上线.xlsx Sheet1 B31:C31；初始参考120元/㎡，待地区核定', 20),
+    (208024, 207006, 'SAND_GROOVE', '单深槽', 'WALL_PAINT', 'SQM', 'PROJECT_QUANTITY', 'WALL_PAINT_AREA', '2026预算公式培训上线.xlsx Sheet1 B32:C32；核定等效施工面积；初始参考150元/㎡，待地区核定', 30),
+    (208025, 207006, 'SAND_POLISHED', '磨边深槽', 'WALL_PAINT', 'SQM', 'PROJECT_QUANTITY', 'WALL_PAINT_AREA', '2026预算公式培训上线.xlsx Sheet1 B33:C33；核定等效施工面积；初始参考180元/㎡，待地区核定', 40),
+    (208026, 207007, 'SHALE', '页岩陶粒', 'CULTURE_STONE', 'METER', 'PROJECT_QUANTITY', 'CULTURE_STONE_LENGTH', '2026预算公式培训上线.xlsx Sheet1 B35:C35；初始参考120元/米，待地区核定', 10),
+    (208027, 207007, 'ARTIFICIAL', '人造石', 'CULTURE_STONE', 'METER', 'PROJECT_QUANTITY', 'CULTURE_STONE_LENGTH', '2026预算公式培训上线.xlsx Sheet1 B36:C36；初始参考150元/米，待地区核定', 20),
+    (208028, 207007, 'NATURAL', '天然石', 'CULTURE_STONE', 'METER', 'PROJECT_QUANTITY', 'CULTURE_STONE_LENGTH', '2026预算公式培训上线.xlsx Sheet1 B37:C37；初始参考180元/米，待地区核定', 30),
+    (208029, 207008, 'WASHER', '洗墙灯', 'WASHER', 'METER', 'PROJECT_QUANTITY', 'LIGHTING_WASHER_LENGTH', '2026预算公式培训上线.xlsx Sheet1 B39:C39；初始参考120元/米，待地区核定', 10),
+    (208030, 207008, 'STRIP', '灯带', 'STRIP', 'METER', 'PROJECT_QUANTITY', 'LIGHTING_STRIP_LENGTH', '2026预算公式培训上线.xlsx Sheet1 B40:C40；初始参考60元/米，待地区核定', 20),
+    (208031, 207008, 'WALL_LAMP', '壁灯', 'WALL_LAMP', 'PIECE', 'PROJECT_QUANTITY', 'LIGHTING_WALL_LAMP_COUNT', '2026预算公式培训上线.xlsx Sheet1 B41:C41；初始参考600元/个，待地区核定', 30),
+    (208032, 207009, 'COATING', '雨虹防水', 'WATERPROOF', 'SQM', 'PROJECT_QUANTITY', 'WATERPROOF_AREA', '2026预算公式培训上线.xlsx Sheet1 B47:C47；初始参考85元/㎡，待地区核定', 10),
+    (208033, 207009, 'INSULATED', '隔热层+防水', 'WATERPROOF', 'SQM', 'PROJECT_QUANTITY', 'INSULATED_WATERPROOF_AREA', '2026预算公式培训上线.xlsx Sheet1 B48:C48；初始参考320元/㎡，待地区核定', 20),
+    (208034, 207009, 'STANDARD', '防雷', 'LIGHTNING', 'SET', 'FIXED_ONE', NULL, '2026预算公式培训上线.xlsx Sheet1 A49:C49；初始参考5000元/套，待地区核定', 30),
+    (208035, 207010, 'STANDARD', '保险', 'INSURANCE', 'SET', 'FIXED_ONE', NULL, '2026预算公式培训上线.xlsx Sheet1 A50:C50；初始参考5000元/套，待地区核定', 10);

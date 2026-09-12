@@ -51,11 +51,7 @@
         </el-link>
       </div>
 
-      <el-button
-        :loading="loginLoading"
-        class="zs-login-btn"
-        @click="getCode()"
-      >
+      <el-button :loading="loginLoading" class="zs-login-btn" @click="getCode()">
         登录后台
       </el-button>
 
@@ -200,7 +196,7 @@ const handleLogin = async (params: any) => {
     }
   } finally {
     loginLoading.value = false
-    loading.value.close()
+    loading.value?.close()
   }
 }
 
@@ -221,21 +217,21 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .zs-login-card {
+  padding: 56px 64px 40px;
   background: #fefefe;
   border-radius: 12px;
   box-shadow: 0 8px 40px rgb(113 67 32 / 8%);
-  padding: 56px 64px 40px;
 }
 
 .zs-login-head {
-  text-align: center;
   margin-bottom: 40px;
+  text-align: center;
 
   .zs-login-title {
     font-size: 28px;
     font-weight: 700;
-    color: #282728;
     letter-spacing: 1px;
+    color: #282728;
   }
 
   .zs-login-subtitle {
@@ -249,16 +245,16 @@ onMounted(() => {
   margin-bottom: 18px;
 
   .zs-field-label {
+    margin-bottom: 8px;
     font-size: 14px;
     font-weight: 600;
     color: #282728;
-    margin-bottom: 8px;
   }
 
   :deep(.el-input__wrapper) {
+    padding: 4px 12px;
     border-radius: 6px;
     box-shadow: 0 0 0 1px #d9d5cf inset;
-    padding: 4px 12px;
   }
 
   :deep(.el-input__inner) {
@@ -273,8 +269,8 @@ onMounted(() => {
   margin: 2px 0 22px;
 
   :deep(.el-checkbox__label) {
-    color: #282728;
     font-size: 14px;
+    color: #282728;
   }
 
   :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
@@ -301,16 +297,16 @@ onMounted(() => {
   height: 48px;
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: 2px;
   color: #fff;
   background: #714320;
   border: none;
   border-radius: 6px;
-  letter-spacing: 2px;
 
   &:hover,
   &:focus {
-    background: #82522f;
     color: #fff;
+    background: #82522f;
   }
 
   &.is-loading {
@@ -320,8 +316,8 @@ onMounted(() => {
 
 .zs-footer {
   margin-top: 34px;
-  text-align: center;
   font-size: 13px;
   color: #9b9b9b;
+  text-align: center;
 }
 </style>

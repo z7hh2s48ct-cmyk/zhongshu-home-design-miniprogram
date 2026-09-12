@@ -17,15 +17,12 @@ test('首页使用接近主视觉容器比例的完整场景，避免窄图被�
   assert.ok(Math.abs(width / height - 702 / 548) < 0.02, '素材与主视觉容器比例应一致');
 });
 
-test('首页场景铺满容器，只在消息入口保留局部缺口', () => {
+test('首页取消右上消息入口后，主视觉完整铺满容器', () => {
   const heroArt = styles.match(/\.hero-art\s*\{([^}]+)\}/)[1];
   assert.match(heroArt, /inset:\s*0;/);
   assert.match(heroArt, /width:\s*100%;/);
   assert.match(heroArt, /height:\s*100%;/);
-  const notch = styles.match(/\.hero::after\s*\{([^}]+)\}/)[1];
-  assert.match(notch, /width:\s*86rpx;/);
-  assert.match(notch, /height:\s*64rpx;/);
-  assert.doesNotMatch(notch, /gradient|inset/);
+  assert.doesNotMatch(styles, /\.hero::after/, '不应再为已取消的铃铛预留缺口');
 });
 
 test('精选户型保留效果图的近方形图片与独立信息区，接口数据按位覆盖内置占位', () => {

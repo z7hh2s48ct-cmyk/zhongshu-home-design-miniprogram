@@ -150,7 +150,7 @@ public class CodegenEngineUniappTest extends CodegenEngineAbstractTest {
         Map<String, String> result = codegenEngine.execute(DbType.MYSQL, table, columns, null, null);
         // 断言
         String index = result.get("yudao-ui-admin-uniapp/src/pages-infra/demo/index.vue");
-        assertTrue(index.contains("currentParentId.value === 0\n  ? list.value"));
+        assertTrue(index.replace("\r\n", "\n").contains("currentParentId.value === 0\n  ? list.value"));
         assertFalse(index.contains("list.value.filter"));
         String breadcrumb = result.get("yudao-ui-admin-uniapp/src/pages-infra/demo/components/breadcrumb.vue");
         assertTrue(breadcrumb.contains("modelValue: number"));

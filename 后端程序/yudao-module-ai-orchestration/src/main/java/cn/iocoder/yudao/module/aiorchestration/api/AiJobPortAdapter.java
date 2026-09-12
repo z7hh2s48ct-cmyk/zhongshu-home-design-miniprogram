@@ -42,6 +42,24 @@ public class AiJobPortAdapter implements AiJobPort {
     }
 
     @Override
+    public long createFlatJob(long userId, int count, String key, String ref,
+                              cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation price) {
+        return settlementService.createJobWithCharge(userId, "FLAT", count, key, ref, price);
+    }
+
+    @Override
+    public long createElevationJob(long userId, int count, String key, String ref,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation price) {
+        return settlementService.createJobWithCharge(userId, "ELEVATION", count, key, ref, price);
+    }
+
+    @Override
+    public Optional<JobView> latestJob(long userId, long projectId, String phase) {
+        return orchestrationService.latestJob(userId, projectId, phase).map(job -> new JobView(
+                job.jobId(), job.userId(), job.status(), job.requestedCount(), job.acceptedCount(), job.progress()));
+    }
+
+    @Override
     public List<CandidateView> listAcceptedResults(long jobId) {
         return orchestrationService.listAcceptedResults(jobId).stream()
                 .map(r -> new CandidateView(r.resultId(), r.slotNo(), r.objectKey(),

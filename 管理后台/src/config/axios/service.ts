@@ -57,10 +57,10 @@ service.interceptors.request.use(
     if (getAccessToken() && isToken) {
       config.headers.Authorization = 'Bearer ' + getAccessToken() // 让每个请求携带自定义 token
     }
-    // 设置租户
+    // 单租户和多租户请求均需租户标识，切换租户仅在多租户模式下开放。
+    const tenantId = getTenantId()
+    if (tenantId) config.headers['tenant-id'] = tenantId
     if (tenantEnable && tenantEnable === 'true') {
-      const tenantId = getTenantId()
-      if (tenantId) config.headers['tenant-id'] = tenantId
       // 只有登录时，才设置 visit-tenant-id 访问租户
       const visitTenantId = getVisitTenantId()
       if (config.headers.Authorization && visitTenantId) {
@@ -239,8 +239,11 @@ service.interceptors.response.use(
 )
 
 const refreshToken = async () => {
-  axios.defaults.headers.common['tenant-id'] = getTenantId()
-  return await axios.post(base_url + '/system/auth/refresh-token?refreshToken=' + getRefreshToken())
+  return await axios.post(
+    base_url + '/system/auth/refresh-token?refreshToken=' + getRefreshToken(),
+    undefined,
+    { headers: { 'tenant-id': getTenantId() } }
+  )
 }
 const handleAuthorized = () => {
   const { t } = useI18n()

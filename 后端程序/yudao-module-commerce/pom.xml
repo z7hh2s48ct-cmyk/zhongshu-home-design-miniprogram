@@ -26,6 +26,12 @@
             <version>${revision}</version>
         </dependency>
 
+        <!-- 限流（T13-25 微信支付通知入口 @RateLimiter）：与 identity 模块一致，独立限流不复用业务端点配额 -->
+        <dependency>
+            <groupId>cn.iocoder.boot</groupId>
+            <artifactId>yudao-spring-boot-starter-protection</artifactId>
+        </dependency>
+
         <!-- Web 安全（传递引入 web starter，提供 CommonResult/异常/接口文档） -->
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
@@ -40,6 +46,14 @@
         <dependency>
             <groupId>cn.iocoder.boot</groupId>
             <artifactId>yudao-spring-boot-starter-redis</artifactId>
+        </dependency>
+
+        <!-- B4 微信支付（T13-21）：复用底座 yudao-dependencies 已锁定的 weixin-java-pay（WxJava 生态，支持 v3 API）。
+             provider=stub 时仅装配 StubPaymentPortAdapter，本依赖的类不会被加载；provider=real 时由 WechatPaymentAdapter 消费。
+             本期不新增官方 wechatpay-java SDK，与 yudao 底座 SocialClientServiceImpl 保持技术栈一致（分派表 §1 SDK 选择决策）。 -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-pay</artifactId>
         </dependency>
 
         <!-- Web 校验 -->

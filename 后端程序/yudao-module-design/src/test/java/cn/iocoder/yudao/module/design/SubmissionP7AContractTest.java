@@ -63,6 +63,8 @@ class SubmissionP7AContractTest {
     private AiJobOrchestrationService orchestration;
     private AiJobSettlementService settlement;
     private FakeQuarantineStorage quarantine;
+    private AssetService assets;
+    private LocalObjectStorageAdapter assetStorage;
 
     @BeforeAll
     void setUp() {
@@ -95,11 +97,12 @@ class SubmissionP7AContractTest {
         settlement = new AiJobSettlementService(dataSource, txManager, pricingPort, ledgerPort,
                 orchestration, eventPort);
         AiJobPort aiJobPort = new AiJobPortAdapter(settlement, orchestration);
-        var assetService = new AssetService(dataSource, txManager,
-                new LocalObjectStorageAdapter(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"),
-                        "p7-assets-" + System.nanoTime()).toString()),
+        assetStorage = new LocalObjectStorageAdapter(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"),
+                "p7-assets-" + System.nanoTime()).toString());
+        var assetService = new AssetService(dataSource, txManager, assetStorage,
                 new AssetContentScanner(), new StubContentModerationAdapter(),
                 new cn.iocoder.yudao.module.infra.zhongshu.delivery.JdbcDeliveryPort(dataSource), rights);
+        assets = assetService;
         projects = new DesignProjectService(dataSource, txManager, aiJobPort, assetService, rights, quarantine);
         var catalog = new CaseCatalogService(dataSource, txManager);
         submissions = new SubmissionReviewService(dataSource, txManager, catalog, eventPort);
@@ -155,6 +158,7 @@ class SubmissionP7AContractTest {
             byte[] content = ("p7-" + jobId + "-" + slot).getBytes(StandardCharsets.UTF_8);
             String objectKey = job.outputPrefix() + "/slot-" + slot + ".png";
             quarantine.putObject(objectKey, content);
+            assetStorage.putObject(objectKey, content);
             orchestration.reportResult(job.jobId(), job.attemptNo(), job.fencingToken(),
                     "stub", "evt-" + jobId + "-" + slot, slot, objectKey, sha256(content),
                     "image/png", content.length);
@@ -166,14 +170,15 @@ class SubmissionP7AContractTest {
     /** 全链生成项目并产出最终结果版本（v1） */
     private long seedResultVersion(long userId) {
         givePoints(userId);
-        long projectId = projects.createProject(userId, "SELF_UPLOAD", null, null, null);
-        var flat = projects.createFlatJob(userId, projectId, 1, "flat-" + projectId);
-        runJob(flat.jobId(), 1);
+        long projectId = projects.createProject(userId, "SELF_UPLOAD", null, null,
+                Map.of("budgetInputs", Map.of("footprintArea", "123", "floorCount", 3)));
+        var flat = projects.createFlatJob(userId, projectId, 2, "flat-" + projectId);
+        runJob(flat.jobId(), 2);
         var flatCandidates = projects.promoteCandidates(userId, projectId, flat.jobId());
         projects.selectFlatCandidate(userId, projectId, flatCandidates.get(0).candidateId());
-        var elev = projects.createElevationJob(userId, projectId, 1, "elev-" + projectId,
+        var elev = projects.createElevationJob(userId, projectId, 2, "elev-" + projectId,
                 Map.of("styleCode", "MODERN"));
-        runJob(elev.jobId(), 1);
+        runJob(elev.jobId(), 2);
         var elevCandidates = projects.promoteCandidates(userId, projectId, elev.jobId()).stream()
                 .filter(c -> c.jobId() == elev.jobId()).toList();
         return projects.selectElevationCandidate(userId, projectId, elevCandidates.get(0).candidateId())
@@ -261,6 +266,73 @@ class SubmissionP7AContractTest {
     private int count(String condition) {
         Integer n = jdbc.queryForObject("SELECT count(*) FROM " + condition, Integer.class);
         return n == null ? 0 : n;
+    }
+
+    @Test
+    void publicationUsesOnlyFrozenSelectionAndFrozenParameters() {
+        long version = seedResultVersion(USER_A);
+        long project = jdbc.queryForObject("SELECT project_id FROM design_result_version WHERE id=?", Long.class, version);
+        var frozen = submissions.previewAssets(version);
+        long sub = submissions.submit(USER_A, project, version, true, true, "旧版本投稿", "frozen");
+        // 另一个已出图但未选定的立面，后来形成 v2，不能混入 v1 的发布。
+        long otherElevation = jdbc.queryForObject("SELECT c.id FROM design_candidate c JOIN ai_job j ON j.id=c.job_id "
+                + "WHERE c.project_id=? AND j.phase='ELEVATION' AND c.asset_id<>? LIMIT 1", Long.class, project,
+                Long.parseLong(frozen.stream().filter(a -> a.role().equals("ELEVATION")).findFirst().orElseThrow().assetId()));
+        jdbc.update("INSERT INTO design_requirement_snapshot(id,project_id,input_version,inputs,create_time) "
+                + "VALUES (?,?,99,CAST(? AS jsonb),now()+interval '1 second')", com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), project,
+                "{\"styleCode\":\"NEW_CHINESE\",\"budgetInputs\":{\"footprintArea\":\"900\",\"floorCount\":2}}");
+        projects.selectElevationCandidate(USER_A, project, otherElevation);
+        submissions.decide(sub, REVIEWER, "APPROVE", null);
+        long caseId = submissions.publishApprovedAsCase(sub, "admin");
+        var links = jdbc.queryForList("SELECT a.asset_id,a.asset_role FROM design_case_asset a JOIN design_case c ON c.current_version_id=a.case_version_id WHERE c.id=?", caseId);
+        assertThat(links).hasSize(3);
+        for (var asset : frozen) {
+            String role = asset.role().equals("FLAT") ? "FLOOR_PLAN" : "ELEVATION";
+            assertThat(links).anySatisfy(link -> {
+                assertThat(link.get("asset_role")).isEqualTo(role);
+                assertThat(link.get("asset_id").toString()).isEqualTo(asset.assetId());
+            });
+        }
+        assertThat(count("asset_rights_grant WHERE scope='GENERATION_REFERENCE'")).isEqualTo(2);
+        var params = jdbc.queryForMap("SELECT v.building_area,v.floor_count,v.style_code FROM design_case_version v JOIN design_case c ON c.current_version_id=v.id WHERE c.id=?", caseId);
+        assertThat(params).containsEntry("building_area", 369).containsEntry("floor_count", 3).containsEntry("style_code", "MODERN");
+    }
+
+    @Test
+    void resubmissionReceiptSurvivesLostResponseAndLaterReview() {
+        long version = seedResultVersion(USER_A);
+        long project = jdbc.queryForObject("SELECT project_id FROM design_result_version WHERE id=?", Long.class, version);
+        long sub = submissions.submit(USER_A, project, version, true, false, "原说明", "resubmit");
+        submissions.decide(sub, REVIEWER, "CHANGES_REQUESTED", "请补充说明");
+        var first = submissions.resubmit(USER_A, sub, "已补充", "retry-key");
+        assertThat(submissions.resubmit(USER_A, sub, "已补充", "retry-key")).isEqualTo(first);
+        assertThat(submissions.countAdminSubmissions("SUBMITTED")).isEqualTo(1);
+        assertThat(submissions.pageAdminSubmissions("SUBMITTED", 1, 10)).extracting(SubmissionReviewService.SubmissionRow::submissionId).contains(sub);
+        submissions.decide(sub, REVIEWER, "APPROVE", null);
+        assertThat(submissions.resubmit(USER_A, sub, "已补充", "retry-key")).isEqualTo(first);
+        assertThat(first.currentRound()).isEqualTo(2);
+        assertThat(first.status()).isEqualTo("RESUBMITTED");
+        assertThat(first.note()).isEqualTo("已补充");
+        assertThat(count("submission_revision")).isEqualTo(2);
+        assertThatThrownBy(() -> submissions.resubmit(USER_A, sub, "不同说明", "retry-key")).isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> submissions.resubmit(REVIEWER, sub, "已补充", "retry-key")).isInstanceOf(ServiceException.class);
+    }
+
+    @Test
+    void previewTicketsAreBoundToReviewerSubmissionAndSelectedAsset() {
+        long version = seedResultVersion(USER_A);
+        long project = jdbc.queryForObject("SELECT project_id FROM design_result_version WHERE id=?", Long.class, version);
+        long sub = submissions.submit(USER_A, project, version, true, false, "说明", "preview");
+        var selected = submissions.previewAssets(version);
+        long assetId = Long.parseLong(selected.get(0).assetId());
+        var ticket = assets.requestReviewTicket(REVIEWER, sub, assetId);
+        assertThatThrownBy(() -> assets.readReviewTicket(REVIEWER + 1, sub, assetId, ticket.getToken())).isInstanceOf(ServiceException.class);
+        var valid = assets.requestReviewTicket(REVIEWER, sub, assetId);
+        assertThat(assets.readReviewTicket(REVIEWER, sub, assetId, valid.getToken()).content()).isNotEmpty();
+        assertThatThrownBy(() -> assets.readReviewTicket(REVIEWER, sub, assetId, valid.getToken())).isInstanceOf(ServiceException.class);
+        long other = jdbc.queryForObject("SELECT asset_id FROM design_candidate WHERE project_id=? AND asset_id NOT IN (?,?) LIMIT 1", Long.class,
+                project, Long.parseLong(selected.get(0).assetId()), Long.parseLong(selected.get(1).assetId()));
+        assertThatThrownBy(() -> assets.requestReviewTicket(REVIEWER, sub, other)).isInstanceOf(ServiceException.class);
     }
 
     private static class FakeQuarantineStorage implements QuarantineObjectPort {

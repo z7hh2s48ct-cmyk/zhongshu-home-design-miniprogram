@@ -17,4 +17,11 @@ public interface PermissionConstants {
     String EXPORT_MANAGE = "design:export:manage";
     String AUDIT_READ = "design:audit:query";
 
+    String BUDGET_QUERY = "design:budget:query";
+    String BUDGET_CONFIGURE = "design:budget:configure";
+    String BUDGET_EDIT = "design:budget:edit";
+    String BUDGET_PRICE_PUBLISH = "design:budget:price-publish";
+    String BUDGET_QUOTE = "design:budget:quote";
+    String BUDGET_QUOTE_PUBLISH = "design:budget:quote-publish";
+
 }

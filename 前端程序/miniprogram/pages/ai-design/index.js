@@ -27,6 +27,7 @@ protectedPage({
   onShow() {
     this.setData({ refCase: getApp().globalData.refCase });
     this.refreshPoints();
+    require('../../utils/generation-price').refresh(this, 'FLAT');
   },
   refreshPoints() {
     const self = this;
@@ -35,31 +36,25 @@ protectedPage({
     }).catch(function () { /* 静默保留占位 */ });
   },
   selectMode(e) { this.setData({ mode: Number(e.currentTarget.dataset.index) }); },
-  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); },
+  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'FLAT'); },
   chooseReference() { wx.switchTab({ url: '/pages/library/index' }); },
   clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
   onPromptInput(e) { this.setData({ prompt: e.detail.value }); },
 
   // ---- 草图上传：选图 → 摘要 → 上传票据 → 直传 → 完成校验 ----
-  chooseImage(e) {
-    const kind = e.currentTarget.dataset.kind === 'reference' ? 'reference' : 'sketch';
+  chooseImage() {
     const self = this;
     wx.chooseMedia({
       count: 1, mediaType: ['image'], sizeType: ['compressed'],
       success: function (res) {
         const file = res.tempFiles && res.tempFiles[0];
         if (!file) return;
-        if (kind === 'reference') {
-          // 后端创建项目契约暂无参考图字段，入口保留但暂不开放上传
-          wx.showToast({ title: '参考图上传即将开放', icon: 'none' });
-          return;
-        }
-        self.uploadSketch(file, kind);
+        self.uploadSketch(file);
       }
     });
   },
-  uploadSketch(file, kind) {
+  uploadSketch(file) {
     const self = this;
     const mime = mimeFromPath(file.tempFilePath);
     if (!mime) { wx.showToast({ title: '仅支持 JPG/PNG 图片', icon: 'none' }); return; }
@@ -70,7 +65,7 @@ protectedPage({
       success: function (res) {
         api.getUploadTicket('USER_SKETCH', mime, file.size, sha256.sha256Hex(res.data))
           .then(function (ticket) {
-            return self.putObject(ticket, file.tempFilePath, mime).then(function () {
+            return self.putObject(ticket, file.tempFilePath, res.data, mime).then(function () {
               return api.completeUpload(ticket.assetId);
             }).then(function (accepted) {
               if (!accepted) throw { msg: '图片校验未通过，请更换图片' };
@@ -79,8 +74,7 @@ protectedPage({
           })
           .then(function (ticket) {
             wx.hideLoading();
-            if (kind === 'sketch') self.setData({ sketchAssetId: ticket.assetId, sketchImage: file.tempFilePath });
-            else wx.showToast({ title: '参考图已上传', icon: 'success' });
+            self.setData({ sketchAssetId: ticket.assetId, sketchImage: file.tempFilePath });
           })
           .catch(function (err) {
             wx.hideLoading();
@@ -93,29 +87,37 @@ protectedPage({
       }
     });
   },
-  // COS 凭据到位前 uploadUrl 是 local:// 内部地址，走开发期直传端点（multipart POST）。
-  // 注意：wx.uploadFile 只支持 multipart POST，切 COS 时预签名 PUT 需改用 wx.request 二进制体，届时一并处理
-  putObject(ticket, filePath, mime) {
-    const isHttpUrl = /^https?:\/\//.test(ticket.uploadUrl || '');
-    const url = isHttpUrl ? ticket.uploadUrl
-      : config.apiBase + '/app-api/design/v1/assets/' + ticket.assetId + '/content';
+  // COS 直传分流（与 utils/avatar-upload.js 一致）：
+  //  · https:// 预签名地址 → wx.request PUT 发二进制体；签名对象 PUT 绝不能带应用 Bearer（会破坏签名/越权），
+  //    Content-Type 必须与申请票据时申报的 mime 一致，否则与后端签名不匹配被拒。
+  //  · local:// 开发期地址 → wx.uploadFile multipart POST 到字节端点，带 Bearer + tenant-id（Content-Type 由 wx 自动置 multipart 边界）。
+  putObject(ticket, filePath, data, mime) {
+    const uploadUrl = ticket.uploadUrl || '';
     return new Promise(function (resolve, reject) {
-      wx.uploadFile({
-        url: url,
-        filePath: filePath,
-        name: 'file',
-        header: { 'Content-Type': mime, 'Authorization': 'Bearer ' + http.getToken() },
-        success: function (res) {
-          if (res.statusCode >= 400) reject({ msg: '上传失败(' + res.statusCode + ')' });
-          else resolve();
-        },
-        fail: function () { reject({ msg: '上传失败，请检查网络' }); }
-      });
+      const success = function (res) {
+        if (res.statusCode < 200 || res.statusCode >= 300) reject({ msg: '上传失败(' + res.statusCode + ')' });
+        else resolve();
+      };
+      const fail = function () { reject({ msg: '上传失败，请检查网络' }); };
+      if (/^https:\/\//.test(uploadUrl)) {
+        wx.request({ url: uploadUrl, method: 'PUT', data: data, header: { 'Content-Type': mime }, success: success, fail: fail });
+      } else if (/^local:\/\//.test(uploadUrl)) {
+        wx.uploadFile({
+          url: config.apiBase + api.assetContentUrl(ticket.assetId),
+          filePath: filePath,
+          name: 'file',
+          header: { 'Authorization': 'Bearer ' + http.getToken(), 'tenant-id': String(config.tenantId) },
+          success: success, fail: fail
+        });
+      } else {
+        reject({ msg: '上传地址不可用' });
+      }
     });
   },
 
   generate() {
     if (this.data.creating) return;
+    const count = this.data.count;
     const self = this;
     self.setData({ creating: true });
     const idemKey = 'proj-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
@@ -130,18 +132,22 @@ protectedPage({
             prompt: this.data.prompt, note: this.data.note
           }
         };
-    api.createProject(body).then(function (project) {
+    let confirmedPrice;
+    require('../../utils/generation-price').confirm('FLAT', count).then(function (price) {
+      confirmedPrice = price;
+      return api.createProject(body);
+    }).then(function (project) {
       const projectId = project && project.projectId;
       if (!projectId) throw { msg: '创建设计项目失败' };
       getApp().globalData.projectId = projectId;
       getApp().globalData.refCase = null;
       getApp().globalData.resultVersionId = null;
-      return api.createFlatJob(projectId, self.data.count, idemKey).then(function (job) {
+      return api.createFlatJob(projectId, count, idemKey, confirmedPrice).then(function (job) {
         getApp().globalData.jobId = job.jobId;
-        wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + self.data.count });
+        wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + count });
       });
     }).catch(function (err) {
-      wx.showToast({ title: (err && err.msg) || '创建任务失败', icon: 'none' });
+      if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '创建任务失败', icon: 'none' });
       self.setData({ creating: false });
     });
   }

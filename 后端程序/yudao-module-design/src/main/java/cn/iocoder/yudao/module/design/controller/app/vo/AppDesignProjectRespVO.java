@@ -33,6 +33,11 @@ public class AppDesignProjectRespVO {
     @Schema(description = "本次创建/查询关联的 AI 任务编号（创建任务与调整请求的返回值，客户端据此轮询进度）")
     private String jobId;
 
+    private String jobStatus;
+    private Integer requestedCount;
+    private String resumeAction;
+    private String selectedFlatAssetId;
+
     @Schema(description = "项目状态：DRAFT / IN_PROGRESS / COMPLETED")
     private String status;
 

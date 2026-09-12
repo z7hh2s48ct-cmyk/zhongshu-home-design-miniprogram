@@ -113,6 +113,37 @@ class IdentityP2AContractTest {
         return n == null ? 0 : n;
     }
 
+    @Test
+    void profileChangesPersistOnlyForTheSessionAccount() {
+        long owner = loginService.login(APPID, "profile-owner", null).accountId();
+        long other = loginService.login(APPID, "profile-other", null).accountId();
+        var service = new cn.iocoder.yudao.module.identity.account.AccountProfileService(jdbc.getDataSource(),
+                (accountId, assetId) -> { assertThat(accountId).isEqualTo(owner); assertThat(assetId).isEqualTo(501L); });
+        assertThat(service.update(owner, "  新昵称  ", "501")).isTrue();
+        assertThat(loginService.findProfile(owner).orElseThrow().nickname()).isEqualTo("新昵称");
+        assertThat(loginService.findProfile(owner).orElseThrow().avatar()).isEqualTo("asset:501");
+        assertThat(service.update(owner, "再次修改", null)).isTrue();
+        assertThat(loginService.findProfile(owner).orElseThrow().avatar()).isEqualTo("asset:501");
+        assertThat(loginService.findProfile(other).orElseThrow().nickname()).isNotEqualTo("再次修改");
+    }
+
+    @Test
+    void invalidProfileAndRejectedAvatarDoNotChangeTheAccount() {
+        long owner = loginService.login(APPID, "profile-reject", null).accountId();
+        var before = loginService.findProfile(owner).orElseThrow();
+        var service = new cn.iocoder.yudao.module.identity.account.AccountProfileService(jdbc.getDataSource(),
+                (accountId, assetId) -> { throw new org.springframework.security.access.AccessDeniedException("rejected"); });
+        for (String name : List.of("", "   ", "x".repeat(33), "bad\nname")) {
+            assertThatThrownBy(() -> service.update(owner, name, null)).isInstanceOf(IllegalArgumentException.class);
+        }
+        for (String id : List.of("-1", "0", "https://avatar", "9999999999999999999")) {
+            assertThatThrownBy(() -> service.update(owner, "昵称", id)).isInstanceOf(IllegalArgumentException.class);
+        }
+        assertThatThrownBy(() -> service.update(owner, "昵称", "501")).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThat(loginService.findProfile(owner).orElseThrow().nickname()).isEqualTo(before.nickname());
+        assertThat(loginService.findProfile(owner).orElseThrow().avatar()).isEqualTo(before.avatar());
+    }
+
     private List<String> createInlineBatch(int quantity) {
         return accessCodeService.createBatch(quantity, "INLINE", null, "test", "tester").oneTimeCodes();
     }
@@ -329,6 +360,78 @@ class IdentityP2AContractTest {
         redemptionService.redeem(APPID, login.openid(), null, codes.get(0));
         assertThatThrownBy(() -> redemptionService.redeem(APPID, "openid-z", null, codes.get(0)))
                 .isInstanceOf(ServiceException.class);
+    }
+
+    @Test
+    void expiredAccessCanRefreshAndRotationRevokesBothOldTokens() {
+        var login = loginService.login(APPID, "refresh-expired-access", null);
+        jdbc.update("UPDATE user_session SET expires_at = now() - interval '1 minute'");
+        assertThat(sessionService.validateAccessToken(login.accessToken())).isEmpty();
+        var rotated = sessionService.refresh(login.refreshToken()).orElseThrow();
+        assertThat(rotated.restricted()).isTrue();
+        assertThat(sessionService.validateAccessToken(rotated.accessToken())).isPresent();
+        assertThat(sessionService.refresh(login.refreshToken())).isEmpty();
+        assertThat(sessionService.refreshExpiresAt(rotated.refreshToken()).orElseThrow())
+                .isAfter(Instant.now().plusSeconds(29 * 24 * 3600L));
+    }
+
+    @Test
+    void refreshExpiryAndAccountClosureRejectWithoutIssuingTokens() {
+        var login = loginService.login(APPID, "refresh-expiry", null);
+        jdbc.update("UPDATE user_session SET refresh_expires_at = now() - interval '1 second'");
+        assertThat(sessionService.refresh(login.refreshToken())).isEmpty();
+        jdbc.update("UPDATE user_session SET refresh_expires_at = now() + interval '1 day'");
+        jdbc.update("UPDATE account SET status = 'CLOSED'");
+        assertThat(sessionService.refresh(login.refreshToken())).isEmpty();
+        assertThat(sessionService.refresh(null)).isEmpty();
+        assertThat(sessionService.refresh(" ")).isEmpty();
+        assertThat(count("user_session", "TRUE")).isEqualTo(1);
+    }
+
+    @Test
+    void closedAccountInvalidatesExistingAccessToken() {
+        // 停用账号（CLOSED）后，尚未过期的既有 access token 必须立即失效——由 validateAccessToken 的 INNER JOIN account a.status='ACTIVE' 保障，
+        // 与上一用例的 refresh 拒绝路径互补，闭合「停用账号」在 validateAccessToken 侧的实时失效验证（T13-08 §5）
+        var login = loginService.login(APPID, "closed-access-token", null);
+        assertThat(sessionService.validateAccessToken(login.accessToken())).as("停用前既有 access token 有效").isPresent();
+        jdbc.update("UPDATE account SET status = 'CLOSED'");
+        assertThat(sessionService.validateAccessToken(login.accessToken())).as("账号停用后既有 access token 立即失效").isEmpty();
+        assertThat(count("user_session", "TRUE")).isEqualTo(1);
+    }
+
+    @Test
+    void refreshResponseRechecksGrantAfterActivationAndRevocation() {
+        var login = loginService.login(APPID, "refresh-grant", null);
+        redemptionService.redeem(APPID, login.openid(), null, createInlineBatch(1).get(0));
+        var granted = sessionService.refresh(login.refreshToken()).orElseThrow();
+        assertThat(granted.restricted()).isFalse();
+        long grantId = jdbc.queryForObject("SELECT id FROM design_access_grant WHERE status = 'ACTIVE'", Long.class);
+        grantService.revoke(grantId, "admin");
+        var restricted = sessionService.refresh(granted.refreshToken()).orElseThrow();
+        assertThat(restricted.restricted()).isTrue();
+        assertThat(sessionService.validateAccessToken(restricted.accessToken()).orElseThrow().restricted()).isTrue();
+    }
+
+    @Test
+    void concurrentRefreshHasExactlyOneWinner() throws Exception {
+        var login = loginService.login(APPID, "refresh-concurrent", null);
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Boolean>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < 8; i++) futures.add(pool.submit(() -> {
+                start.await();
+                return sessionService.refresh(login.refreshToken()).isPresent();
+            }));
+            start.countDown();
+            int winners = 0;
+            for (Future<Boolean> future : futures) if (future.get(30, java.util.concurrent.TimeUnit.SECONDS)) winners++;
+            assertThat(winners).isEqualTo(1);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertThat(count("user_session", "revoked_at IS NULL")).isEqualTo(1);
+        assertThat(count("user_session", "TRUE")).isEqualTo(2);
     }
 
     // ========== 8. 跨 AppID 隔离与 token 不落库 ==========

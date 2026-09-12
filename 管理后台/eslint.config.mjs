@@ -18,6 +18,7 @@ export default tseslint.config(
       'node_modules/',
       'src/main.ts',
       'src/types/auto-components.d.ts',
+      'src/types/auto-imports.d.ts',
       'src/components/Tinyflow/ui/**'
     ]
   },

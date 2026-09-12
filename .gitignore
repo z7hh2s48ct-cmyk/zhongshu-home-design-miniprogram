@@ -13,11 +13,13 @@ node_modules/
 dist/
 coverage/
 target/
+artifacts/
 *.log
 
 .env
 .env.*
 !.env.example
+!管理后台/.env.prod
 
 *.pem
 *.key

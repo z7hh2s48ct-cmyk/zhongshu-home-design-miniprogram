@@ -40,9 +40,19 @@ public class DashboardAdminController {
         Map<String, Object> summary = new LinkedHashMap<>();
         // 生成侧
         summary.put("aiJobsRunning", scalar(jdbc,
-                "SELECT count(*) FROM ai_job WHERE status IN ('QUEUED','RUNNING','CANCEL_REQUESTED') AND deleted = FALSE"));
-        summary.put("aiJobsSucceededToday", scalar(jdbc,
-                "SELECT count(*) FROM ai_job WHERE status = 'SUCCEEDED' AND update_time >= current_date AND deleted = FALSE"));
+                "SELECT count(*) FROM ai_job WHERE status IN ('QUEUED','RUNNING','VALIDATING','SETTLING','CANCEL_REQUESTED') AND deleted = FALSE"));
+        var trend = jdbc.queryForList("WITH days AS (SELECT generate_series("
+                + "(now() AT TIME ZONE 'Asia/Shanghai')::date - 6, "
+                + "(now() AT TIME ZONE 'Asia/Shanghai')::date, interval '1 day')::date AS day), "
+                + "finished AS (SELECT j.id, MAX(s.create_time) AS finished_at FROM ai_job j "
+                + "JOIN ai_job_settlement s ON s.job_id = j.id AND s.deleted = FALSE "
+                + "WHERE j.status = 'SUCCEEDED' AND j.deleted = FALSE GROUP BY j.id) "
+                + "SELECT to_char(d.day, 'YYYY-MM-DD') AS day, count(f.id) AS count FROM days d "
+                + "LEFT JOIN finished f ON (f.finished_at AT TIME ZONE 'Asia/Shanghai')::date = d.day "
+                + "GROUP BY d.day ORDER BY d.day");
+        summary.put("aiTrend", trend);
+        summary.put("businessTimezone", "Asia/Shanghai");
+        summary.put("aiJobsSucceededToday", trend.get(trend.size() - 1).get("count"));
         // 审核侧
         summary.put("submissionsPendingReview", scalar(jdbc,
                 "SELECT count(*) FROM case_submission WHERE status IN ('SUBMITTED','RESUBMITTED','IN_REVIEW') AND deleted = FALSE"));
@@ -56,7 +66,13 @@ public class DashboardAdminController {
                 "SELECT count(*) FROM recharge_order WHERE payment_state = 'UNKNOWN' AND deleted = FALSE"));
         summary.put("pointsConsumedToday", scalar(jdbc,
                 "SELECT COALESCE(-SUM(delta), 0) FROM design_point_ledger "
-                        + "WHERE delta < 0 AND create_time >= current_date AND deleted = FALSE"));
+                        + "WHERE type IN ('FLAT_GENERATION_DEBIT','ELEVATION_GENERATION_DEBIT') "
+                        + "AND (create_time AT TIME ZONE 'Asia/Shanghai')::date = "
+                        + "(now() AT TIME ZONE 'Asia/Shanghai')::date AND deleted = FALSE"));
+        summary.put("generationPointsRefundedToday", scalar(jdbc,
+                "SELECT COALESCE(SUM(delta), 0) FROM design_point_ledger WHERE type = 'TASK_SETTLEMENT_REFUND' "
+                        + "AND (create_time AT TIME ZONE 'Asia/Shanghai')::date = "
+                        + "(now() AT TIME ZONE 'Asia/Shanghai')::date AND deleted = FALSE"));
         summary.put("openRefunds", scalar(jdbc,
                 "SELECT count(*) FROM refund_order WHERE channel_state IN ('CREATED','PENDING','UNKNOWN') AND deleted = FALSE"));
         // 消息与用户

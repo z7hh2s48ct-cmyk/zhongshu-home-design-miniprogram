@@ -1,0 +1,41 @@
+name: zhongshu-backend-dev
+
+services:
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: ${ZS_PG_DATABASE:-zhongshu_design}
+      POSTGRES_USER: ${ZS_PG_USERNAME:-zhongshu}
+      POSTGRES_PASSWORD: ${ZS_PG_PASSWORD:-zhongshu}
+    ports:
+      - "127.0.0.1:${ZS_PG_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql/postgresql/ruoyi-vue-pro.sql:/docker-entrypoint-initdb.d/00-platform.sql:ro
+      - ./sql/postgresql/quartz.sql:/docker-entrypoint-initdb.d/01-quartz.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.11-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${ZS_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:

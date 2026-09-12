@@ -21,6 +21,12 @@ public class AppResultVersionRespVO {
     @Schema(description = "本版本采用的立面候选编号")
     private String elevationCandidateId;
 
+    @Schema(description = "本版本冻结选定的平面资产编号，图片仍须通过资产鉴权获取")
+    private String selectedFlatAssetId;
+
+    @Schema(description = "本版本冻结选定的立面资产编号")
+    private String selectedElevationAssetId;
+
     @Schema(description = "生成配置快照（风格、屋顶、材质等）")
     private String configSnapshot;
 

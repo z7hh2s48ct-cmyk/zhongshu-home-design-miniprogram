@@ -1,0 +1,63 @@
+# RG1/R06: use --spring.profiles.active=pg,prod. Never combine with local/dev/zsdev.
+# Secrets and endpoints are supplied by deployment; no production fallback credentials.
+spring:
+  data:
+    redis:
+      host: ${ZS_REDIS_HOST}
+      port: ${ZS_REDIS_PORT:6379}
+      password: ${ZS_REDIS_PASSWORD}
+  datasource:
+    druid:
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+    dynamic:
+      primary: master
+      datasource:
+        master:
+          url: ${ZS_PG_URL}
+          username: ${ZS_PG_USERNAME}
+          password: ${ZS_PG_PASSWORD}
+          driver-class-name: org.postgresql.Driver
+  flyway:
+    url: ${ZS_PG_URL}
+    user: ${ZS_PG_USERNAME}
+    password: ${ZS_PG_PASSWORD}
+yudao:
+  security:
+    mock-enable: false
+zhongshu:
+  identity:
+    wechat:
+      provider: real
+  commerce:
+    payment:
+      provider: real
+      wechat:
+        merchant-id: ${ZS_PAY_MERCHANT_ID}
+        merchant-serial-no: ${ZS_PAY_MERCHANT_SERIAL_NO}
+        api-v3-key: ${ZS_PAY_API_V3_KEY}
+        merchant-private-key-path: ${ZS_PAY_MERCHANT_PRIVATE_KEY_PATH}
+        notify-url: ${ZS_PAY_NOTIFY_URL}
+        refund-notify-url: ${ZS_PAY_REFUND_NOTIFY_URL}
+  design:
+    seed-dev-data: false
+    asset:
+      dev-content-endpoint: false
+      storage:
+        provider: cos
+      moderation:
+        provider: real
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+    env:
+      show-values: NEVER
+    configprops:
+      show-values: NEVER

@@ -8,14 +8,16 @@
       <div class="zs-date">{{ today }}</div>
     </div>
 
+    <el-alert v-if="summaryError" type="error" :closable="false" title="统计加载失败，请重试"
+      ><el-button @click="loadSummary">重试</el-button></el-alert
+    >
     <!-- 统计卡 -->
     <div class="zs-stat-cards">
       <div class="zs-stat-card" v-for="card in statCards" :key="card.label">
         <div class="zs-stat-icon"><Icon :icon="card.icon" /></div>
         <div>
           <div class="zs-stat-label">{{ card.label }}</div>
-          <div class="zs-stat-value">{{ card.value }}</div>
-          <div class="zs-stat-label">较昨日 {{ card.delta }}</div>
+          <div class="zs-stat-value">{{ summaryReady ? (card.value ?? '—') : '—' }}</div>
         </div>
       </div>
     </div>
@@ -24,8 +26,9 @@
       <!-- 近7日趋势 -->
       <el-col :span="16">
         <div class="zs-table-card">
-          <div class="zs-panel-title">近7日AI生成趋势</div>
-          <Echart :options="trendOptions" :height="280" />
+          <div class="zs-panel-title">近7日全部成功任务（北京时间）</div>
+          <Echart v-if="trendDays.length" :options="trendOptions" :height="280" />
+          <el-empty v-else description="暂无可用趋势统计" />
         </div>
       </el-col>
       <!-- 待办事项 -->
@@ -38,7 +41,9 @@
               <span>{{ item.label }}</span>
             </div>
             <div class="zs-todo-right">
-              <span class="zs-todo-count" :style="{ color: item.color }">{{ item.count }}</span>
+              <span class="zs-todo-count" :style="{ color: item.color }">{{
+                summaryReady ? (item.count ?? '—') : '—'
+              }}</span>
               <span class="zs-link" @click="item.go()">去处理 ›</span>
             </div>
           </div>
@@ -51,20 +56,26 @@
       <el-col :span="16">
         <div class="zs-table-card">
           <div class="zs-panel-title">最近生成任务</div>
+          <el-alert v-if="jobsError" title="任务加载失败" type="error" :closable="false"
+            ><el-button @click="loadJobs">重试</el-button></el-alert
+          >
           <el-table :data="recentJobs" stripe>
             <el-table-column label="任务编号" prop="jobNo" width="160" />
             <el-table-column label="用户" prop="userName" />
             <el-table-column label="生成类型" prop="phaseText" />
             <el-table-column label="数量" prop="requestedCount" width="70" />
-            <el-table-column label="消耗设计点" prop="pointCost" width="100" />
+            <el-table-column label="扣点快照" prop="pointCost" width="100" />
+            <el-table-column label="结算退点" prop="refundedPoints" width="100" />
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <span class="zs-tag" :class="'zs-tag--' + row.statusColor">{{ row.statusText }}</span>
+                <span class="zs-tag" :class="'zs-tag--' + row.statusColor">{{
+                  row.statusText
+                }}</span>
               </template>
             </el-table-column>
             <el-table-column label="时间" prop="createTime" width="170" />
           </el-table>
-          <div class="zs-link zs-view-all" @click="$router.push('/zs/recharge-order')">查看全部 ›</div>
+          <div class="zs-link zs-view-all" @click="openJobs">查看全部 ›</div>
         </div>
       </el-col>
       <!-- 快捷操作 -->
@@ -86,16 +97,23 @@
 <script lang="ts" setup>
 import { Echart } from '@/components/Echart'
 import * as ZsApi from '@/api/zs'
+import { checkPermi } from '@/utils/permission'
+import { fmtTime } from '@/utils/zsFormat'
 
 defineOptions({ name: 'ZsDashboard' })
 
 const today = new Date().toLocaleDateString('zh-CN', {
+  timeZone: 'Asia/Shanghai',
   year: 'numeric',
   month: 'long',
   day: 'numeric'
 })
 
 const $router = useRouter()
+const openJobs = () => $router.push('/zs/ai-job')
+const summaryReady = ref(false)
+const summaryError = ref(false)
+const jobsError = ref(false)
 
 const summary = ref<Record<string, any>>({
   aiJobsSucceededToday: 0,
@@ -110,32 +128,77 @@ const summary = ref<Record<string, any>>({
   openRefunds: 0
 })
 const statCards = computed(() => [
-  { label: '今日AI生成', value: summary.value.aiJobsSucceededToday, delta: '', icon: 'ep:cpu' },
-  { label: '待审核案例', value: summary.value.submissionsPendingReview, delta: '', icon: 'ep:document-checked' },
-  { label: '今日消耗设计点', value: summary.value.pointsConsumedToday, delta: '', icon: 'ep:wallet' },
+  {
+    label: '今日全部成功任务',
+    value: summary.value.aiJobsSucceededToday,
+    delta: '',
+    icon: 'ep:cpu'
+  },
+  {
+    label: '待审核案例',
+    value: summary.value.submissionsPendingReview,
+    delta: '',
+    icon: 'ep:document-checked'
+  },
+  {
+    label: '今日生成扣点（不含退点）',
+    value: summary.value.pointsConsumedToday,
+    delta: '',
+    icon: 'ep:wallet'
+  },
   { label: '有效授权', value: summary.value.accessGrantsActive, delta: '', icon: 'ep:ticket' }
 ])
 
 const todos = computed(() => [
-  { label: 'AI案例待审核', count: summary.value.submissionsPendingReview, color: '#c07a1f', go: () => $router.push('/zs/review') },
-  { label: '支付未到账', count: summary.value.ordersPendingFulfillment, color: '#d0342c', go: () => $router.push('/zs/recharge-order') },
-  { label: '支付状态未知', count: summary.value.ordersUnknownPayment, color: '#d0342c', go: () => $router.push('/zs/recharge-order') },
-  { label: '进行中任务', count: summary.value.aiJobsRunning, color: '#714320', go: () => $router.push('/zs/access-code') }
+  {
+    label: 'AI案例待审核',
+    count: summary.value.submissionsPendingReview,
+    color: '#c07a1f',
+    go: () => $router.push('/zs/review')
+  },
+  {
+    label: '支付未到账',
+    count: summary.value.ordersPendingFulfillment,
+    color: '#d0342c',
+    go: () => $router.push('/zs/recharge-order')
+  },
+  {
+    label: '支付状态未知',
+    count: summary.value.ordersUnknownPayment,
+    color: '#d0342c',
+    go: () => $router.push('/zs/recharge-order')
+  },
+  {
+    label: '进行中任务',
+    count: summary.value.aiJobsRunning,
+    color: '#714320',
+    go: openJobs
+  }
 ])
 
-const quickActions = [
+const quickActions = computed(() => [
   { label: '新增公司案例', icon: 'ep:office-building', go: () => $router.push('/zs/case/create') },
   { label: '审核AI案例', icon: 'ep:document-checked', go: () => $router.push('/zs/review') },
   { label: '生成授权码', icon: 'ep:key', go: () => $router.push('/zs/access-code/batch') },
-  { label: '新增充值方案', icon: 'ep:coin', go: () => $router.push('/zs/recharge-plan/edit') }
-]
+  { label: '新增充值方案', icon: 'ep:coin', go: () => $router.push('/zs/recharge-plan/edit') },
+  ...(checkPermi(['design:budget:query'])
+    ? [
+        { label: '预算配置', icon: 'ep:money', go: () => $router.push('/zs/budget') },
+        {
+          label: '项目预算与报价',
+          icon: 'ep:document',
+          go: () => $router.push('/zs/budget-estimates')
+        }
+      ]
+    : [])
+])
 
 const recentJobs = ref<any[]>([])
 
 const trendOptions = computed((): any => ({
   grid: { left: 40, right: 20, top: 20, bottom: 30 },
   xAxis: { type: 'category', data: trendDays.value, boundaryGap: false },
-  yAxis: { type: 'value', minInterval: 10 },
+  yAxis: { type: 'value', minInterval: 1 },
   series: [
     {
       type: 'line',
@@ -154,36 +217,57 @@ const trendOptions = computed((): any => ({
 const trendDays = ref<string[]>([])
 const trendValues = ref<number[]>([])
 
-
-onMounted(async () => {
+const loadSummary = async () => {
+  summaryError.value = false
   try {
     const res = await ZsApi.getDashboardSummary()
-    summary.value = { ...summary.value, ...(res || {}) }
-  } catch {}
+    if (!res) throw Error('统计为空')
+    summary.value = res
+    summaryReady.value = true
+    trendDays.value = (res.aiTrend || []).map((d: any) => d.day)
+    trendValues.value = (res.aiTrend || []).map((d: any) => Number(d.count))
+  } catch {
+    summaryError.value = true
+    summaryReady.value = false
+    trendDays.value = []
+    trendValues.value = []
+  }
+}
+const loadJobs = async () => {
+  jobsError.value = false
   try {
     const res = await ZsApi.getAiJobPage({ pageNo: 1, pageSize: 5 })
     recentJobs.value = (res?.list || []).map((j: any) => ({
       jobNo: j.jobId,
-      userName: j.userId,
+      userName: j.userId ?? '—',
       phaseText: j.phase === 'FLAT' ? '平面方案生成' : '立面方案生成',
       requestedCount: j.requestedCount,
-      pointCost: (j.requestedCount || 0) * 20,
+      pointCost: j.totalPointCost ?? '—',
+      refundedPoints: j.refundedPointCost ?? '未结算',
       statusText:
-        j.status === 'SUCCEEDED' ? '已完成' : j.status === 'RUNNING' ? '生成中' : j.status === 'FAILED' ? '已退回' : j.status,
+        j.status === 'SUCCEEDED'
+          ? '已完成'
+          : j.status === 'RUNNING'
+            ? '生成中'
+            : j.status === 'FAILED'
+              ? '已失败'
+              : j.status,
       statusColor:
-        j.status === 'SUCCEEDED' ? 'green' : j.status === 'RUNNING' ? 'orange' : j.status === 'FAILED' ? 'red' : 'gray',
-      createTime: j.createTime || ''
+        j.status === 'SUCCEEDED'
+          ? 'green'
+          : j.status === 'RUNNING'
+            ? 'orange'
+            : j.status === 'FAILED'
+              ? 'red'
+              : 'gray',
+      createTime: fmtTime(j.createdAt)
     }))
-  } catch {}
-  // 近 7 日趋势（暂无统计端点：以今日值平铺占位，联调后由 summary 趋势字段替换）
-  const days: string[] = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000)
-    days.push(`${d.getMonth() + 1}/${d.getDate()}`)
+  } catch {
+    jobsError.value = true
+    recentJobs.value = []
   }
-  trendDays.value = days
-  trendValues.value = [0, 0, 0, 0, 0, 0, summary.value.todayGenerated || 0]
-})
+}
+onMounted(() => Promise.all([loadSummary(), loadJobs()]))
 </script>
 
 <style lang="scss" scoped>
@@ -193,20 +277,20 @@ onMounted(async () => {
 }
 
 .zs-panel-title {
+  margin-bottom: 14px;
   font-size: 16px;
   font-weight: 700;
   color: #282728;
-  margin-bottom: 14px;
 }
 
 .zs-todo-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 14px 0;
-  border-bottom: 1px solid #f5f0e8;
   font-size: 14px;
   color: #282728;
+  border-bottom: 1px solid #f5f0e8;
+  align-items: center;
+  justify-content: space-between;
 
   &:last-child {
     border-bottom: none;
@@ -237,9 +321,9 @@ onMounted(async () => {
 }
 
 .zs-view-all {
-  text-align: center;
   margin-top: 14px;
   font-size: 13px;
+  text-align: center;
 }
 
 .zs-quick-grid {
@@ -248,17 +332,17 @@ onMounted(async () => {
   gap: 14px;
 
   .zs-quick-item {
+    display: flex;
+    padding: 22px 0;
+    font-size: 14px;
+    color: #714320;
+    cursor: pointer;
     background: #faf6f0;
     border-radius: 10px;
-    padding: 22px 0;
-    display: flex;
+    transition: all 0.2s;
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    color: #714320;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
 
     &:hover {
       background: #f5eee7;

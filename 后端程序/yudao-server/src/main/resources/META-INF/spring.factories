@@ -1,0 +1,4 @@
+# T13-01：众墅真实/Stub 实现选择启动守卫。
+# 在 Spring 上下文创建前校验各端口 provider 配置；缺失/非法或生产启用替身时快速失败。
+org.springframework.boot.env.EnvironmentPostProcessor=\
+cn.iocoder.yudao.server.wiring.ZhongshuWiringEnvironmentPostProcessor

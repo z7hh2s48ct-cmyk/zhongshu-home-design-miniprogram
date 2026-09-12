@@ -15,4 +15,9 @@ public interface ErrorCodeConstants {
     ErrorCode GENERATION_REFERENCE_NOT_AUTHORIZED = new ErrorCode(1_071_000_003, "该案例未授权用作生成参考");
     ErrorCode SUBMISSION_STATE_CONFLICT = new ErrorCode(1_071_000_004, "投稿状态不允许该操作");
 
+    ErrorCode BUDGET_INPUT_INVALID = new ErrorCode(1_071_000_100, "预算输入不符合字段、单位或精度要求");
+    ErrorCode BUDGET_INCOMPLETE = new ErrorCode(1_071_000_101, "预算存在待补或待复核项，不能形成完整报价");
+    ErrorCode BUDGET_PRICE_CONFLICT = new ErrorCode(1_071_000_102, "同地区选项的价格生效区间冲突");
+    ErrorCode BUDGET_AMOUNT_LIMIT = new ErrorCode(1_071_000_103, "预算金额超过允许范围");
+
 }

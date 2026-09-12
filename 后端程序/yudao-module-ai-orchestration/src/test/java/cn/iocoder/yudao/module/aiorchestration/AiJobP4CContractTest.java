@@ -108,6 +108,36 @@ class AiJobP4CContractTest {
                 + "effective_at) VALUES (9001, 'FLAT', 10, 1, 4, now() - interval '1 minute')");
     }
 
+    @Test
+    void jobReadModelUsesFrozenPricesRealSettlementAndLatestFirst() {
+        long userId = 7791;
+        givePoints(userId, 100);
+        long id = settlement.createJobWithCharge(userId, "FLAT", 3, "read-model", "project-1");
+        var before = cn.iocoder.yudao.module.aiorchestration.controller.app.AppAiJobController.toVo(orchestration.getJob(id).orElseThrow());
+        assertThat(before.getUnitPointCost()).isEqualTo(10L);
+        assertThat(before.getTotalPointCost()).isEqualTo(30L);
+        assertThat(before.getRefundedPointCost()).isNull();
+        assertThat(before.getNetPointCost()).isNull();
+        assertThat(before.getCreatedAt()).isNotNull();
+        assertThat(before.getFinishedAt()).isNull();
+        assertThat(before.getAllowedActions()).containsExactly("CANCEL");
+        runProvider(id, 1, 3);
+        settlement.settle(id, "SETTLE");
+        var after = cn.iocoder.yudao.module.aiorchestration.controller.app.AppAiJobController.toVo(orchestration.getJob(id).orElseThrow());
+        assertThat(after.getStatus()).isEqualTo("PARTIALLY_SUCCEEDED");
+        assertThat(after.getProgress()).isEqualTo(100);
+        assertThat(after.getTotalPointCost()).isEqualTo(30L);
+        assertThat(after.getRefundedPointCost()).isEqualTo(20L);
+        assertThat(after.getNetPointCost()).isEqualTo(10L);
+        assertThat(after.getFinishedAt()).isNotNull();
+        assertThat(after.getAllowedActions()).isEmpty();
+        var query = new cn.iocoder.yudao.module.aiorchestration.job.AiJobQueryService(dataSource);
+        assertThat(query.getJob(id)).isEqualTo(orchestration.getJob(id));
+        long newest = settlement.createJobWithCharge(userId, "FLAT", 1, "read-model-next", "project-1");
+        assertThat(query.pageJobs(null, null, 1, 1)).extracting(AiJobOrchestrationService.JobSnapshot::jobId).containsExactly(newest);
+        assertThat(query.pageJobs(null, null, 2, 1)).extracting(AiJobOrchestrationService.JobSnapshot::jobId).containsExactly(id);
+    }
+
     private String sha256(byte[] content) {
         try {
             return HexFormat.of().formatHex(

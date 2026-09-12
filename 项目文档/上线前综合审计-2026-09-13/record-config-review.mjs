@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+const out=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(out,'../..');
+const scope=JSON.parse(fs.readFileSync(path.join(out,'scope-snapshot.json'),'utf8'));
+const paths=['后端程序/.env.example','后端程序/yudao-server/src/main/resources/application-pg.yaml','后端程序/yudao-server/src/main/resources/application-zsdev.yaml','项目文档/项目状态看板.md'];
+const result={reviewedAt:new Date().toISOString(),origin:'Concurrent workspace edits; not made by this audit',review:'Additive AI provider configuration and status board update; inspected separately. No outbound generation consumer was added. Does not resolve R01/R02/R18. Original 528-test result is retained for its earlier configuration, with a separate targeted configuration follow-up.',files:paths.map(p=>({path:p,sha256:createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex'),initialSha256:scope.snapshots.find(s=>s.path===p)?.sha256??null})),expectedAddedStatus:paths.map(p=>' M '+p)};
+fs.writeFileSync(path.join(out,'concurrent-config-review.json'),JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({reviewedFiles:paths,details:'Hashes recorded without configuration values'},null,2));

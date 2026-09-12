@@ -1,14 +1,44 @@
 <view class="v12-page budget-page" wx:if="{{accessReady}}">
   <v12-navbar title="快速预算" show-back show-brand="{{false}}" />
-  <view class="auto-note"><t-icon name="info-circle-filled" size="17px" color="#bf7d0e" /><text>已从AI设计方案自动带入基础参数</text><span>方案B</span></view>
-  <view class="v12-card budget-form">
-    <view class="form-row"><text>建筑面积</text><span><input class="area-input" type="digit" value="{{buildingArea}}" bindinput="onAreaInput" /> m²</span></view>
-    <view class="form-row"><text>层数</text><span>2层 <t-icon name="chevron-down" size="16px" color="#777" /></span></view>
-    <view class="form-row"><text>建造地区</text><span>福建 · 泉州 <t-icon name="chevron-right" size="16px" color="#777" /></span></view>
-    <view class="form-row" bindtap="chooseStructure"><text>结构形式</text><span>{{structure.label}} <t-icon name="chevron-right" size="16px" color="#777" /></span></view>
-    <view class="form-row standard-row"><text>建造标准</text><view><span wx:for="{{['经济','标准','品质']}}" wx:key="*this" class="{{standard === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectStandard">{{item}}</span></view></view>
-    <view class="form-row"><text>包含室内基础装修</text><switch checked="{{interior}}" color="#8a4a1a" bindchange="toggleInterior" /></view>
+  <view wx:if="{{noProject}}" class="budget-card state-card">
+    <text class="section-title">请先选择设计项目</text>
+    <text class="muted">请从已有设计项目进入预算，无需重新生成AI方案。</text>
+    <button class="text-action" bindtap="selectProject">前往设计项目</button>
   </view>
-  <view class="v12-card explain"><view class="document"><t-icon name="file" size="30px" color="#7b5532" /></view><view><text>测算说明</text><text>结果根据地区参考单价、建筑面积和建造标准估算</text></view></view>
-  <view class="v12-primary-button generate-budget" bindtap="generate">生成参考预算</view>
+  <view wx:elif="{{loading}}" class="budget-card state-card"><text>正在导入项目参数…</text></view>
+  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="load">重新加载</button></view>
+  <block wx:elif="{{draft}}">
+    <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>已从设计项目带入已保存参数</text><text class="source-tag">{{draft.resultVersionId ? '方案参数' : '项目参数'}}</text></view>
+    <view class="budget-card summary-card">
+      <view class="section-head"><text class="section-title">基础参数</text><button class="text-action modify" bindtap="modify" disabled="{{!!storageError}}">修改 <t-icon name="chevron-right" size="16px" color="#888b91" /></button></view>
+      <view class="parameter-grid">
+        <view class="parameter-cell"><text class="parameter-label">占地面积</text><text class="parameter-value">{{values.footprintArea || '待填写'}}<text wx:if="{{values.footprintArea}}"> m²</text></text></view>
+        <view class="parameter-cell"><text class="parameter-label">建筑层数</text><text class="parameter-value">{{values.floorCount ? values.floorCount + '层' : '待选择'}}</text></view>
+        <view class="parameter-cell"><text class="parameter-label">屋顶面积</text><text class="parameter-value">{{values.roofArea || '待填写'}}<text wx:if="{{values.roofArea}}"> m²</text></text></view>
+        <view class="parameter-cell"><text class="parameter-label">建造地区</text><text class="parameter-value region-value">{{regionName}}</text></view>
+      </view>
+    </view>
+    <view wx:if="{{storageError || regionsError || needsReview}}" class="inline-warning">
+      <text>{{storageError || regionsError || '项目实际建筑面积与当前参数存在差异，请管理员复核；原值未被覆盖。'}}</text>
+      <button wx:if="{{regionsError || storageError}}" class="text-action" bindtap="load">重试</button>
+    </view>
+    <view class="budget-card config-card">
+      <text class="section-title">预算配置</text>
+      <view class="config-row" bindtap="configuration" data-category="BODY" role="button" aria-label="主体类配置"><view class="round-icon"><t-icon name="home" size="27px" color="#82470f" /></view><view class="config-copy"><text>主体类</text><text>地基基础 · 主体结构 · 屋面结构</text></view><text class="config-status {{bodyCount === 3 ? 'config-complete' : ''}}">{{bodyCount}}/3 已选</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view>
+      <view class="config-row" bindtap="configuration" data-category="EXTERIOR" role="button" aria-label="外装类配置"><view class="round-icon"><t-icon name="archway" size="27px" color="#82470f" /></view><view class="config-copy"><text>外装类</text><text>装饰构件 · 门窗 · 外墙漆等</text></view><text class="config-status {{exteriorCount === 7 ? 'config-complete' : ''}}">{{exteriorCount}}/7 已选</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view>
+      <text wx:if="{{customCount}}" class="muted">另选{{customCount}}项补充预算项</text>
+    </view>
+    <view wx:if="{{catalogLoading}}" class="inline-warning">正在校验地区可选配置…</view>
+    <view wx:if="{{catalogError}}" class="inline-warning"><text>{{catalogError}}</text><button class="text-action" bindtap="loadCatalog">重试</button></view>
+    <view wx:if="{{selectionNotice}}" class="inline-warning">{{selectionNotice}}</view>
+    <view wx:if="{{pendingPriceCount}}" class="inline-warning">已选配置中有{{pendingPriceCount}}项待补价，选择完成不代表完整计价。</view>
+    <view wx:if="{{generateError}}" class="inline-warning">{{generateError}}</view>
+    <view wx:if="{{importConflict}}" class="inline-warning">项目参数已更新，请使用下方“重新导入当前参数”重建本机草稿，再重新配置预算。</view>
+    <view wx:if="{{importError}}" class="inline-warning">{{importError}}</view>
+    <view wx:if="{{reimporting}}" class="inline-warning">正在读取最新参数，成功后才替换当前本机草稿…</view>
+    <view class="budget-card explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">测算说明</text><text class="muted">根据地区价格、项目面积和所选配置估算</text></view></view>
+    <view class="context-note"><text>{{sourceLabel}} · 项目 {{draft.projectId}}</text><text wx:if="{{draft.resultVersionId}}">方案版本编号 {{draft.resultVersionId}}</text><view class="budget-history-links"><button class="text-action legacy-link" bindtap="history">项目预算历史</button><button class="text-action legacy-link" bindtap="legacy">旧版区间测算</button></view></view>
+    <button class="text-action legacy-link" bindtap="confirmReimport" disabled="{{creating || loading || catalogLoading || reimporting}}">重新导入当前参数</button>
+    <view class="budget-footer"><text class="footer-hint">参数或配置未齐时生成待补充预算，不视为完整总价</text><button class="budget-primary" bindtap="generate" disabled="{{!canGenerate || creating || loading || catalogLoading || reimporting}}" loading="{{creating}}">{{creating ? '正在生成预算' : '生成参考预算'}}</button></view>
+  </block>
 </view>

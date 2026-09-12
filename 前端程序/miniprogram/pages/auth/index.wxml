@@ -11,7 +11,7 @@
         <t-icon name="scan" size="25px" color="#2f2925" />
       </view>
       <text class="field-help">验证通过后将绑定当前微信账号</text>
-      <view class="v12-primary-button" bindtap="verify">激活并继续</view>
+      <view class="v12-primary-button {{loading ? 'is-loading' : ''}}" bindtap="verify">{{loading ? '激活中…' : '激活并继续'}}</view>
     </view>
     <view class="browse-link" bindtap="continueBrowsing">暂不激活，继续浏览</view>
     <view class="v12-card auth-notes">

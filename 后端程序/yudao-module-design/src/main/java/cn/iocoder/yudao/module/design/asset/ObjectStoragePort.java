@@ -20,7 +20,7 @@ public interface ObjectStoragePort {
     /** 读取对象内容（校验/消毒用；调用方负责关闭流） */
     java.io.InputStream getObject(String objectKey);
 
-    /** 覆写对象（EXIF 消毒后回写） */
+    /** 服务端写对象；已审核内容必须写入客户端无写权限的独立不可变 key。 */
     void putObject(String objectKey, byte[] content);
 
     /** 短期下载 URL */

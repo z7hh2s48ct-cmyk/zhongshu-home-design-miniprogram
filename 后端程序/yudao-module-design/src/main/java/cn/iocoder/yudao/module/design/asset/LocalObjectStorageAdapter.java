@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.design.asset;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -10,9 +11,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
- * 本地文件系统对象存储适配器（P0 开发/测试用；COS Adapter 就绪后替换）
+ * 本地文件系统对象存储适配器（开发/测试用）。
+ *
+ * 装配条件（T13-01）：zhongshu.design.asset.storage.provider=local；真实腾讯云 COS 由 B2 的 cos 实现替换。
+ * 生产禁止 local，由 ZhongshuWiringEnvironmentPostProcessor 启动守卫强制。
  */
 @Component
+@ConditionalOnProperty(prefix = "zhongshu.design.asset.storage", name = "provider", havingValue = "local")
 public class LocalObjectStorageAdapter implements ObjectStoragePort {
 
     private final Path root;

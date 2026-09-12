@@ -25,6 +25,8 @@ const userStore = useUserStore()
 const all_permission = '*:*:*'
 export const hasPermission = (permission: string[]) => {
   return (
+    // 与后端 PermissionServiceImpl 的超级管理员规则保持一致。
+    userStore.roles.includes('super_admin') ||
     userStore.permissions.has(all_permission) ||
     permission.some((permission) => userStore.permissions.has(permission))
   )

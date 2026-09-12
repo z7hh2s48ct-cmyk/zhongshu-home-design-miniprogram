@@ -3,7 +3,9 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">{{ isEdit ? '编辑充值方案' : '新增充值方案' }}</h1>
-        <div class="zs-page-subtitle">价格字段创建后如需调整，建议停用旧方案并新增（历史订单引用快照）</div>
+        <div class="zs-page-subtitle"
+          >价格字段创建后如需调整，建议停用旧方案并新增（历史订单引用快照）</div
+        >
       </div>
       <el-button @click="$router.back()">返回</el-button>
     </div>
@@ -11,7 +13,12 @@
     <div class="zs-table-card zs-form">
       <el-form label-width="120px" label-position="left">
         <el-form-item label="方案名称" required>
-          <el-input v-model="form.name" placeholder="如：体验包 50 元" maxlength="40" style="max-width: 360px" />
+          <el-input
+            v-model="form.name"
+            placeholder="如：体验包 50 元"
+            maxlength="40"
+            style="max-width: 360px"
+          />
         </el-form-item>
         <el-form-item label="金额(元)" required>
           <el-input-number v-model="amountYuan" :min="1" :max="100000" />

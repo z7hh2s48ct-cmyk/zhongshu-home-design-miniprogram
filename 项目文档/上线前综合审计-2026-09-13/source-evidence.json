@@ -1,0 +1,362 @@
+[
+  {
+    "id": "E01",
+    "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/RealServiceWiringPolicy.java",
+    "line": 37,
+    "description": "生产识别、真实端口与禁止 profile"
+  },
+  {
+    "id": "E02",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/StubContentModerationAdapter.java",
+    "line": 17,
+    "description": "目前唯一内容审核实现"
+  },
+  {
+    "id": "E03",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/AssetService.java",
+    "line": 128,
+    "description": "上传扫描、净化与资产状态推进"
+  },
+  {
+    "id": "E04",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/CosObjectStorageAdapter.java",
+    "line": 130,
+    "description": "预签名 PUT 与固定对象键"
+  },
+  {
+    "id": "E05",
+    "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/config/AiProviderConfiguration.java",
+    "line": 13,
+    "description": "AI 配置不等于运行时实现"
+  },
+  {
+    "id": "E06",
+    "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+    "line": 68,
+    "description": "任务领取时 provider 标识"
+  },
+  {
+    "id": "E07",
+    "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuJobDriver.java",
+    "line": 95,
+    "description": "结果结算与超时处理覆盖范围"
+  },
+  {
+    "id": "E08",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RechargePaymentService.java",
+    "line": 101,
+    "description": "预下单建单与重试"
+  },
+  {
+    "id": "E09",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RechargePaymentService.java",
+    "line": 649,
+    "description": "支付补偿扫描"
+  },
+  {
+    "id": "E10",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RechargePaymentService.java",
+    "line": 969,
+    "description": "退款冲正及事件载荷"
+  },
+  {
+    "id": "E11",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/notification/MessageService.java",
+    "line": 35,
+    "description": "站内信消费者与用户标识"
+  },
+  {
+    "id": "E12",
+    "path": "后端程序/yudao-server/src/main/resources/application-local.yaml",
+    "line": 240,
+    "description": "local 开启后台模拟身份"
+  },
+  {
+    "id": "E13",
+    "path": "后端程序/yudao-framework/yudao-spring-boot-starter-security/src/main/java/cn/iocoder/yudao/framework/security/core/filter/TokenAuthenticationFilter.java",
+    "line": 105,
+    "description": "模拟后台身份路径"
+  },
+  {
+    "id": "E14",
+    "path": "前端程序/miniprogram/utils/config.js",
+    "line": 5,
+    "description": "小程序当前后端地址和环境"
+  },
+  {
+    "id": "E15",
+    "path": "前端程序/miniprogram/utils/assets.js",
+    "line": 21,
+    "description": "资产上传根据环境分支"
+  },
+  {
+    "id": "E16",
+    "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/DevDataSeeder.java",
+    "line": 68,
+    "description": "干净环境案例种子"
+  },
+  {
+    "id": "E17",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/catalog/CaseCatalogService.java",
+    "line": 165,
+    "description": "公司案例发布要求"
+  },
+  {
+    "id": "E18",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/privacy/PrivacyService.java",
+    "line": 92,
+    "description": "数据主体请求只登记"
+  },
+  {
+    "id": "E19",
+    "path": "前端程序/miniprogram/utils/api.js",
+    "line": 216,
+    "description": "隐私同意及数据请求 API 封装"
+  },
+  {
+    "id": "E20",
+    "path": "前端程序/miniprogram/pages/profile/services.js",
+    "line": 12,
+    "description": "客服入口只弹提示"
+  },
+  {
+    "id": "E21",
+    "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuExportWorker.java",
+    "line": 58,
+    "description": "导出筛选快照未进入生成逻辑"
+  },
+  {
+    "id": "E22",
+    "path": "后端程序/yudao-framework/yudao-spring-boot-starter-web/src/main/java/cn/iocoder/yudao/framework/web/core/filter/CacheRequestBodyWrapper.java",
+    "line": 27,
+    "description": "控制器之前读取完整请求体"
+  },
+  {
+    "id": "E23",
+    "path": "scripts/verify.mjs",
+    "line": 260,
+    "description": "默认后端门禁只选合同测试"
+  },
+  {
+    "id": "E24",
+    "path": "后端程序/yudao-server/src/test/java/cn/iocoder/yudao/ZhongshuErrorCodeRegistryTest.java",
+    "line": 66,
+    "description": "错误码注册表精确匹配测试"
+  },
+  {
+    "id": "E25",
+    "path": "前端程序/scripts/check-release.js",
+    "line": 1,
+    "description": "小程序发布静态检查"
+  },
+  {
+    "id": "E26",
+    "path": "前端程序/miniprogram/pages/ai-design/result.js",
+    "line": 61,
+    "description": "调整入口实际为重新生成"
+  },
+  {
+    "id": "E27",
+    "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/api/PricingPort.java",
+    "line": 10,
+    "description": "价格确认规则"
+  },
+  {
+    "id": "E28",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/session/UserSessionService.java",
+    "line": 133,
+    "description": "会话吊销能力存在，但缺业务关闭编排"
+  },
+  {
+    "id": "E29",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RefundRecoveryJob.java",
+    "line": 35,
+    "description": "退款补偿默认关闭"
+  },
+  {
+    "id": "E30",
+    "path": "管理后台/src/router/modules/zs.ts",
+    "line": 1,
+    "description": "管理端业务路由"
+  },
+  {
+    "id": "E31",
+    "path": "前端程序/miniprogram/app.json",
+    "line": 1,
+    "description": "小程序 28 个主包页面"
+  },
+  {
+    "id": "E32",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/wechat/RealWechatIdentityAdapter.java",
+    "line": 1,
+    "description": "真实微信 code2session 适配器"
+  },
+  {
+    "id": "E33",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/wechat/WechatPaymentAdapter.java",
+    "line": 1,
+    "description": "真实微信支付、查单、退款及验签适配器"
+  },
+  {
+    "id": "E34",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/accesscode/AccessCodeService.java",
+    "line": 1,
+    "description": "授权码生成、状态与交付"
+  },
+  {
+    "id": "E35",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/accesscode/AccessCodeRedemptionService.java",
+    "line": 1,
+    "description": "兑换并绑定账号"
+  },
+  {
+    "id": "E36",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/accesscode/AccessGrantService.java",
+    "line": 1,
+    "description": "授权查询与撤销"
+  },
+  {
+    "id": "E37",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppProfileController.java",
+    "line": 1,
+    "description": "用户资料白名单更新"
+  },
+  {
+    "id": "E38",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/project/DesignProjectService.java",
+    "line": 1,
+    "description": "设计项目、候选选择与结果版本"
+  },
+  {
+    "id": "E39",
+    "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/job/AiJobOrchestrationService.java",
+    "line": 1,
+    "description": "任务准入、租约、隔离结果"
+  },
+  {
+    "id": "E40",
+    "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/job/AiJobSettlementService.java",
+    "line": 1,
+    "description": "槽位结算与点数退回"
+  },
+  {
+    "id": "E41",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/BudgetCatalogService.java",
+    "line": 1,
+    "description": "地区、物料、价目表与套餐"
+  },
+  {
+    "id": "E42",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/ItemizedBudgetService.java",
+    "line": 1,
+    "description": "明细预算计算与保存"
+  },
+  {
+    "id": "E43",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/AdminBudgetRevisionService.java",
+    "line": 1,
+    "description": "预算补项、修订与冻结"
+  },
+  {
+    "id": "E44",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/BudgetQuoteService.java",
+    "line": 1,
+    "description": "报价发布、撤回与客户端查询"
+  },
+  {
+    "id": "E45",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/BudgetService.java",
+    "line": 1,
+    "description": "兼容旧区间预算"
+  },
+  {
+    "id": "E46",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/submission/SubmissionReviewService.java",
+    "line": 1,
+    "description": "投稿、审核、退修、重提、发布"
+  },
+  {
+    "id": "E47",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/rights/RightsGrantService.java",
+    "line": 1,
+    "description": "公开展示和生成引用授权"
+  },
+  {
+    "id": "E48",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/points/PointAccountService.java",
+    "line": 1,
+    "description": "点数账本、预留与冲正"
+  },
+  {
+    "id": "E49",
+    "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/PointAdminController.java",
+    "line": 1,
+    "description": "调点审批和权限"
+  },
+  {
+    "id": "E50",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+    "line": 1,
+    "description": "导出建单、短票据和审计查询"
+  },
+  {
+    "id": "E51",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccountAdminController.java",
+    "line": 1,
+    "description": "C 端用户只读管理"
+  },
+  {
+    "id": "E52",
+    "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/admin/AiJobAdminController.java",
+    "line": 1,
+    "description": "AI 任务管理接口"
+  },
+  {
+    "id": "E53",
+    "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/DashboardAdminController.java",
+    "line": 1,
+    "description": "运营工作台统计"
+  },
+  {
+    "id": "E54",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppSupportEntryController.java",
+    "line": 1,
+    "description": "客服配置接口"
+  },
+  {
+    "id": "E55",
+    "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppDataSubjectRequestController.java",
+    "line": 1,
+    "description": "数据导出与关闭账号请求"
+  },
+  {
+    "id": "E56",
+    "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/OutboxDispatcherService.java",
+    "line": 1,
+    "description": "至少一次投递、重试及死信"
+  },
+  {
+    "id": "E57",
+    "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/SensitiveLoggingPolicy.java",
+    "line": 1,
+    "description": "敏感日志配置守卫"
+  },
+  {
+    "id": "E58",
+    "path": ".github/workflows/verify.yml",
+    "line": 1,
+    "description": "当前 CI 四条验证链"
+  },
+  {
+    "id": "E59",
+    "path": "前端程序/miniprogram/pages/ai-design/generating.wxml",
+    "line": 1,
+    "description": "进度页面静态内容"
+  },
+  {
+    "id": "E60",
+    "path": "前端程序/miniprogram/pages/ai-design/publish.wxml",
+    "line": 1,
+    "description": "投稿页面静态图片与校验数量"
+  }
+]

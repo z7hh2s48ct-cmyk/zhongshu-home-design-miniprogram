@@ -47,7 +47,7 @@ export function createVitePlugins(isBuild = false, env: Record<string, string> =
           '@/utils/dict': ['DICT_TYPE']
         }
       ],
-      dts: !isBuild && 'src/types/auto-imports.d.ts',
+      dts: 'src/types/auto-imports.d.ts',
       resolvers: [ElementPlusResolver()],
       eslintrc: {
         enabled: false, // Default `false`
@@ -57,7 +57,7 @@ export function createVitePlugins(isBuild = false, env: Record<string, string> =
     }),
     Components({
       // 生成自定义 `auto-components.d.ts` 全局声明
-      dts: !isBuild && 'src/types/auto-components.d.ts',
+      dts: 'src/types/auto-components.d.ts',
       // 自定义组件的解析器
       resolvers: [ElementPlusResolver()],
       globs: ['src/components/**/**.{vue, md}', '!src/components/DiyEditor/components/mobile/**']

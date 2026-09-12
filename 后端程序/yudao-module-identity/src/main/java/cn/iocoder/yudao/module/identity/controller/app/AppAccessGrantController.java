@@ -37,7 +37,7 @@ public class AppAccessGrantController {
         String token = authorization != null && authorization.startsWith("Bearer ")
                 ? authorization.substring(7) : authorization;
         UserSessionService.AccessContext context = sessionService.validateAccessToken(token)
-                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("会话无效或已过期"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(401, "会话无效或已过期"));
 
         AppAccessGrantRespVO vo = new AppAccessGrantRespVO();
         vo.setStatus(context.restricted() ? "NONE" : "ACTIVE");

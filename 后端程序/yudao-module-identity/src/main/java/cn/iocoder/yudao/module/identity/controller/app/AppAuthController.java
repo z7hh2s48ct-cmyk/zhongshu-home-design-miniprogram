@@ -43,12 +43,12 @@ public class AppAuthController {
     @Operation(summary = "刷新会话：旧 access/refresh 吊销并签发新对（grant 状态实时重判）")
     public CommonResult<AppAuthLoginRespVO> refresh(@RequestBody Map<String, String> body) {
         var tokens = sessionService.refresh(body.get("refreshToken"))
-                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("刷新令牌无效或已过期"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(401, "刷新令牌无效或已过期"));
         AppAuthLoginRespVO resp = new AppAuthLoginRespVO();
         resp.setAccessToken(tokens.accessToken());
         resp.setRefreshToken(tokens.refreshToken());
         resp.setExpiresAt(java.time.LocalDateTime.ofInstant(tokens.expiresAt(), java.time.ZoneOffset.UTC));
-        resp.setRestricted(false);
+        resp.setRestricted(tokens.restricted());
         return success(resp);
     }
 

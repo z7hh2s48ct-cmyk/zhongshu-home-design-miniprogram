@@ -87,18 +87,21 @@ public class CaseCatalogService {
                            List<String> tags) {
         return txTemplate.execute(status -> {
             List<Map<String, Object>> caseRows = jdbcTemplate.queryForList(
-                    "SELECT current_version_id, publication_status FROM design_case "
+                    "SELECT current_version_id, publication_status, source_type FROM design_case "
                             + "WHERE id = ? AND deleted = FALSE FOR UPDATE", caseId);
             if (caseRows.isEmpty() || caseRows.get(0).get("current_version_id") == null) {
                 throw exception(RESOURCE_FORBIDDEN);
             }
             Map<String, Object> c = caseRows.get(0);
+            if (!"COMPANY".equals(c.get("source_type"))) throw exception(RESOURCE_FORBIDDEN);
             Long currentVersionId = ((Number) c.get("current_version_id")).longValue();
             Long currentVersion = jdbcTemplate.queryForObject(
                     "SELECT version FROM design_case_version WHERE id = ?", Long.class, currentVersionId);
             if (currentVersion == null || currentVersion != expectedVersion) {
                 throw exception(STATE_VERSION_CONFLICT);
             }
+            if ("PUBLISHED".equals(c.get("publication_status")))
+                throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "已上架案例请先下架后再编辑");
             long newVersionId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO design_case_version (id, case_id, version, title, description, style_code, "
@@ -128,7 +131,53 @@ public class CaseCatalogService {
         });
     }
 
-    /** 上架：公司案例 DRAFT/OFFLINE → PUBLISHED（新发布事实）；AI 案例走 P7A 审核链 */
+    /** 上传前后都校验状态与版本，避免慢扫描期间发生覆盖。 */
+    public CaseDetail requireImageEditable(long caseId, long expectedVersion, String role, Integer floorNo) {
+        var detail = getAdminCase(caseId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+        if (!"COMPANY".equals(detail.sourceType()) || "PUBLISHED".equals(detail.publicationStatus()))
+            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "仅公司草稿或已下架案例可更换图纸，请先下架");
+        if (detail.version() != expectedVersion) throw exception(STATE_VERSION_CONFLICT);
+        if (role == null || !List.of("COVER", "ELEVATION", "FLOOR_PLAN").contains(role)
+                || ("FLOOR_PLAN".equals(role) ? floorNo == null || floorNo < 1 || floorNo > detail.floorCount() : floorNo != null))
+            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "图纸角色或楼层无效");
+        return detail;
+    }
+
+    /** 换图沿用既有版本化编辑；仅替换新版本对应槽位，不覆盖历史图纸。 */
+    public long replaceCompanyImage(long caseId, long adminId, long expectedVersion, long assetId, String role, Integer floorNo) {
+        return txTemplate.execute(status -> {
+            jdbcTemplate.queryForList("SELECT id FROM design_case WHERE id=? AND deleted=FALSE FOR UPDATE", caseId);
+            var detail = requireImageEditable(caseId, expectedVersion, role, floorNo);
+            boolean usable = Boolean.TRUE.equals(jdbcTemplate.queryForObject("SELECT EXISTS(SELECT 1 FROM asset WHERE id=? AND owner_user_id=? "
+                    + "AND asset_type='CASE_IMAGE' AND source_type='COMPANY' AND upload_status='ACCEPTED' "
+                    + "AND security_scan_status='PASSED' AND moderation_status='PASSED' AND deleted=FALSE)", Boolean.class, assetId, adminId));
+            if (!usable) throw exception(RESOURCE_FORBIDDEN);
+            long versionId = updateCase(caseId, adminId, expectedVersion, detail.title(), detail.description(), detail.styleCode(),
+                    detail.floorCount(), detail.buildingArea(), detail.faceWidth(), detail.depth(), detail.rooms(), detail.tags());
+            jdbcTemplate.update("DELETE FROM design_case_asset WHERE case_version_id=? AND asset_role=? AND floor_no IS NOT DISTINCT FROM ?", versionId, role, floorNo);
+            jdbcTemplate.update("INSERT INTO design_case_asset(id,case_version_id,asset_id,asset_role,floor_no,creator) VALUES(?,?,?,?,?,?)",
+                    IdWorker.getId(), versionId, assetId, role, floorNo, String.valueOf(adminId));
+            return expectedVersion + 1;
+        });
+    }
+
+    /** 公司上架的最低图纸门禁，不把缺图或未校验/未授权的资产发布给用户。 */
+    public void requireCompanyPublishable(long caseId) {
+        var detail = getAdminCase(caseId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+        if (!"COMPANY".equals(detail.sourceType())) throw exception(RESOURCE_FORBIDDEN);
+        var images = jdbcTemplate.queryForList("SELECT ca.asset_role, ca.floor_no, a.id, a.upload_status, a.security_scan_status, a.moderation_status, "
+                + "EXISTS(SELECT 1 FROM asset_rights_grant g WHERE g.asset_id=a.id AND g.scope='PUBLIC_DISPLAY' AND g.status='ACTIVE' "
+                + "AND g.effective_at<=now() AND (g.expires_at IS NULL OR g.expires_at>now()) AND g.deleted=FALSE) AS granted "
+                + "FROM design_case_asset ca LEFT JOIN asset a ON a.id=ca.asset_id AND a.deleted=FALSE "
+                + "JOIN design_case c ON c.current_version_id=ca.case_version_id WHERE c.id=? AND ca.deleted=FALSE", caseId);
+        boolean cover = images.stream().anyMatch(i -> "COVER".equals(i.get("asset_role")));
+        boolean plan = images.stream().anyMatch(i -> "FLOOR_PLAN".equals(i.get("asset_role")));
+        if (!cover || !plan || images.stream().anyMatch(i -> i.get("id") == null || !"ACCEPTED".equals(i.get("upload_status"))
+                || !"PASSED".equals(i.get("security_scan_status")) || !"PASSED".equals(i.get("moderation_status")) || !Boolean.TRUE.equals(i.get("granted"))))
+            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "上架至少需要封面和平面图，所有关联图纸须校验通过并有有效公开展示授权");
+    }
+
+    /** 上架：公司案例 DRAFT/OFFLINE → PUBLISHED；AI 案例走审核链。 */
     public boolean publish(long caseId, String operator) {
         return txTemplate.execute(status -> {
             List<String> sourceRows = jdbcTemplate.query(
@@ -143,6 +192,7 @@ public class CaseCatalogService {
             }
             Long versionId = jdbcTemplate.queryForObject(
                     "SELECT current_version_id FROM design_case WHERE id = ?", Long.class, caseId);
+            requireCompanyPublishable(caseId);
             int updated = jdbcTemplate.update(
                     "UPDATE design_case SET publication_status = 'PUBLISHED', update_time = now() "
                             + "WHERE id = ? AND publication_status IN ('DRAFT','OFFLINE')", caseId);
@@ -254,12 +304,21 @@ public class CaseCatalogService {
 
     /** 详情：仅 PUBLISHED 对外可见（后台管理另行查询） */
     public Optional<CaseDetail> getPublishedCase(long caseId) {
+        return getCaseDetail(caseId, true);
+    }
+
+    public Optional<CaseDetail> getAdminCase(long caseId) {
+        return getCaseDetail(caseId, false);
+    }
+
+    private Optional<CaseDetail> getCaseDetail(long caseId, boolean publishedOnly) {
         List<CaseDetail> rows = jdbcTemplate.query(
                 "SELECT c.id, v.id AS version_row_id, v.title, v.description, c.source_type, "
                         + "v.style_code, v.floor_count, v.building_area, v.face_width, v.depth, "
                         + "v.version, c.publication_status, v.rooms, v.tags FROM design_case c "
                         + "JOIN design_case_version v ON v.id = c.current_version_id "
-                        + "WHERE c.id = ? AND c.deleted = FALSE AND c.publication_status = 'PUBLISHED'",
+                        + "WHERE c.id = ? AND c.deleted = FALSE AND v.deleted = FALSE"
+                        + (publishedOnly ? " AND c.publication_status = 'PUBLISHED'" : ""),
                 (rs, i) -> {
                     long vid = rs.getLong("version_row_id");
                     return new CaseDetail(caseId, rs.getString("title"), rs.getString("description"),
@@ -275,6 +334,29 @@ public class CaseCatalogService {
                 },
                 caseId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    public record FloorPlan(String assetId, Integer floorNo) {}
+
+    /** 保留实际楼层编号；未分层的方案图不得伪装为第一层。调用方先校验案例可见性。 */
+    public List<FloorPlan> getFloorPlans(long caseId) {
+        return jdbcTemplate.query("SELECT a.asset_id, a.floor_no FROM design_case_asset a "
+                        + "JOIN design_case c ON c.current_version_id = a.case_version_id "
+                        + "WHERE c.id = ? AND c.deleted = FALSE AND a.deleted = FALSE "
+                        + "AND a.asset_role = 'FLOOR_PLAN' ORDER BY a.floor_no NULLS FIRST, a.id",
+                (rs, i) -> new FloorPlan(rs.getString("asset_id"), (Integer) rs.getObject("floor_no")), caseId);
+    }
+
+    /** 与生成时的最终授权校验保持同一口径；入口提示不能替代任务创建时的校验。 */
+    public boolean canUseForGeneration(long caseId) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject("SELECT count(*) > 0 AND bool_and(EXISTS ("
+                        + "SELECT 1 FROM asset_rights_grant g WHERE g.asset_id = a.asset_id "
+                        + "AND g.scope = 'GENERATION_REFERENCE' AND g.status = 'ACTIVE' "
+                        + "AND g.effective_at <= now() AND (g.expires_at IS NULL OR g.expires_at > now()) "
+                        + "AND g.deleted = FALSE)) FROM design_case c "
+                        + "JOIN design_case_asset a ON a.case_version_id = c.current_version_id "
+                        + "WHERE c.id = ? AND c.deleted = FALSE AND c.publication_status = 'PUBLISHED' "
+                        + "AND a.asset_role = 'FLOOR_PLAN' AND a.deleted = FALSE", Boolean.class, caseId));
     }
 
     /** 管理端分页：包含草稿/下架，来源与状态过滤参数化 */

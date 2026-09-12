@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-13",
+  "inventory": {
+    "mini": {
+      "executableFiles": 19,
+      "declaredTestCalls": 213
+    },
+    "backend": {
+      "ordinaryFiles": 48,
+      "declaredOrdinaryTestMethods": 533,
+      "excludedRealAcceptanceFiles": 3,
+      "contractFiles": 35,
+      "testMethods": 329,
+      "parameterizedMethods": 0
+    },
+    "admin": {
+      "executableFiles": 10,
+      "declaredTestCalls": 70
+    },
+    "e2e": {
+      "checkpoints": 54
+    }
+  }
+}

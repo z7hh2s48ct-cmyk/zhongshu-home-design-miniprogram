@@ -6,6 +6,10 @@
 # 边界：底座 system/infra 在 PG 上的初始化与回归属于平台阶段 1A/1B 门禁（见 T00 登记 §4）；
 # 本 profile 当前承载业务库基线与 CI，完整服务器 PG 启动验收在平台门禁通过后补证。
 spring:
+  data:
+    redis:
+      host: ${ZS_REDIS_HOST:127.0.0.1}
+      port: ${ZS_REDIS_PORT:6379}
   flyway:
     enabled: true
     url: ${ZS_PG_URL:jdbc:postgresql://127.0.0.1:5432/zhongshu_design}
@@ -43,13 +47,30 @@ spring:
 # 安全基线：本 profile 不携带任何密钥默认值，也不打开开发便利开关。
 # 密钥缺失时兑换/发码接口按合同快速失败（AccessCodeCipher.requirePepper），不得静默降级为公开值。
 # 本机联调请追加 zsdev profile：--spring.profiles.active=local,pg,zsdev
+# T13-01：本 profile 刻意不声明各端口 provider（真实/Stub 选择）。生产必须显式配置为真实实现
+# （环境变量 ZHONGSHU_*_PROVIDER 或 -Dzhongshu.*.provider=real/cos）；缺失即被启动守卫快速失败，
+# 避免生产误装配 Stub 或静默无实现。开发默认值放在 zsdev profile。
 zhongshu:
   ai:
     # C6：internal-api 服务签名密钥——生产必须配置，空值时 internal 端点全部拒绝（快速失败）
     internal-secret: ${ZS_INTERNAL_SECRET:}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+    # D-11（EXT-05）AI Provider 配置面，2026-09-12 冻结：apilio.ai，OpenAI 兼容 /v1/chat/completions。
+    # ⚠️ 本仓库 ai-orchestration 只做编排/租约/结算，无出站生成引擎——真实 Provider 调用由外部 AI Runtime（P4D）承担，
+    #    Runtime 不在本仓库。故本块为「前向声明的配置面」：AiProviderProperties 仅启动绑定、不装配任何客户端、当前无消费者。
+    # 遵 T12「只登记已被消费的键」纪律：api-key 暂不纳入 RealServiceWiringPolicy 强制启动守卫（无消费者时纳入会令生产为无用键失败）。
+    # 安全基线：本 profile 不给任何默认值；api-key 属机密，只经部署环境 ZS_AI_API_KEY 带外注入，绝不落文件/提交；
+    #    Actuator env/configprops show-values=NEVER（见文件末）兜底不回显。
+    provider:
+      base-url: ${ZS_AI_BASE_URL:}
+      api-key: ${ZS_AI_API_KEY:}
+      model: ${ZS_AI_MODEL:}
+      temperature: ${ZS_AI_TEMPERATURE:}
   identity:
     wechat-appid: ${ZS_WX_APPID:}
+    # T13-04：真实 code2session AppSecret——生产安全基线不给默认值；provider=real 时必须由 ZS_WX_APPSECRET 注入，
+    # 缺失即被启动守卫 RealServiceWiringPolicy 快速失败（本 profile 不声明 provider，见上方 T13-01 注释）。
+    wechat-appsecret: ${ZS_WX_APPSECRET:}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:}
@@ -59,3 +80,26 @@ zhongshu:
     driver-enabled: ${ZS_DRIVER_ENABLED:false}
     asset:
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:false}
+      # T13-11：真实 COS 私有桶所需配置——生产安全基线不给默认值；provider=cos 时必须由 ZS_COS_* 注入，
+      # 缺失即被启动守卫 RealServiceWiringPolicy 快速失败（本 profile 不声明 provider，见上方 T13-01 注释）。
+      # secret-id/secret-key 属机密，只经部署环境带外注入，绝不落库/回显（Actuator show-values=NEVER，见文件末）。
+      storage:
+        cos:
+          endpoint: ${ZS_COS_ENDPOINT:}
+          region: ${ZS_COS_REGION:}
+          bucket: ${ZS_COS_BUCKET:}
+          secret-id: ${ZS_COS_SECRET_ID:}
+          secret-key: ${ZS_COS_SECRET_KEY:}
+          path-style-access: ${ZS_COS_PATH_STYLE_ACCESS:false}
+          api-call-timeout-ms: ${ZS_COS_API_CALL_TIMEOUT_MS:20000}
+
+# T13-02：管理端不得回显密钥——将 Actuator env/configprops 端点的值回显显式设为安全默认值 NEVER。
+# Spring Boot 3.5 默认即 never（值以 ****** 呈现），此处在生产安全基线显式声明，令「不回显密钥」不依赖框架默认。
+# 注意：这是 profile 级默认值，更高优先级来源（命令行 --management.endpoint.env.show-values=ALWAYS、环境变量）仍可覆盖；
+# 生产部署须同时确保 actuator 端点受访问控制/不公网暴露（属 T13-34 部署安全范围）。仅收敛「值回显」，不改动 local/dev 的端点暴露范围（不影响本地联调）。
+management:
+  endpoint:
+    env:
+      show-values: NEVER
+    configprops:
+      show-values: NEVER

@@ -14,8 +14,8 @@ import cn.iocoder.yudao.framework.common.util.collection.SetUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.monitor.TracerUtils;
 import cn.iocoder.yudao.framework.common.util.servlet.ServletUtils;
+import cn.iocoder.yudao.framework.web.core.util.SensitiveLogRedactor;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
-import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.util.Assert;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -184,17 +183,19 @@ public class GlobalExceptionHandler {
      * 例如说，接口上设置了 @RequestBody 实体中 xx 属性类型为 Integer，结果传递 xx 参数类型为 String
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    @SuppressWarnings("PatternVariableCanBeUsed")
-    public CommonResult<?> methodArgumentTypeInvalidFormatExceptionHandler(HttpMessageNotReadableException ex) {
-        log.warn("[methodArgumentTypeInvalidFormatExceptionHandler]", ex);
-        if (ex.getCause() instanceof InvalidFormatException) {
-            InvalidFormatException invalidFormatException = (InvalidFormatException) ex.getCause();
-            return CommonResult.error(BAD_REQUEST.getCode(), String.format("请求参数类型错误:%s", invalidFormatException.getValue()));
-        }
+    public CommonResult<?> methodArgumentTypeInvalidFormatExceptionHandler(HttpServletRequest req, HttpMessageNotReadableException ex) {
+        // T13-04 安全（codex 四轮）：请求体解析异常（畸形 JSON / 类型不匹配）的 message / cause / stackTrace 会回显原始请求体 token
+        // （如 Unrecognized token 'XXX'、InvalidFormatException.getValue()），可能含一次性登录 code / 密码等凭据。故：
+        // ① 仅记录异常类型名，绝不把原始 throwable 交给 logger；② 落库经 buildExceptionLog 统一脱敏；
+        // ③ 返回固定 400，不回显原始值；④ 不再转发 defaultExceptionHandler（避免其 log.error 原始 throwable）。
+        log.warn("[methodArgumentTypeInvalidFormatExceptionHandler][请求体解析失败({})]", ex.getClass().getName());
         if (StrUtil.startWith(ex.getMessage(), "Required request body is missing")) {
+            // 请求体缺失：message 为固定串、不含请求体内容，保留原有友好提示，无需落库
             return CommonResult.error(BAD_REQUEST.getCode(), "请求参数类型错误: request body 缺失");
         }
-        return defaultExceptionHandler(ServletUtils.getRequest(), ex);
+        // 记录脱敏后的错误日志（buildExceptionLog 对 body-parse 异常替换 message / rootCause / stackTrace）
+        createExceptionLog(req, ex);
+        return CommonResult.error(BAD_REQUEST.getCode(), "请求参数类型错误: request body 无法解析");
     }
 
     /**
@@ -339,7 +340,13 @@ public class GlobalExceptionHandler {
         }
 
         // 情况二：处理异常
-        log.error("[defaultExceptionHandler]", ex);
+        // T13-04 安全（codex 四轮）：请求体解析异常的 message / cause / stackTrace 含原始请求体 token，
+        // 不记录原始 throwable，仅记录异常类型名（落库文本亦经 buildExceptionLog 脱敏）。
+        if (SensitiveLogRedactor.isBodyParseLeak(ex)) {
+            log.error("[defaultExceptionHandler][请求体解析异常({})]", ex.getClass().getName());
+        } else {
+            log.error("[defaultExceptionHandler]", ex);
+        }
         // 插入异常日志
         createExceptionLog(req, ex);
         // 返回 ERROR CommonResult
@@ -365,23 +372,43 @@ public class GlobalExceptionHandler {
         errorLog.setUserType(WebFrameworkUtils.getLoginUserType(request));
         // 设置异常字段
         errorLog.setExceptionName(e.getClass().getName());
-        errorLog.setExceptionMessage(ExceptionUtil.getMessage(e));
-        errorLog.setExceptionRootCauseMessage(ExceptionUtil.getRootCauseMessage(e));
-        errorLog.setExceptionStackTrace(ExceptionUtil.stacktraceToString(e));
+        // T13-04 安全（codex 四轮）：请求体解析异常（HttpMessageNotReadableException / Jackson JsonProcessingException）的
+        // message、rootCauseMessage、stackTrace 文本会回显原始请求体 token（可能含一次性登录 code / 密码等凭据），
+        // 入库前统一替换为安全占位；仅保留异常类型名与下方栈帧位置元数据（class / file / method / line，不含请求体内容）。
+        if (SensitiveLogRedactor.isBodyParseLeak(e)) {
+            errorLog.setExceptionMessage(SensitiveLogRedactor.BODY_PARSE_OMITTED);
+            errorLog.setExceptionRootCauseMessage(SensitiveLogRedactor.BODY_PARSE_OMITTED);
+            errorLog.setExceptionStackTrace(SensitiveLogRedactor.BODY_PARSE_OMITTED);
+        } else {
+            errorLog.setExceptionMessage(ExceptionUtil.getMessage(e));
+            errorLog.setExceptionRootCauseMessage(ExceptionUtil.getRootCauseMessage(e));
+            errorLog.setExceptionStackTrace(ExceptionUtil.stacktraceToString(e));
+        }
+        // T13-04 安全（codex 五轮，修 P2）：栈帧可能被清空（setStackTrace(new StackTraceElement[0])），
+        // 原 Assert.notEmpty 会抛异常被 createExceptionLog 吞掉、导致整条错误日志不落库（丢失审计记录）。
+        // 改为：有栈帧则取首帧位置元数据；无栈帧则用安全占位（类名 + unknown + 行号 -1）继续落库，绝不因缺帧丢审计。
         StackTraceElement[] stackTraceElements = e.getStackTrace();
-        Assert.notEmpty(stackTraceElements, "异常 stackTraceElements 不能为空");
-        StackTraceElement stackTraceElement = stackTraceElements[0];
-        errorLog.setExceptionClassName(stackTraceElement.getClassName());
-        errorLog.setExceptionFileName(stackTraceElement.getFileName());
-        errorLog.setExceptionMethodName(stackTraceElement.getMethodName());
-        errorLog.setExceptionLineNumber(stackTraceElement.getLineNumber());
+        if (stackTraceElements != null && stackTraceElements.length > 0) {
+            StackTraceElement stackTraceElement = stackTraceElements[0];
+            errorLog.setExceptionClassName(stackTraceElement.getClassName());
+            errorLog.setExceptionFileName(stackTraceElement.getFileName());
+            errorLog.setExceptionMethodName(stackTraceElement.getMethodName());
+            errorLog.setExceptionLineNumber(stackTraceElement.getLineNumber());
+        } else {
+            errorLog.setExceptionClassName(e.getClass().getName());
+            errorLog.setExceptionFileName("unknown");
+            errorLog.setExceptionMethodName("unknown");
+            errorLog.setExceptionLineNumber(-1);
+        }
         // 设置其它字段
         errorLog.setTraceId(TracerUtils.getTraceId());
         errorLog.setApplicationName(applicationName);
         errorLog.setRequestUrl(request.getRequestURI());
         Map<String, Object> requestParams = MapUtil.<String, Object>builder()
-                .put("query", ServletUtils.getParamMap(request))
-                .put("body", ServletUtils.getBody(request)).build();
+                // T13-04 安全：错误日志会落库（全环境），查询参数与请求体均可能含一次性登录 code/密码等凭据，
+                // 入库前分别结构化脱敏（query 走 redactMap、body 走 redactJsonBody），杜绝凭据经错误日志库泄露。
+                .put("query", SensitiveLogRedactor.redactMap(ServletUtils.getParamMap(request)))
+                .put("body", SensitiveLogRedactor.redactJsonBody(ServletUtils.getBody(request))).build();
         errorLog.setRequestParams(JsonUtils.toJsonString(requestParams));
         errorLog.setRequestMethod(request.getMethod());
         errorLog.setUserAgent(ServletUtils.getUserAgent(request));

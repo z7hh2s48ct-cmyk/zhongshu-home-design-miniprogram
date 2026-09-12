@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.identity.wechat;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -9,9 +10,11 @@ import java.util.HexFormat;
 /**
  * 微信身份 Stub：同一 login code 确定性地映射到同一 openid，便于联调与自动化验证。
  *
- * 仅用于 CODE_PRESENT / AUTOMATED_VERIFIED 证据等级；真实 code2session 由 P2B（G0B 后）替换。
+ * 装配条件（T13-01）：zhongshu.identity.wechat.provider=stub。真实 code2session 由 B1 的 real 实现替换；
+ * 生产禁止 stub，由 ZhongshuWiringEnvironmentPostProcessor 启动守卫强制。
  */
 @Component
+@ConditionalOnProperty(prefix = "zhongshu.identity.wechat", name = "provider", havingValue = "stub")
 public class StubWechatIdentityAdapter implements WechatIdentityPort {
 
     @Override

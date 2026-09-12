@@ -1,0 +1,33 @@
+{
+  "reviewedAt": "2026-09-12T17:16:27.894Z",
+  "origin": "Concurrent workspace edits; not made by this audit",
+  "review": "Additive AI provider configuration and status board update; inspected separately. No outbound generation consumer was added. Does not resolve R01/R02/R18. Original 528-test result is retained for its earlier configuration, with a separate targeted configuration follow-up.",
+  "files": [
+    {
+      "path": "后端程序/.env.example",
+      "sha256": "48e714bae3737f554146d0ff22394725fc829491e425c66e27734673cfcfd7cb",
+      "initialSha256": null
+    },
+    {
+      "path": "后端程序/yudao-server/src/main/resources/application-pg.yaml",
+      "sha256": "6a518130de92d5499f37f746c43e22fb4a14e67e52bc8bc33f4e4337cb37507a",
+      "initialSha256": "6ea7a6afa0b7cfb616f73633dae099aaeb02df8416df61e356a6a737ff8c448e"
+    },
+    {
+      "path": "后端程序/yudao-server/src/main/resources/application-zsdev.yaml",
+      "sha256": "4d4812f0912c0a2a13b900f7ff2535b8bdefc59bb3e7117df46fbbdd0590047c",
+      "initialSha256": "d3751c0c21dfcdfdafcc0656393901049728a381d011daa5bef108348323d979"
+    },
+    {
+      "path": "项目文档/项目状态看板.md",
+      "sha256": "a8a99742ab347a4faed11a306a1db1f0b7101e2f9267f2624a38bf4f5f1e5624",
+      "initialSha256": null
+    }
+  ],
+  "expectedAddedStatus": [
+    " M 后端程序/.env.example",
+    " M 后端程序/yudao-server/src/main/resources/application-pg.yaml",
+    " M 后端程序/yudao-server/src/main/resources/application-zsdev.yaml",
+    " M 项目文档/项目状态看板.md"
+  ]
+}

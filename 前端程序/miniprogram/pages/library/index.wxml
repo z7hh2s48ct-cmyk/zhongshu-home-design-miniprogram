@@ -15,7 +15,7 @@
         <view class="image-wrap"><image src="{{item.image}}" mode="aspectFill" /><text>{{item.tag}}</text></view>
         <view class="case-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view>
       </view>
-      <view wx:if="{{!loading && !visibleCases.length}}" class="empty-tip">没有符合筛选条件的方案，换个筛选看看</view>
     </view>
+    <v12-state wx:if="{{!loading && !visibleCases.length}}" status="empty" icon="search" text="没有符合筛选条件的方案，换个筛选看看" card="{{false}}" />
   </view>
 </view>

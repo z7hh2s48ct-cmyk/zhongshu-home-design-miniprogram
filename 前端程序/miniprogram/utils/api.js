@@ -9,14 +9,27 @@ module.exports = {
   login: function (wxCode) {
     return http.post(BASE + '/auth/wechat-login', { code: wxCode });
   },
-  getAccessGrant: function () {
-    return http.get(BASE + '/access-grant');
+  getAccessGrant: function (options) {
+    return http.get(BASE + '/access-grant', undefined, options);
   },
   redeemAccessCode: function (accessCode) {
     return http.post(BASE + '/access-code-redemptions', { accessCode: accessCode });
   },
   getProfile: function () {
     return http.get(BASE + '/profile');
+  },
+  updateProfile: function (nickname, avatarAssetId) {
+    var body = { nickname: nickname };
+    if (avatarAssetId) body.avatarAssetId = String(avatarAssetId);
+    return http.patch(BASE + '/profile', body);
+  },
+  // 用户偏好：字段白名单由服务端决定，白名单外的键丢弃（PATCH /profile/preferences）
+  updatePreferences: function (preferences) {
+    return http.patch(BASE + '/profile/preferences', preferences || {});
+  },
+  // 客服入口配置（C06）：未配置时后端下发空串，前端据此隐藏入口，不展示打不通的假号码
+  getSupportEntry: function () {
+    return http.get(BASE + '/support-entry');
   },
 
   // ---- 首页 / 户型库 ----
@@ -42,15 +55,33 @@ module.exports = {
   },
 
   // ---- 设计项目 / AI 任务 ----
+  listProjects: function (cursor, limit) {
+    return http.get(BASE + '/design-projects?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+  },
+  listSubmissions: function (cursor, limit) {
+    return http.get(BASE + '/submissions?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+  },
+  getSubmission: function (id) {
+    return http.get(BASE + '/submissions/' + encodeURIComponent(id));
+  },
+  resubmitSubmission: function (id, note, key) {
+    return http.post(BASE + '/submissions/' + encodeURIComponent(id) + '/resubmissions', { note: note }, { 'Idempotency-Key': key });
+  },
+  listRechargeOrders: function (pageNo, pageSize) {
+    return http.get(BASE + '/recharge-orders?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
+  },
   createProject: function (body) {
     return http.post(BASE + '/design-projects', body || null);
   },
   getProject: function (projectId, jobId) {
     return http.get(BASE + '/design-projects/' + projectId + (jobId ? '?jobId=' + jobId : ''));
   },
-  createFlatJob: function (projectId, count, idemKey) {
+  getGenerationQuote: function (stage, count) {
+    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count);
+  },
+  createFlatJob: function (projectId, count, idemKey, priceConfirmation) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-jobs',
-      { count: count }, { 'Idempotency-Key': idemKey });
+      { count: count, priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
   },
   selectFlat: function (projectId, jobId, candidateId) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-selections',
@@ -89,6 +120,10 @@ module.exports = {
   getRechargeOrder: function (orderId) {
     return http.get(BASE + '/recharge-orders/' + orderId);
   },
+  // T13-24：恢复流程重新领取 payParams（禁止重复建单，同 orderNo 幂等）
+  getPayParams: function (orderId) {
+    return http.get(BASE + '/recharge-orders/' + orderId + '/pay-params');
+  },
   getPointAccount: function () {
     return http.get(BASE + '/point-account');
   },
@@ -118,10 +153,54 @@ module.exports = {
   createDownloadTicket: function (assetId) {
     return http.post(BASE + '/assets/' + assetId + '/download-tickets');
   },
+  resolveDownload: function (assetId, ticket) {
+    return http.post(BASE + '/assets/' + encodeURIComponent(assetId) + '/downloads', { ticket: ticket });
+  },
+  // 开发期资产字节端点 URL 构造器（GET 下载 / POST multipart 直传共用同一路径）。
+  // 该端点是二进制/multipart，不走 http 的 JSON 封装；此处仅收敛散落在
+  // assets.js / ai-design/index.js / avatar-upload.js 的硬编码路径，调用方自行
+  // 用 wx.request/wx.uploadFile 拼 config.apiBase + 本 URL。切 COS 预签名后此路径退役。
+  assetContentUrl: function (assetId) {
+    return BASE + '/assets/' + encodeURIComponent(assetId) + '/content';
+  },
 
   // ---- 预算 ----
+  getBudgetInputs: function (projectId, resultVersionId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-inputs'
+      + (resultVersionId == null ? '' : '?resultVersionId=' + encodeURIComponent(resultVersionId)));
+  },
+  getBudgetRegions: function () {
+    return http.get(BASE + '/budget/regions');
+  },
+  getBudgetOptions: function (regionCode) {
+    return http.get(BASE + '/budget/options?regionCode=' + encodeURIComponent(regionCode));
+  },
   createBudgetEstimate: function (projectId, input) {
     return http.post(BASE + '/design-projects/' + projectId + '/budget-estimates', input);
+  },
+  createItemizedBudget: function (projectId, input, idemKey) {
+    return http.post(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates/itemized',
+      input, { 'Idempotency-Key': idemKey });
+  },
+  getBudgetEstimate: function (budgetId, revisionId) {
+    return http.get(BASE + '/budget-estimates/' + encodeURIComponent(budgetId)
+      + (revisionId == null ? '' : '?revisionId=' + encodeURIComponent(revisionId)));
+  },
+  saveBudgetEstimate: function (budgetId, idemKey) {
+    return http.post(BASE + '/budget-estimates/' + encodeURIComponent(budgetId) + '/save', {},
+      { 'Idempotency-Key': idemKey });
+  },
+  getBudgetHistory: function (projectId, options) {
+    const query = options || {};
+    const params = ['savedOnly=' + (query.savedOnly !== false), 'limit=' + encodeURIComponent(query.limit || 20)];
+    if (query.cursor != null) params.push('cursor=' + encodeURIComponent(query.cursor));
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates?' + params.join('&'));
+  },
+  getBudgetQuotes: function (projectId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes');
+  },
+  getBudgetQuote: function (projectId, quoteId) {
+    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes/' + encodeURIComponent(quoteId));
   },
 
   // ---- 投稿 ----
@@ -139,5 +218,20 @@ module.exports = {
   },
   acceptPrivacyConsents: function () {
     return http.post(BASE + '/privacy-consents');
+  },
+
+  // ---- 数据主体请求（M10：数据导出 / 账号关闭）----
+  // P0 后端只登记与查询进度；导出包生成与关闭编排的执行链随后端接入（WS5/6/7）。
+  createDataExportRequest: function () {
+    return http.post(BASE + '/data-export-requests');
+  },
+  getDataExportRequest: function (requestId) {
+    return http.get(BASE + '/data-export-requests/' + encodeURIComponent(requestId));
+  },
+  createAccountClosureRequest: function () {
+    return http.post(BASE + '/account-closure-requests');
+  },
+  getAccountClosureRequest: function (requestId) {
+    return http.get(BASE + '/account-closure-requests/' + encodeURIComponent(requestId));
   }
 };

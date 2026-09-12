@@ -10,19 +10,20 @@ import java.util.Optional;
  */
 public interface IdentitySessionPort {
 
+    int ACCESS_GRANT_REQUIRED = 1_070_001_001;
+
     /** token 无效/过期/账号停用返回 empty；restricted 会话同样返回上下文（调用方按需处理） */
     Optional<SessionContext> resolveByBearerToken(String bearerToken);
 
     /**
      * 解析并强制要求非受限会话（审查 H4：受限会话只允许查准入状态/协议/兑换授权码）。
-     * 无效/过期/受限一律抛 AccessDeniedException，由各业务 Controller 统一使用，
-     * 替代此前各自为政的手写判断。
+     * 会话失效返回 401；受限会话返回独立业务码，资源越权仍为 403。
      */
     default SessionContext requireUnrestricted(String bearerToken) {
         SessionContext ctx = resolveByBearerToken(bearerToken)
-                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("会话无效或已过期"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(401, "会话无效或已过期"));
         if (ctx.restricted()) {
-            throw new org.springframework.security.access.AccessDeniedException("账号未激活，请先兑换授权码");
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(ACCESS_GRANT_REQUIRED, "账号未激活，请先兑换授权码");
         }
         return ctx;
     }

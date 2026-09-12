@@ -1,0 +1,163 @@
+name: 三端基线验证
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mini:
+    name: 小程序测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: 执行小程序验证
+        run: node scripts/verify.mjs mini
+
+  admin:
+    name: 管理端检查与构建
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js、pnpm 与冻结依赖
+        uses: pnpm/setup@v2
+        with:
+          version: 11.19.0
+          runtime: node@24.19.0
+          working-directory: 管理后台
+          cache: true
+          require-lockfile: true
+
+      - name: 执行管理端验证
+        run: node scripts/verify.mjs admin
+
+  backend:
+    name: 后端合同测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: 安装 JDK 17 并缓存 Maven 依赖
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version-file: 后端程序/.java-version
+          cache: maven
+          cache-dependency-path: 后端程序/**/pom.xml
+
+      - name: 执行后端普通单元与集成测试
+        run: node scripts/verify.mjs backend
+
+      - name: 上传 Surefire 测试报告
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-surefire-reports-${{ github.run_attempt }}
+          path: 后端程序/**/target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: 三端全链 E2E（54 检查点）
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@v6
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          package-manager-cache: false
+
+      - name: 安装 JDK 17 并缓存 Maven 依赖
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version-file: 后端程序/.java-version
+          cache: maven
+          cache-dependency-path: 后端程序/**/pom.xml
+
+      - name: 启动 PostgreSQL 与 Redis
+        working-directory: 后端程序
+        run: docker compose --env-file .env.example -f compose.dev.yml up -d --wait
+
+      - name: 构建后端
+        working-directory: 后端程序
+        run: ./mvnw -B -DskipTests package
+
+      - name: 启动后端并等待健康
+        shell: bash
+        run: |
+          mkdir -p artifacts/e2e
+          java -jar 后端程序/yudao-server/target/yudao-server.jar \
+            --spring.profiles.active=local,pg,zsdev \
+            --zhongshu.design.asset.storage-root="${{ github.workspace }}/artifacts/e2e/assets" \
+            > artifacts/e2e/backend.log 2>&1 &
+          echo $! > artifacts/e2e/backend.pid
+          for attempt in {1..90}; do
+            curl --fail --silent --header 'tenant-id: 1' http://127.0.0.1:48080/app-api/design/v1/home | grep --quiet '"code":0' && exit 0
+            sleep 2
+          done
+          tail -n 100 artifacts/e2e/backend.log
+          exit 1
+
+      - name: 执行 54 检查点全链回归
+        env:
+          ZS_E2E_ASSET_ROOT: ${{ github.workspace }}/artifacts/e2e/assets
+        run: node scripts/verify.mjs e2e
+
+      - name: 收集日志并停止隔离环境
+        if: always()
+        shell: bash
+        run: |
+          if test -f artifacts/e2e/backend.pid; then
+            kill "$(cat artifacts/e2e/backend.pid)" || true
+          fi
+          docker compose --env-file 后端程序/.env.example -f 后端程序/compose.dev.yml logs --no-color > artifacts/e2e/compose.log || true
+          docker compose --env-file 后端程序/.env.example -f 后端程序/compose.dev.yml down --volumes || true
+
+      - name: 上传 E2E 报告与日志
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-54-checkpoints-${{ github.run_attempt }}
+          path: |
+            artifacts/e2e/latest.json
+            artifacts/e2e/latest.md
+            artifacts/e2e/backend.log
+            artifacts/e2e/compose.log
+          if-no-files-found: warn
+          retention-days: 14

@@ -7,8 +7,8 @@ import cn.iocoder.yudao.module.identity.accesscode.AccessCodeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 import javax.sql.DataSource;
 import java.time.Instant;
@@ -20,6 +20,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@Profile("zsdev & !prod & !production")
 public class DevDataSeeder implements org.springframework.beans.factory.InitializingBean {
 
     private final JdbcTemplate jdbcTemplate;
@@ -28,6 +29,8 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
     private final AccessCodeService accessCodeService;
     private final CaseCatalogService caseCatalogService;
     private final cn.iocoder.yudao.module.design.asset.ObjectStoragePort storage;
+    private final cn.iocoder.yudao.module.design.rights.RightsGrantService rights;
+    private final org.springframework.transaction.support.TransactionTemplate seedTransaction;
 
     @Value("${zhongshu.design.seed-dev-data:false}")
     private boolean enabled;
@@ -42,16 +45,28 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
         this.accessCodeService = accessCodeService;
         this.caseCatalogService = caseCatalogService;
         this.storage = storage;
+        this.rights = new cn.iocoder.yudao.module.design.rights.RightsGrantService(dataSource);
+        this.seedTransaction = new org.springframework.transaction.support.TransactionTemplate(
+                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
     }
 
     public void afterPropertiesSet() {
         if (!enabled) {
             return;
         }
+        // InitializingBean runs before AOP; use an explicit transaction, not @Transactional.
+        seedTransaction.executeWithoutResult(status -> {
+            jdbcTemplate.execute("SELECT pg_advisory_xact_lock(9013008)");
+            initializeSeed();
+        });
+    }
+
+    private void initializeSeed() {
         Integer seeded = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM recharge_plan WHERE deleted = FALSE", Integer.class);
         if (seeded != null && seeded > 0) {
-            log.info("[DevDataSeeder][已有种子数据，跳过]");
+            seedDemoCase(); // Repairs the former partially committed seed missing display rights.
+            seedAccessCode();
             return;
         }
         jdbcTemplate.update("INSERT INTO generation_price_rule (id, stage, unit_point_cost, min_count, "
@@ -70,20 +85,31 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
 
     private void seedDemoCase() {
         long admin = 1L;
-        long caseId = caseCatalogService.createCompanyCase(admin, "云栖雅院（示例）",
+        var existing = jdbcTemplate.queryForList("SELECT c.id FROM design_case c JOIN design_case_version v ON v.id=c.current_version_id "
+                        + "WHERE v.title=? AND c.source_type='COMPANY' AND c.creator_user_id=1 AND c.deleted=FALSE ORDER BY c.id LIMIT 1",
+                Long.class, "云栖雅院（示例）");
+        long caseId = existing.isEmpty() ? caseCatalogService.createCompanyCase(admin, "云栖雅院（示例）",
                 "新中式二层自建别墅，五室三厅，带庭院", "NEW_CHINESE", 2, 168,
-                12, 10, null, List.of("新中式", "庭院"));
+                12, 10, null, List.of("新中式", "庭院")) : existing.get(0);
         long versionId = jdbcTemplate.queryForObject(
                 "SELECT current_version_id FROM design_case WHERE id = ?", Long.class, caseId);
-        long cover = putAsset("company-cases/demo-cover.png", 0x8B6F47);
-        long plan1 = putAsset("company-cases/demo-plan-1.png", 0xD4C5A9);
-        long plan2 = putAsset("company-cases/demo-plan-2.png", 0xC4B59A);
-        long elev = putAsset("company-cases/demo-elevation.png", 0xA08060);
-        insertRel(versionId, cover, "COVER", null);
-        insertRel(versionId, plan1, "FLOOR_PLAN", 1);
-        insertRel(versionId, plan2, "FLOOR_PLAN", 2);
-        insertRel(versionId, elev, "ELEVATION", null);
-        caseCatalogService.publish(caseId, "dev-seeder");
+        if (existing.isEmpty()) {
+            long cover = putAsset("accepted/dev/demo-cover.png", 0x8B6F47);
+            long plan1 = putAsset("accepted/dev/demo-plan-1.png", 0xD4C5A9);
+            long plan2 = putAsset("accepted/dev/demo-plan-2.png", 0xC4B59A);
+            long elev = putAsset("accepted/dev/demo-elevation.png", 0xA08060);
+            insertRel(versionId, cover, "COVER", null);
+            insertRel(versionId, plan1, "FLOOR_PLAN", 1);
+            insertRel(versionId, plan2, "FLOOR_PLAN", 2);
+            insertRel(versionId, elev, "ELEVATION", null);
+        }
+        for (Long assetId : jdbcTemplate.queryForList("SELECT asset_id FROM design_case_asset WHERE case_version_id=? AND deleted=FALSE", Long.class, versionId)) {
+            if (!rights.hasEffectiveGrant(assetId, "PUBLIC_DISPLAY")) {
+                rights.createGrant(admin, assetId, "PUBLIC_DISPLAY", "开发示例", "*", "示例展示", Instant.now().minusSeconds(1), null);
+            }
+        }
+        String state = jdbcTemplate.queryForObject("SELECT publication_status FROM design_case WHERE id=?", String.class, caseId);
+        if (!"PUBLISHED".equals(state)) caseCatalogService.publish(caseId, "dev-seeder");
         log.info("[DevDataSeeder][示例案例 {} 已发布]", caseId);
     }
 
@@ -110,6 +136,8 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
     }
 
     private void seedAccessCode() {
+        if (jdbcTemplate.queryForObject("SELECT count(*) FROM design_access_code_batch "
+                + "WHERE issued_by='dev-seeder' AND purpose_note='开发联调测试码' AND deleted=FALSE", Integer.class) > 0) return;
         var batch = accessCodeService.createBatch(1, "INLINE", 365, "开发联调测试码", "dev-seeder");
         batch.oneTimeCodes().forEach(code -> log.info("[DevDataSeeder][测试授权码: {}]", code));
     }

@@ -19,6 +19,9 @@ public class AppProfileRespVO {
     @Schema(description = "头像 URL（短期签名或公开地址）")
     private String avatar;
 
+    @Schema(description = "本人头像资产编号，通过现有私有资产下载链路读取")
+    private String avatarAssetId;
+
     @Schema(description = "账号状态：ACTIVE / DISABLED / CLOSED")
     private String status;
 

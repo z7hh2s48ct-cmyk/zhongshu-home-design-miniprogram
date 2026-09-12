@@ -39,6 +39,7 @@ public class RechargeOrderAdminController {
             @RequestParam(value = "paymentState", required = false) String paymentState,
             @RequestParam(value = "fulfillmentState", required = false) String fulfillmentState,
             @RequestParam(value = "abnormalOnly", required = false) Boolean abnormalOnly,
+            @RequestParam(value = "paidNoCredit", required = false) Boolean paidNoCredit,
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
         var where = new java.util.ArrayList<String>(List.of("deleted = FALSE"));
@@ -54,6 +55,10 @@ public class RechargeOrderAdminController {
         if (Boolean.TRUE.equals(abnormalOnly)) {
             where.add("(payment_state IN ('UNKNOWN', 'FAILED') OR fulfillment_state = 'FAILED')");
         }
+        if (Boolean.TRUE.equals(paidNoCredit)) {
+            where.add("payment_state = 'SUCCEEDED' AND fulfillment_state <> 'CREDITED'");
+        }
+        pageSize = Math.min(Math.max(pageSize, 1), 100);
         String base = "FROM recharge_order WHERE " + String.join(" AND ", where);
         Integer total = jdbc.queryForObject("SELECT count(*) " + base, Integer.class, args.toArray());
         var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -63,7 +68,11 @@ public class RechargeOrderAdminController {
         params.add((long) Math.max(pageNo - 1, 0) * pageSize);
         var rows = jdbc.queryForList(
                 "SELECT id, order_no, user_id, amount_cents, base_points, bonus_points, "
-                        + "payment_state, fulfillment_state, create_time "
+                        + "payment_state, fulfillment_state, create_time, "
+                        + "(SELECT channel_state FROM refund_order r WHERE r.order_id = recharge_order.id "
+                        + "AND r.deleted = FALSE ORDER BY r.id DESC LIMIT 1) AS refund_state, "
+                        + "(SELECT point_reversal_state FROM refund_order r WHERE r.order_id = recharge_order.id "
+                        + "AND r.deleted = FALSE ORDER BY r.id DESC LIMIT 1) AS reversal_state "
                         + base + " ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
                 params.toArray());
         var list = rows.stream().map(r -> {
@@ -77,6 +86,8 @@ public class RechargeOrderAdminController {
             item.put("bonusPoints", ((Number) r.get("bonus_points")).longValue());
             item.put("paymentState", r.get("payment_state"));
             item.put("fulfillmentState", r.get("fulfillment_state"));
+            item.put("refundState", r.get("refund_state"));
+            item.put("pointReversalState", r.get("reversal_state"));
             item.put("createdAt", formatter.format(((java.sql.Timestamp) r.get("create_time")).toInstant()));
             return item;
         }).toList();
@@ -115,6 +126,26 @@ public class RechargeOrderAdminController {
         result.put("amountCents", o.amountCents());
         result.put("basePoints", o.basePoints());
         result.put("bonusPoints", o.bonusPoints());
+        paymentService.getOrderDetail(o.userId(), o.orderId()).ifPresent(detail -> {
+            var zone = java.time.ZoneId.of("Asia/Shanghai");
+            result.put("userId", String.valueOf(detail.userId()));
+            result.put("createdAt", java.time.LocalDateTime.ofInstant(detail.createdAt(), zone));
+            result.put("paidAt", detail.paidAt() == null ? null : java.time.LocalDateTime.ofInstant(detail.paidAt(), zone));
+            result.put("refund", detail.refund());
+        });
+        // T13-30 前半 ①a：详情弹窗展示真实渠道字段（渠道/商户号/渠道流水号），供财务核对资金归属。
+        // 数据源 payment_transaction（UK(channel, merchant_id, channel_transaction_id)）；未支付订单无流水则不下发。
+        jdbc.queryForList(
+                "SELECT channel, merchant_id, channel_transaction_id, paid_at FROM payment_transaction "
+                        + "WHERE order_no = ? AND deleted = FALSE ORDER BY id DESC LIMIT 1", o.orderNo())
+                .stream().findFirst().ifPresent(tx -> {
+                    var zone = java.time.ZoneId.of("Asia/Shanghai");
+                    result.put("channel", tx.get("channel"));
+                    result.put("merchantId", tx.get("merchant_id"));
+                    result.put("channelTransactionId", tx.get("channel_transaction_id"));
+                    result.put("channelPaidAt", tx.get("paid_at") == null ? null
+                            : java.time.LocalDateTime.ofInstant(((java.sql.Timestamp) tx.get("paid_at")).toInstant(), zone));
+                });
         return success(result);
     }
 
@@ -136,21 +167,22 @@ public class RechargeOrderAdminController {
             @RequestParam(value = "state", required = false) String state,
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
-        var where = new java.util.ArrayList<String>(List.of("deleted = FALSE"));
+        var where = new java.util.ArrayList<String>(List.of("r.deleted = FALSE"));
         var args = new java.util.ArrayList<Object>();
         if (state != null && !state.isBlank()) {
-            where.add("channel_state = ?");
+            where.add("r.channel_state = ?");
             args.add(state);
         }
-        String base = "FROM refund_order WHERE " + String.join(" AND ", where);
+        String base = "FROM refund_order r LEFT JOIN recharge_order o ON o.id = r.order_id WHERE " + String.join(" AND ", where);
+        pageSize = Math.min(Math.max(pageSize, 1), 100);
         Integer total = jdbc.queryForObject("SELECT count(*) " + base, Integer.class, args.toArray());
         var params = new java.util.ArrayList<Object>(args);
         params.add(pageSize);
         params.add((long) Math.max(pageNo - 1, 0) * pageSize);
         var rows = jdbc.queryForList(
-                "SELECT id, order_id, refund_request_key, amount_cents, channel_refund_id, channel_state, "
-                        + "point_reversal_state, reserved_base, reserved_bonus, operator_id, create_time "
-                        + base + " ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
+                "SELECT r.id, r.order_id, r.refund_request_key, r.amount_cents, r.channel_refund_id, r.channel_state, "
+                        + "r.point_reversal_state, r.reserved_base, r.reserved_bonus, r.operator_id, r.reason, r.create_time, "
+                        + "o.order_no, o.user_id " + base + " ORDER BY r.create_time DESC, r.id DESC LIMIT ? OFFSET ?",
                 params.toArray());
         var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
                 .withZone(java.time.ZoneId.of("Asia/Shanghai"));
@@ -159,6 +191,10 @@ public class RechargeOrderAdminController {
             item.put("id", String.valueOf(((Number) r.get("id")).longValue()));
             item.put("orderId", String.valueOf(((Number) r.get("order_id")).longValue()));
             item.put("refundRequestKey", r.get("refund_request_key"));
+            item.put("refundNo", String.valueOf(r.get("id")));
+            item.put("orderNo", r.get("order_no"));
+            item.put("userId", r.get("user_id") == null ? null : String.valueOf(r.get("user_id")));
+            item.put("reason", r.get("reason"));
             item.put("amountCents", ((Number) r.get("amount_cents")).longValue());
             item.put("channelRefundId", r.get("channel_refund_id") == null ? "" : r.get("channel_refund_id"));
             item.put("channelState", r.get("channel_state"));
@@ -217,6 +253,51 @@ public class RechargeOrderAdminController {
             return success("ACTION_NOT_SUPPORTED");
         }
         return success(paymentService.reconcile(order.get().orderNo()));
+    }
+
+    @GetMapping("/payment-transactions")
+    @Operation(summary = "渠道支付流水分页（T13-30 前半 ③：复用 payment_transaction，供财务对账）")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.PAYMENT_RECONCILE + "')")
+    public CommonResult<PageResult<Map<String, Object>>> getPaymentTransactionPage(
+            @RequestParam(value = "channel", required = false) String channel,
+            @RequestParam(value = "orderNo", required = false) String orderNo,
+            @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
+            @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        var where = new java.util.ArrayList<String>(List.of("deleted = FALSE"));
+        var args = new java.util.ArrayList<Object>();
+        if (channel != null && !channel.isBlank()) {
+            where.add("channel = ?");
+            args.add(channel);
+        }
+        if (orderNo != null && !orderNo.isBlank()) {
+            where.add("order_no = ?");
+            args.add(orderNo);
+        }
+        String base = "FROM payment_transaction WHERE " + String.join(" AND ", where);
+        pageSize = Math.min(Math.max(pageSize, 1), 100);
+        Integer total = jdbc.queryForObject("SELECT count(*) " + base, Integer.class, args.toArray());
+        var params = new java.util.ArrayList<Object>(args);
+        params.add(pageSize);
+        params.add((long) Math.max(pageNo - 1, 0) * pageSize);
+        var rows = jdbc.queryForList(
+                "SELECT id, channel, merchant_id, channel_transaction_id, order_no, amount_cents, paid_at, create_time "
+                        + base + " ORDER BY create_time DESC, id DESC LIMIT ? OFFSET ?",
+                params.toArray());
+        var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(java.time.ZoneId.of("Asia/Shanghai"));
+        var list = rows.stream().map(r -> {
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("id", String.valueOf(((Number) r.get("id")).longValue()));
+            item.put("channel", r.get("channel"));
+            item.put("merchantId", r.get("merchant_id"));
+            item.put("channelTransactionId", r.get("channel_transaction_id"));
+            item.put("orderNo", r.get("order_no"));
+            item.put("amountCents", ((Number) r.get("amount_cents")).longValue());
+            item.put("paidAt", formatter.format(((java.sql.Timestamp) r.get("paid_at")).toInstant()));
+            item.put("createdAt", formatter.format(((java.sql.Timestamp) r.get("create_time")).toInstant()));
+            return item;
+        }).toList();
+        return success(new PageResult<>(list, total == null ? 0 : total.longValue()));
     }
 
 }

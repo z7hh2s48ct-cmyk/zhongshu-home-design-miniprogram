@@ -5,6 +5,8 @@ dist-ssr
 /dist*
 pnpm-debug
 auto-*.d.ts
+!src/types/auto-imports.d.ts
+!src/types/auto-components.d.ts
 .idea
 .history
 output/

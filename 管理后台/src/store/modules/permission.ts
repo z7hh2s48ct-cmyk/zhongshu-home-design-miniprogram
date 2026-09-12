@@ -2,6 +2,9 @@ import { defineStore } from 'pinia'
 import { store } from '@/store'
 import { cloneDeep } from 'lodash-es'
 import remainingRouter from '@/router/modules/remaining'
+import zsRouter from '@/router/modules/zs'
+import { buildProjectMenus } from '@/utils/projectNavigation'
+import { checkPermi } from '@/utils/permission'
 import { flatMultiLevelRoutes, generateRoute } from '@/utils/routerHelper'
 import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 
@@ -60,7 +63,12 @@ export const usePermissionStore = defineStore('permission', {
           }
         ])
         // 渲染菜单的所有路由
-        this.routers = cloneDeep(remainingRouter).concat(routerMap)
+        this.routers = buildProjectMenus(
+          cloneDeep(remainingRouter),
+          cloneDeep(zsRouter) as AppRouteRecordRaw[],
+          routerMap,
+          checkPermi
+        )
         resolve()
       })
     },

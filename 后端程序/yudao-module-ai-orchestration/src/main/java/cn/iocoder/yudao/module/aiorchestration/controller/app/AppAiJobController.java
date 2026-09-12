@@ -59,11 +59,23 @@ public class AppAiJobController {
     public static AppAiJobRespVO toVo(AiJobOrchestrationService.JobSnapshot job) {
         AppAiJobRespVO vo = new AppAiJobRespVO();
         vo.setJobId(String.valueOf(job.jobId()));
+        vo.setProjectId(job.projectRef());
+        vo.setUserId(String.valueOf(job.userId()));
         vo.setPhase(job.phase());
         vo.setStatus(job.status());
         vo.setRequestedCount(job.requestedCount());
         vo.setAcceptedCount(job.acceptedCount());
         vo.setProgress(job.progress());
+        vo.setUnitPointCost(job.unitPointCost());
+        vo.setTotalPointCost(job.totalPointCost());
+        vo.setRefundedPointCost(job.refundedPointCost());
+        vo.setNetPointCost(job.totalPointCost() == null || job.refundedPointCost() == null ? null
+                : job.totalPointCost() - job.refundedPointCost());
+        var zone = java.time.ZoneId.of("Asia/Shanghai");
+        vo.setCreatedAt(job.createdAt() == null ? null : java.time.LocalDateTime.ofInstant(job.createdAt(), zone));
+        vo.setFinishedAt(job.finishedAt() == null ? null : java.time.LocalDateTime.ofInstant(job.finishedAt(), zone));
+        vo.setAllowedActions(java.util.List.of("CREATED", "QUEUED", "RUNNING", "VALIDATING").contains(job.status())
+                ? java.util.List.of("CANCEL") : java.util.List.of());
         return vo;
     }
 

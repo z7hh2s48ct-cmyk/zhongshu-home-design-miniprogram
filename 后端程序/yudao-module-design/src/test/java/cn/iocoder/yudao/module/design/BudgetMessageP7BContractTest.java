@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.design;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.module.design.budget.BudgetService;
+import cn.iocoder.yudao.module.design.project.DesignProjectService;
 import cn.iocoder.yudao.module.design.notification.MessageService;
 import cn.iocoder.yudao.module.infra.zhongshu.delivery.OutboxDispatcherService;
 import cn.iocoder.yudao.module.infra.zhongshu.delivery.OutboxEventRecord;
@@ -66,7 +67,10 @@ class BudgetMessageP7BContractTest {
                 .load()
                 .migrate();
 
-        budget = new BudgetService(dataSource);
+        // These tests only use project creation/read; AI/assets/rights are not called.
+        var projects = new DesignProjectService(dataSource, new DataSourceTransactionManager(dataSource),
+                null, null, null, null);
+        budget = new BudgetService(dataSource, projects);
         messages = new MessageService(dataSource);
         dispatcher = new OutboxDispatcherService(dataSource, List.of(messages));
         eventPort = new JdbcReliableEventPort(dataSource);
@@ -74,8 +78,27 @@ class BudgetMessageP7BContractTest {
 
     @BeforeEach
     void cleanTables() {
-        jdbc.execute("TRUNCATE budget_rule_version, budget_estimate, user_message, message_receipt, "
+        jdbc.execute("TRUNCATE budget_quote, budget_line, budget_revision, budget_rule_version, budget_estimate, user_message, message_receipt, "
                 + "outbox_event");
+        jdbc.update("INSERT INTO design_project (id, user_id, source_type) VALUES "
+                + "(100, 1, 'SELF_UPLOAD'), (101, 1, 'SELF_UPLOAD'), (102, 1, 'SELF_UPLOAD') ON CONFLICT (id) DO NOTHING");
+    }
+
+    @Test
+    void messagesCanContinuePastFiftyAndReceiptCannotTargetAnotherUser() {
+        for (long id = 1; id <= 55; id++) jdbc.update("INSERT INTO user_message (id,user_id,message_type,title) VALUES (?,1,'AI_JOB_SETTLED','test')", id);
+        jdbc.update("INSERT INTO user_message (id,user_id,message_type,title) VALUES (100,2,'AI_JOB_SETTLED','private')");
+        var first = messages.listPage(1, null, 50);
+        assertThat(first.list()).hasSize(50);
+        assertThat(first.nextCursor()).isEqualTo("6");
+        var last = messages.listPage(1, first.nextCursor(), 50);
+        assertThat(last.list()).hasSize(5);
+        assertThat(last.nextCursor()).isNull();
+        assertThat(messages.markRead(1, 1)).isTrue();
+        assertThat(messages.markRead(1, 1)).isFalse();
+        assertThatThrownBy(() -> messages.markRead(1, 100)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> messages.listPage(1, "broken", 50)).isInstanceOf(cn.iocoder.yudao.framework.common.exception.ServiceException.class);
+        assertThat(messages.unreadCount(1)).isEqualTo(54);
     }
 
     // ========== 1. 预算：规则版本化，历史不漂移 ==========

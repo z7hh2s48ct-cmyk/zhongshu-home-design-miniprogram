@@ -60,8 +60,13 @@ class CommerceP1AContractTest {
             } else if (pkg.endsWith(".controller.internal")) {
                 assertThat(path.equals("/internal-api/design/v1") || path.startsWith("/internal-api/design/v1/"))
                         .as("internal 分面路径必须位于 /internal-api/design/v1 下：%s", path).isTrue();
+            } else if (pkg.endsWith(".controller.notify")) {
+                // T13-25：外部渠道回调入口（微信支付通知），与 app/admin 同属 /design/v1 路由空间，
+                // 但语义独立：无 Authorization 头、响应体为渠道原生 JSON（禁止 CommonResult）。
+                assertThat(path.equals("/design/v1") || path.startsWith("/design/v1/"))
+                        .as("notify 分面路径必须位于 /design/v1 下：%s", path).isTrue();
             } else {
-                throw new AssertionError("控制器必须在 controller.admin/app/internal 包下：" + controller.getName());
+                throw new AssertionError("控制器必须在 controller.admin/app/internal/notify 包下：" + controller.getName());
             }
         }
     }
@@ -104,6 +109,8 @@ class CommerceP1AContractTest {
                         AppRechargeOrderRespVO.class.getDeclaredFields())
                 .map(Field::getName).toList();
         assertThat(fields).contains("paymentState", "fulfillmentState", "allowedActions");
+        // T13-24：payParams 字段必须存在（wx.requestPayment 拉起参数）
+        assertThat(fields).as("T13-24 payParams 字段").contains("payParams");
     }
 
 

@@ -4,14 +4,18 @@ const api = require('./api');
 
 const HOME = '/pages/home/index';
 const AUTH = '/pages/auth/index';
-const PUBLIC_PAGES = [HOME, '/pages/profile/index'];
-const TAB_PAGES = [...PUBLIC_PAGES, '/pages/library/index', '/pages/ai-design/index'];
+const PUBLIC_PAGES = [HOME, '/pages/profile/index', '/pages/profile/services'];
+const TAB_PAGES = [HOME, '/pages/profile/index', '/pages/library/index', '/pages/ai-design/index'];
 const BUSINESS_PAGES = [
+  '/pages/profile/records', '/pages/profile/record',
+  '/pages/profile/edit',
   '/pages/library/index', '/pages/library/detail', '/pages/ai-design/index',
   '/pages/ai-design/generating', '/pages/ai-design/plane-select',
   '/pages/ai-design/elevation-setup', '/pages/ai-design/elevation-select',
   '/pages/ai-design/result', '/pages/ai-design/publish',
-  '/pages/budget/input', '/pages/budget/result', '/pages/wallet/recharge',
+  '/pages/budget/input', '/pages/budget/parameters', '/pages/budget/legacy',
+  '/pages/budget/body', '/pages/budget/exterior', '/pages/budget/history',
+  '/pages/budget/result', '/pages/budget/body-detail', '/pages/budget/exterior-detail', '/pages/wallet/recharge',
   '/pages/payment/success', '/pages/messagecenter/messagecenter'
 ];
 let prompting = false;
@@ -38,7 +42,10 @@ function setAuthorized(value) {
 // 启动、兑换成功后调用；测试环境无 wx.request 时静默跳过。
 function refreshFromServer() {
   if (typeof wx.request !== 'function') return Promise.resolve();
-  return api.getAccessGrant()
+  if (!require('./request').getToken()) return Promise.resolve();
+  // silent：后台对账只同步授权快照，绝不让在途请求的迟到 401/受限触发全局跳转把用户从当前页拉回激活页
+  // （承 T13-07 P2#1）；导航由页面级门禁 protectedPage/checkPage 在用户进入或交互时驱动。
+  return api.getAccessGrant({ silent: true })
     .then((grant) => setAuthorized(!!grant && grant.status === 'ACTIVE'))
     .catch(() => { /* 刷新失败保持现有快照，待下次进入页面重试 */ });
 }
@@ -50,9 +57,9 @@ function safeTarget(value) {
   return TAB_PAGES.includes(route) ? route : target;
 }
 
-function navigate(url, replace = false) {
+function navigate(url, replace = false, handlers = {}) {
   const method = TAB_PAGES.includes(url.split('?')[0]) ? 'switchTab' : replace ? 'redirectTo' : 'navigateTo';
-  wx[method]({ url, fail: navigationFailed });
+  wx[method]({ url, success: handlers.success, fail: handlers.fail || navigationFailed });
 }
 
 function openActivation(target = HOME) {

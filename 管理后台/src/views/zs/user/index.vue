@@ -10,17 +10,29 @@
     <div class="zs-table-card">
       <el-form inline class="zs-filter">
         <el-form-item label="昵称">
-          <el-input v-model="query.nickname" placeholder="昵称关键字" clearable style="width: 180px" @keyup.enter="load" />
+          <el-input
+            v-model="query.nickname"
+            placeholder="昵称关键字"
+            clearable
+            style="width: 180px"
+            @keyup.enter="search"
+          />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="query.status" clearable placeholder="全部" style="width: 150px" @change="load">
+          <el-select
+            v-model="query.status"
+            clearable
+            placeholder="全部"
+            style="width: 150px"
+            @change="search"
+          >
             <el-option label="正常" value="ACTIVE" />
             <el-option label="已停用" value="DISABLED" />
             <el-option label="已注销" value="CLOSED" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" @click="load">查询</el-button>
+          <el-button class="zs-btn-primary" @click="search">查询</el-button>
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
@@ -32,7 +44,9 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <span class="zs-tag" :class="statusClass(row.status)">{{ statusText(row.status) }}</span>
+            <span class="zs-tag" :class="statusClass(row.status)">{{
+              statusText(row.status)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="授权状态" width="110">
@@ -50,7 +64,9 @@
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" text type="primary" @click.stop="openDetail(row)">详情</el-button>
+            <el-button size="small" text type="primary" @click.stop="openDetail(row)"
+              >详情</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -59,7 +75,8 @@
         class="mt-16px"
         layout="total, sizes, prev, pager, next"
         :total="total"
-        :page-size="query.pageSize"
+        v-model:page-size="query.pageSize"
+        @size-change="search"
         v-model:current-page="query.pageNo"
         @current-change="load"
       />
@@ -69,13 +86,25 @@
       <div v-loading="detail.loading">
         <template v-if="detail.data">
           <div class="zs-detail-block">
-            <div class="zs-detail-row"><span>用户编号</span><b>{{ detail.data.id }}</b></div>
-            <div class="zs-detail-row"><span>昵称</span><b>{{ detail.data.nickname || '（未设置）' }}</b></div>
-            <div class="zs-detail-row"><span>状态</span><b>{{ statusText(detail.data.status) }}</b></div>
-            <div class="zs-detail-row"><span>可用点数</span><b>{{ detail.data.availablePoints }}</b></div>
+            <div class="zs-detail-row"
+              ><span>用户编号</span><b>{{ detail.data.id }}</b></div
+            >
+            <div class="zs-detail-row"
+              ><span>昵称</span><b>{{ detail.data.nickname || '（未设置）' }}</b></div
+            >
+            <div class="zs-detail-row"
+              ><span>状态</span><b>{{ statusText(detail.data.status) }}</b></div
+            >
+            <div class="zs-detail-row"
+              ><span>可用点数</span><b>{{ detail.data.availablePoints }}</b></div
+            >
             <div class="zs-detail-row">
               <span>统计</span>
-              <b>项目 {{ detail.data.stats?.projectCount || 0 }} · 过审投稿 {{ detail.data.stats?.approvedSubmissionCount || 0 }} · 生成任务 {{ detail.data.stats?.aiJobCount || 0 }}</b>
+              <b
+                >项目 {{ detail.data.stats?.projectCount || 0 }} · 过审投稿
+                {{ detail.data.stats?.approvedSubmissionCount || 0 }} · 生成任务
+                {{ detail.data.stats?.aiJobCount || 0 }}</b
+              >
             </div>
           </div>
 
@@ -84,7 +113,10 @@
             <el-table-column label="授权号" prop="id" width="180" />
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
-                <span class="zs-tag" :class="row.status === 'ACTIVE' ? 'zs-tag--green' : 'zs-tag--red'">
+                <span
+                  class="zs-tag"
+                  :class="row.status === 'ACTIVE' ? 'zs-tag--green' : 'zs-tag--red'"
+                >
                   {{ row.status === 'ACTIVE' ? '有效' : '已撤销' }}
                 </span>
               </template>
@@ -94,7 +126,14 @@
             </el-table-column>
             <el-table-column label="操作" width="90">
               <template #default="{ row }">
-                <el-button v-if="row.status === 'ACTIVE'" size="small" type="danger" plain @click="revoke(row)">解绑</el-button>
+                <el-button
+                  v-if="row.status === 'ACTIVE'"
+                  size="small"
+                  type="danger"
+                  plain
+                  @click="revoke(row)"
+                  >解绑</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
@@ -133,8 +172,14 @@ const total = ref(0)
 const query = reactive({ nickname: '', status: '', pageNo: 1, pageSize: 10 })
 const detail = reactive({ visible: false, loading: false, data: null as any })
 
-const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' }[s] || s)
-const statusClass = (s: string) => ({ ACTIVE: 'zs-tag--green', DISABLED: 'zs-tag--yellow', CLOSED: 'zs-tag--red' }[s] || '')
+const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' })[s] || s
+const statusClass = (s: string) =>
+  ({ ACTIVE: 'zs-tag--green', DISABLED: 'zs-tag--yellow', CLOSED: 'zs-tag--red' })[s] || ''
+
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
 
 const load = async () => {
   loading.value = true
@@ -192,9 +237,9 @@ onMounted(load)
 
 .zs-detail-block {
   padding: 12px 16px;
+  margin-bottom: 16px;
   background: #faf6f0;
   border-radius: 8px;
-  margin-bottom: 16px;
 }
 
 .zs-detail-row {

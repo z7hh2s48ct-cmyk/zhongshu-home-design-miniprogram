@@ -52,7 +52,13 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'access-code/batch',
         component: () => import('@/views/zs/accesscode/batch.vue'),
         name: 'ZsAccessCodeBatch',
-        meta: { title: '批量生成授权码', icon: 'ep:plus', noCache: true, hidden: true, activeMenu: '/zs/access-code' }
+        meta: {
+          title: '批量生成授权码',
+          icon: 'ep:plus',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/access-code'
+        }
       },
       {
         path: 'recharge-plan',
@@ -64,13 +70,52 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'recharge-plan/edit',
         component: () => import('@/views/zs/recharge/plan-edit.vue'),
         name: 'ZsRechargePlanEdit',
-        meta: { title: '编辑充值方案', noCache: true, hidden: true, activeMenu: '/zs/recharge-plan' }
+        meta: {
+          title: '编辑充值方案',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/recharge-plan'
+        }
       },
       {
         path: 'recharge-order',
         component: () => import('@/views/zs/recharge/order/index.vue'),
         name: 'ZsRechargeOrder',
         meta: { title: '充值订单', icon: 'ep:tickets' }
+      },
+      {
+        path: 'budget',
+        component: () => import('@/views/zs/budget/index.vue'),
+        name: 'ZsBudgetCatalog',
+        meta: { title: '预算配置', icon: 'ep:money', noCache: true }
+      },
+      {
+        path: 'budget-estimates',
+        component: () => import('@/views/zs/budget/estimates.vue'),
+        name: 'ZsBudgetEstimates',
+        meta: { title: '项目预算', icon: 'ep:document', noCache: true }
+      },
+      {
+        path: 'budget-estimates/:budgetId',
+        component: () => import('@/views/zs/budget/detail.vue'),
+        name: 'ZsBudgetDetail',
+        meta: {
+          title: '预算明细与修订',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/budget-estimates'
+        }
+      },
+      {
+        path: 'budget-estimates/:budgetId/quotes',
+        component: () => import('@/views/zs/budget/quote.vue'),
+        name: 'ZsBudgetQuote',
+        meta: {
+          title: '对外报价',
+          noCache: true,
+          hidden: true,
+          activeMenu: '/zs/budget-estimates'
+        }
       },
       {
         path: 'point-ledger',

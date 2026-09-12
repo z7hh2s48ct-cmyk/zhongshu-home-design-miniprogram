@@ -1,0 +1,220 @@
+{
+  "backup": "E:\\众墅之家设计平台\\.cleanup-backups\\cleanup-20260909-01\\source-before.tar",
+  "backupSha256": "4379d3bd3e0a83678b2b004e64541293f715fd0b065e3773e884bedd251c366f",
+  "historicalMigrations": [
+    {
+      "path": "后端程序/yudao-server/src/main/resources/db/migration/platform/V20260905.004__zhongshu_admin_menus.sql",
+      "sha256": "900bf9dc7ec850645e3dce8d7e0c4b33904222ac7d0e84b002e9f55546d17bed",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-infra/src/main/resources/db/migration/platform/V20260905.001__zhongshu_baseline.sql",
+      "sha256": "e7617140b1288d052c529ddd72aca30b020f832903b242d3b71d7fa967666087",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-infra/src/main/resources/db/migration/platform/V20260905.002__zhongshu_baseline_probe_index.sql",
+      "sha256": "4e8d73826e197cc6fcb6e8f1e3e3f2c900a98b3ca1ffd5ea88b6a14bf6157fd3",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-infra/src/main/resources/db/migration/platform/V20260905.003__p1c_platform_tables.sql",
+      "sha256": "a73de69383b1d18eae74835d47ed36ba53543ca3c53126155d9292d57c203647",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-identity/src/main/resources/db/migration/identity/V20260905.101__p2a_identity_access.sql",
+      "sha256": "31e03d3e65370fe378467d89b2015884687b5817de5f28d13bd329d951982262",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.201__p3a_asset_rights.sql",
+      "sha256": "74d9bc63152ebc6c04e3911a528305d7a90487723a47908e72a7fdda7d8acbd6",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.202__p3b_case_catalog.sql",
+      "sha256": "0d114ba24a2d934a82c2057eafd4da4c529ce0827cd079c579bb3ff326ce10cc",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.203__p5_design_project.sql",
+      "sha256": "2409e87ae9812cde91226a14319d52a970ffb4c67365582a13ee8b49ef0f02a6",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.204__p6_result_versions.sql",
+      "sha256": "a705787d8cbfd106d13e10c20979095ed8b38393f941c9a7aa5d9779e7c613ef",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.205__p7a_submission_review.sql",
+      "sha256": "ec80bf931261bd4f731ac5f3a4fbc46b84cd41d7c30a06399e7a8b8ed9571493",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260905.206__p7b_budget_message_privacy.sql",
+      "sha256": "1ca733b581ba3212752be0ac1b8ca071c4c51d59372bed8c9cf26544fccb250d",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260908.207__t10_itemized_budget.sql",
+      "sha256": "48ea43c86668a187024955c58398d1e4862e9325d5ef86612d9d0ecc677d56a2",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260908.208__t10_catalog_commands.sql",
+      "sha256": "00b62653ed69762aaed9b67d8ca20852d5222927424c53cfb1f4a50b01b1c2c2",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/src/main/resources/db/migration/design/V20260908.209__t10_app_budget_commands.sql",
+      "sha256": "4191d6762b1f7b69c787ba073221a67bf1c683d4ed4947e80dc4db065b37c8c5",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-commerce/src/main/resources/db/migration/commerce/V20260905.301__p4a_pricing_points.sql",
+      "sha256": "e8ab519ce3077450058fa610cefa8f495ab58b4a48e50b09bf2f0ca9ba24c895",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-commerce/src/main/resources/db/migration/commerce/V20260905.302__p8a_payment.sql",
+      "sha256": "01fcdd3a93ac6c3fbc2cfc016a64bf4eca0b853e663bb135538734715d6a5f65",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/resources/db/migration/ai-orchestration/V20260905.401__p4b_ai_job.sql",
+      "sha256": "01d865a8420dfa92fd863a6afb49533956ccbb10475a799ae32f4afa130b3fed",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/resources/db/migration/ai-orchestration/V20260905.402__p4c_task_charge.sql",
+      "sha256": "b4f5ed2132ada7711ed4405bd3a047a7e094c313d5d7be45fb4c4ff668a50e5c",
+      "unchanged": true
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/resources/db/migration/ai-orchestration/V20260906.401__c2_promotion_scan_index.sql",
+      "sha256": "f1401fab6dfb818f52fec7868eee3182359a47155da18b00a816939b9cd6e48f",
+      "unchanged": true
+    }
+  ],
+  "newMigrations": [
+    "后端程序/yudao-module-identity/src/main/resources/db/migration/identity/V20260909.102__independent_refresh_expiry.sql"
+  ],
+  "activePomComparison": [
+    {
+      "path": "后端程序/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-dependencies/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-common/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-mybatis/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-redis/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-web/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-security/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-websocket/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-monitor/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-protection/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-job/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-mq/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-excel/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-test/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-biz-tenant/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-biz-data-permission/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-framework/yudao-spring-boot-starter-biz-ip/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-server/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-system/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-infra/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-identity/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-design/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-commerce/pom.xml",
+      "sameActiveXml": true
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/pom.xml",
+      "sameActiveXml": true
+    }
+  ],
+  "runtimeBusinessLibraries": [
+    "yudao-module-ai-orchestration-2026.08-SNAPSHOT.jar",
+    "yudao-module-commerce-2026.08-SNAPSHOT.jar",
+    "yudao-module-design-2026.08-SNAPSHOT.jar",
+    "yudao-module-identity-2026.08-SNAPSHOT.jar",
+    "yudao-module-infra-2026.08-SNAPSHOT.jar",
+    "yudao-module-system-2026.08-SNAPSHOT.jar"
+  ],
+  "defaultControllerAbsent": true,
+  "jarSha256": "dcd156e71e7975488b7052a1fceb7200cec2c3d480e8d541cf82728e8ecfdbf2",
+  "jarBytes": 173327183,
+  "activePomCount": 25,
+  "removedInactiveJavaFiles": 5375,
+  "removedInactiveJavaLines": 427573
+}

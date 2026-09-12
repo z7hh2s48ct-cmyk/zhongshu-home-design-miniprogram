@@ -34,10 +34,17 @@ public class AppSubmissionRespVO {
     @Schema(description = "最近一次审核意见")
     private String reviewComment;
 
+    private String note;
+    private Boolean publicDisplayGranted;
+    private Boolean generationReferenceGranted;
+
     @Schema(description = "提交时间")
     private LocalDateTime submittedAt;
 
     @Schema(description = "当前对象允许执行的动作集合（如 RESUBMIT）")
     private List<String> allowedActions;
+
+    @Schema(description = "冻结版本图纸（审核详情使用，不包含下载凭证）")
+    private List<cn.iocoder.yudao.module.design.submission.SubmissionReviewService.PreviewAsset> previewAssets;
 
 }

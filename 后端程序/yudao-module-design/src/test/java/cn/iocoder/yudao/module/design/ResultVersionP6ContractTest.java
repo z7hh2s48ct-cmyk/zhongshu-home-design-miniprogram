@@ -271,6 +271,29 @@ class ResultVersionP6ContractTest {
                         e -> assertThat(e.getCode()).isEqualTo(1_071_000_000));
     }
 
+    @Test
+    void recoveredVersionAssetsUseFrozenSelectionsAndRemainOwnerScoped() {
+        long projectId = projectWithFlatSelected();
+        var firstJob = projects.createElevationJob(USER_A, projectId, 1, "recover-one", null);
+        runElevation(firstJob.jobId(), 1);
+        var firstCandidate = projects.promoteCandidates(USER_A, projectId, firstJob.jobId()).stream()
+                .filter(c -> c.jobId() == firstJob.jobId()).findFirst().orElseThrow();
+        var firstVersion = projects.selectElevationCandidate(USER_A, projectId, firstCandidate.candidateId());
+        Long flatAsset = jdbc.queryForObject("SELECT c.asset_id FROM design_selection s JOIN design_candidate c "
+                + "ON c.id = s.candidate_id WHERE s.project_id = ? AND s.stage = 'FLAT' AND s.deleted = FALSE", Long.class, projectId);
+        var second = projects.createRevisionRequest(USER_A, projectId, "改立面", null, 1, "recover-two");
+        runElevation(second.newJobId(), 1);
+        var nextCandidate = projects.promoteCandidates(USER_A, projectId, second.newJobId()).stream()
+                .filter(c -> c.jobId() == second.newJobId()).findFirst().orElseThrow();
+        projects.selectElevationCandidate(USER_A, projectId, nextCandidate.candidateId());
+        var rows = projects.listResultVersions(USER_A, projectId);
+        var old = rows.stream().filter(r -> ((Number) r.get("id")).longValue() == firstVersion.versionId()).findFirst().orElseThrow();
+        assertThat(old.get("selected_flat_asset_id")).isEqualTo(flatAsset);
+        assertThat(old.get("selected_elevation_asset_id")).isEqualTo(firstCandidate.assetId());
+        assertThat(rows.get(0).get("selected_elevation_asset_id")).isEqualTo(nextCandidate.assetId());
+        assertThatThrownBy(() -> projects.listResultVersions(9999, projectId)).isInstanceOf(ServiceException.class);
+    }
+
     private static class FakeQuarantineStorage implements QuarantineObjectPort {
 
         private final Map<String, byte[]> objects = new ConcurrentHashMap<>();

@@ -1,0 +1,55 @@
+{
+  "ranAt": "2026-09-08T16:59:18.555Z",
+  "mode": "isolated-vm-no-network",
+  "results": [
+    {
+      "check": "大整数项目 ID 完整性",
+      "source": "pages/ai-design/plane-select.js",
+      "inputId": "2100000000000000001",
+      "actualId": "2100000000000000000",
+      "defectObserved": true
+    },
+    {
+      "check": "大整数项目 ID 完整性",
+      "source": "pages/ai-design/elevation-select.js",
+      "inputId": "2100000000000000001",
+      "actualId": "2100000000000000000",
+      "defectObserved": true
+    },
+    {
+      "check": "同一业务 403 在不同 HTTP 状态下的处理",
+      "statusCode": 200,
+      "bodyCode": 403,
+      "tokenRetained": true,
+      "authorized": true,
+      "redirects": [],
+      "rejection": {
+        "code": 403,
+        "msg": "没有该资源权限"
+      }
+    },
+    {
+      "check": "同一业务 403 在不同 HTTP 状态下的处理",
+      "statusCode": 403,
+      "bodyCode": 403,
+      "tokenRetained": false,
+      "authorized": false,
+      "redirects": [
+        "/pages/auth/index"
+      ],
+      "rejection": {
+        "code": -1,
+        "msg": "请重新登录"
+      }
+    },
+    {
+      "check": "查单响应校准显示金额/点数及关闭状态",
+      "expectedPrice": 10,
+      "actualPrice": 999,
+      "expectedPoints": 110,
+      "actualPoints": 1998,
+      "statusText": "处理中",
+      "defectObserved": true
+    }
+  ]
+}

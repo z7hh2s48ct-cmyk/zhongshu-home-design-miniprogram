@@ -122,6 +122,48 @@ class DesignProjectP5ContractTest {
                 + "effective_at) VALUES (9101, 'FLAT', 10, 1, 4, now() - interval '1 minute')");
     }
 
+    @Test
+    void confirmedPriceMustMatchActualChargeAndRetryKeepsOriginalJob() {
+        points.credit(USER_A, "RECHARGE_BASE_CREDIT", 100, "recharge_order", "price", "seed-price", null, null);
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
+        var price = new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation("9101", 1);
+        jdbc.update("UPDATE generation_price_rule SET unit_point_cost=15, version=2 WHERE id=9101");
+        assertThatThrownBy(() -> projects.createFlatJob(USER_A, projectId, 2, "price-key", price))
+                .isInstanceOfSatisfying(cn.iocoder.yudao.framework.common.exception.ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_072_000_001));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_job", Long.class)).isZero();
+        var accepted = new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation("9101", 2);
+        long job = projects.createFlatJob(USER_A, projectId, 2, "price-key", accepted).jobId();
+        assertThat(jdbc.queryForObject("SELECT total_point_cost FROM ai_task_charge WHERE job_id=?", Long.class, job)).isEqualTo(30);
+        jdbc.update("UPDATE generation_price_rule SET version=3 WHERE id=9101");
+        assertThat(projects.createFlatJob(USER_A, projectId, 2, "price-key", accepted).jobId()).isEqualTo(job);
+        assertThat(jdbc.queryForObject("SELECT available_points FROM design_point_account WHERE user_id=?", Long.class, USER_A)).isEqualTo(70);
+    }
+
+    @Test
+    void projectRecoveryFindsOwnedLatestJobAndMovesToElevationAfterFlatSelection() {
+        points.credit(USER_A, "RECHARGE_BASE_CREDIT", 100, "recharge_order", "resume", "seed-resume", null, null);
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
+        var controller = new cn.iocoder.yudao.module.design.controller.app.AppDesignProjectController();
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "designProjectService", projects);
+        cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort identities = token -> java.util.Optional.of(
+                new cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort.SessionContext(USER_A, "app", "id", false));
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "identitySessionPort", identities);
+        long jobId = projects.createFlatJob(USER_A, projectId, 2, "resume-job").jobId();
+        var running = controller.getProject(String.valueOf(projectId), null, "owner").getData();
+        assertThat(running.getJobId()).isEqualTo(String.valueOf(jobId));
+        assertThat(running.getResumeAction()).isEqualTo("POLL_JOB");
+        jdbc.update("UPDATE ai_job SET status='SUCCEEDED', accepted_count=2 WHERE id=?", jobId);
+        assertThat(controller.getProject(String.valueOf(projectId), null, "owner").getData().getResumeAction()).isEqualTo("SELECT_FLAT");
+        jdbc.update("INSERT INTO design_selection (id,project_id,stage,candidate_id,selected_by) VALUES (8801,?,'FLAT',8802,?)", projectId, USER_A);
+        var selected = controller.getProject(String.valueOf(projectId), null, "owner").getData();
+        assertThat(selected.getResumeAction()).isEqualTo("CREATE_ELEVATION_JOB");
+        assertThat(selected.getJobId()).isNull();
+        assertThat(selected.getStage()).isEqualTo("ELEVATION");
+        assertThat(orchestration.latestJob(USER_B, projectId, "FLAT")).isEmpty();
+        assertThat(orchestration.latestJob(USER_A, projectId + 1, "FLAT")).isEmpty();
+    }
+
     @BeforeEach
     void cleanTables() {
         jdbc.execute("TRUNCATE design_project, design_requirement_snapshot, design_candidate, "
@@ -170,6 +212,10 @@ class DesignProjectP5ContractTest {
             rights.createGrant(ADMIN, asset2, "GENERATION_REFERENCE", "平台", "*", "*",
                     Instant.now(), null);
         }
+        jdbc.update("INSERT INTO design_case_asset(id,case_version_id,asset_id,asset_role) VALUES(?,?,?,'COVER')",
+                com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), versionId, asset1);
+        rights.createGrant(ADMIN, asset1, "PUBLIC_DISPLAY", "平台", "*", "*", Instant.now(), null);
+        rights.createGrant(ADMIN, asset2, "PUBLIC_DISPLAY", "平台", "*", "*", Instant.now(), null);
         assertThat(catalog.publish(caseId, "admin")).isTrue();
         return caseId;
     }

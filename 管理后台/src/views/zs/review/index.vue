@@ -8,7 +8,7 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="load">
+      <el-tabs v-model="activeTab" @tab-change="search">
         <el-tab-pane label="待审核" name="SUBMITTED" />
         <el-tab-pane label="已通过" name="APPROVED" />
         <el-tab-pane label="已退回" name="CHANGES_REQUESTED" />
@@ -29,14 +29,20 @@
         <el-table-column label="当前轮次" prop="currentRound" width="90" />
         <el-table-column label="公开展示" width="90">
           <template #default="{ row }">
-            <span class="zs-tag" :class="row.publicDisplayGranted ? 'zs-tag--green' : 'zs-tag--gray'">
+            <span
+              class="zs-tag"
+              :class="row.publicDisplayGranted ? 'zs-tag--green' : 'zs-tag--gray'"
+            >
               {{ row.publicDisplayGranted ? '已授权' : '未授权' }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="生成参考" width="90">
           <template #default="{ row }">
-            <span class="zs-tag" :class="row.generationReferenceGranted ? 'zs-tag--green' : 'zs-tag--gray'">
+            <span
+              class="zs-tag"
+              :class="row.generationReferenceGranted ? 'zs-tag--green' : 'zs-tag--gray'"
+            >
               {{ row.generationReferenceGranted ? '已授权' : '未授权' }}
             </span>
           </template>
@@ -46,7 +52,9 @@
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="120">
           <template #default="{ row }">
-            <span class="zs-link" @click="$router.push(`/zs/review/${row.submissionId}`)">去审核 ›</span>
+            <span class="zs-link" @click="$router.push(`/zs/review/${row.submissionId}`)"
+              >去审核 ›</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -58,14 +66,20 @@
         <el-table-column label="当前轮次" prop="currentRound" width="90" />
         <el-table-column label="公开展示" width="90">
           <template #default="{ row }">
-            <span class="zs-tag" :class="row.publicDisplayGranted ? 'zs-tag--green' : 'zs-tag--gray'">
+            <span
+              class="zs-tag"
+              :class="row.publicDisplayGranted ? 'zs-tag--green' : 'zs-tag--gray'"
+            >
               {{ row.publicDisplayGranted ? '已授权' : '未授权' }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="生成参考" width="90">
           <template #default="{ row }">
-            <span class="zs-tag" :class="row.generationReferenceGranted ? 'zs-tag--green' : 'zs-tag--gray'">
+            <span
+              class="zs-tag"
+              :class="row.generationReferenceGranted ? 'zs-tag--green' : 'zs-tag--gray'"
+            >
               {{ row.generationReferenceGranted ? '已授权' : '未授权' }}
             </span>
           </template>
@@ -75,7 +89,9 @@
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="120">
           <template #default="{ row }">
-            <span class="zs-link" @click="$router.push(`/zs/review/${row.submissionId}`)">查看详情 ›</span>
+            <span class="zs-link" @click="$router.push(`/zs/review/${row.submissionId}`)"
+              >查看详情 ›</span
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -84,7 +100,12 @@
         <el-button type="success" plain :loading="bulkLoading" @click="doBulkReview('APPROVE')">
           批量通过（{{ selection.length }}）
         </el-button>
-        <el-button type="warning" plain :loading="bulkLoading" @click="doBulkReview('CHANGES_REQUESTED')">
+        <el-button
+          type="warning"
+          plain
+          :loading="bulkLoading"
+          @click="doBulkReview('CHANGES_REQUESTED')"
+        >
           批量退回（{{ selection.length }}）
         </el-button>
         <el-button type="danger" plain :loading="bulkLoading" @click="doBulkReview('REJECT')">
@@ -119,9 +140,13 @@ const query = reactive({ status: 'SUBMITTED', pageNo: 1, pageSize: 10 })
 const selection = ref<any[]>([])
 const bulkLoading = ref(false)
 
+const search = () => {
+  query.pageNo = 1
+  return load()
+}
+
 const load = async () => {
   query.status = activeTab.value
-  query.pageNo = 1
   selection.value = []
   loading.value = true
   try {
@@ -165,7 +190,9 @@ const doBulkReview = async (decision: string) => {
     const ok = items.filter((i: any) => i.success).length
     const failed = items.filter((i: any) => !i.success)
     if (failed.length) {
-      ElMessage.warning(`完成 ${ok} 项，失败 ${failed.length} 项：${failed.map((f: any) => f.targetId).join('、')}`)
+      ElMessage.warning(
+        `完成 ${ok} 项，失败 ${failed.length} 项：${failed.map((f: any) => f.targetId).join('、')}`
+      )
     } else {
       ElMessage.success(`已完成 ${ok} 项`)
     }
@@ -175,5 +202,4 @@ const doBulkReview = async (decision: string) => {
   }
 }
 onMounted(load)
-watch(activeTab, load)
 </script>

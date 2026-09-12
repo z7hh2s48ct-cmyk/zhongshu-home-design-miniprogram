@@ -2,6 +2,9 @@ package cn.iocoder.yudao.module.identity.controller.app;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.module.identity.account.AccountLoginService;
+import cn.iocoder.yudao.module.identity.account.AccountProfileService;
+import cn.iocoder.yudao.module.identity.controller.app.vo.AppProfileUpdateReqVO;
+import jakarta.validation.Valid;
 import cn.iocoder.yudao.module.identity.controller.app.vo.AppProfileRespVO;
 import cn.iocoder.yudao.module.identity.session.UserSessionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,8 +27,7 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 /**
  * "我的"页基础信息（页面 15）。
  *
- * 只下发身份与授权态：设计点余额走 GET /design/v1/point-account，
- * 设计/投稿统计走各自模块的列表端点——本端点不跨模块聚合，保持四模块零依赖。
+ * 下发身份、实时授权态与跨域只读统计；设计点余额走 GET /design/v1/point-account。
  */
 @Tag(name = "小程序 - 个人信息")
 @RestController
@@ -40,6 +42,9 @@ public class AppProfileController {
     private AccountLoginService accountLoginService;
 
     @Resource
+    private AccountProfileService accountProfileService;
+
+    @Resource
     private javax.sql.DataSource dataSource;
 
     @GetMapping
@@ -52,7 +57,8 @@ public class AppProfileController {
         AppProfileRespVO vo = new AppProfileRespVO();
         vo.setId(profile.accountId());
         vo.setNickname(profile.nickname());
-        vo.setAvatar(profile.avatar());
+        vo.setAvatarAssetId(AccountProfileService.avatarAssetId(profile.avatar()));
+        vo.setAvatar(vo.getAvatarAssetId() == null ? profile.avatar() : null);
         vo.setStatus(profile.status());
         // restricted 由会话校验实时联表判定，撤销授权后下一次请求即降级
         vo.setAccessGrantStatus(context.restricted() ? "NONE" : "ACTIVE");
@@ -74,7 +80,9 @@ public class AppProfileController {
         stats.put("projectCount", (int) count(jdbc,
                 "SELECT count(*) FROM design_project WHERE user_id = ? AND deleted = FALSE", accountId));
         stats.put("publishedCount", (int) count(jdbc,
-                "SELECT count(*) FROM case_submission WHERE user_id = ? AND status = 'APPROVED' AND deleted = FALSE",
+                "SELECT count(*) FROM case_submission s JOIN design_case c ON c.id = s.published_case_id "
+                        + "WHERE s.user_id = ? AND s.deleted = FALSE AND c.deleted = FALSE "
+                        + "AND c.publication_status = 'PUBLISHED'",
                 accountId));
         return stats;
     }
@@ -93,11 +101,21 @@ public class AppProfileController {
         return success(accountLoginService.updatePreferences(context.accountId(), preferences));
     }
 
+    @PatchMapping
+    @Operation(summary = "修改本人昵称与已通过校验的头像")
+    public CommonResult<Boolean> updateProfile(
+            @Valid @RequestBody AppProfileUpdateReqVO body,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        UserSessionService.AccessContext context = requireContext(authorization);
+        if (context.restricted()) throw new cn.iocoder.yudao.framework.common.exception.ServiceException(cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort.ACCESS_GRANT_REQUIRED, "请先激活账号");
+        return success(accountProfileService.update(context.accountId(), body.getNickname(), body.getAvatarAssetId()));
+    }
+
     private UserSessionService.AccessContext requireContext(String authorization) {
         String token = authorization != null && authorization.startsWith("Bearer ")
                 ? authorization.substring(7) : authorization;
         return sessionService.validateAccessToken(token)
-                .orElseThrow(() -> new AccessDeniedException("会话无效或已过期"));
+                .orElseThrow(() -> new cn.iocoder.yudao.framework.common.exception.ServiceException(401, "会话无效或已过期"));
     }
 
 }

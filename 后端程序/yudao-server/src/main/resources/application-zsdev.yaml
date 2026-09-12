@@ -2,7 +2,10 @@
 # 启用方式：--spring.profiles.active=local,pg,zsdev
 #
 # ⚠️ 本文件内的密钥是公开的占位值，仅用于本机联调，严禁用于任何共享或生产环境。
-# 生产只启用 local,pg（或 prod,pg），密钥由环境变量/密钥托管注入，缺失即快速失败。
+# 生产只启用 pg,prod，需注册真实外部服务适配器并从环境注入密钥；禁止组合 local/dev/zsdev。
+# T13-01：真实/Stub 由各端口 provider 键选择——本 profile 默认全部 stub/local（字面值，便于 @ConditionalOnProperty 直接判定）；
+# 逐项联调用环境变量覆盖对应端口（松散绑定，优先级高于本文件），如 ZHONGSHU_IDENTITY_WECHAT_PROVIDER=real；
+# 只填密钥不会切换实现。生产启用 stub/local 会被启动守卫 ZhongshuWiringEnvironmentPostProcessor 拒绝。
 #
 # 与 pg profile 的分工：
 # - pg     = 数据库基线 + 生产安全默认（无密钥、不播种、不开内容端点）
@@ -12,12 +15,35 @@ zhongshu:
     # C6 internal-api 签名联调占位值；生产由密钥托管注入，缺失时 internal 端点全部拒绝
     internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
+    # D-11（EXT-05）AI Provider 配置面，2026-09-12 冻结：apilio.ai，OpenAI 兼容。开发默认值只给非机密项（base-url/model/temperature）；
+    # api-key 属机密，本 profile 留空——P4D 外部 Runtime 联调时由环境变量 ZS_AI_API_KEY 带外注入，绝不写入本文件。
+    # ⚠️ 当前本仓库无 Java 消费者（生成引擎在外部 Runtime），本块仅为配置面前向声明（AiProviderProperties 仅绑定不装配客户端）。
+    provider:
+      base-url: ${ZS_AI_BASE_URL:https://api.apilio.ai/v1}
+      api-key: ${ZS_AI_API_KEY:}
+      model: ${ZS_AI_MODEL:gpt-5.6-sol}
+      temperature: ${ZS_AI_TEMPERATURE:0.7}
   identity:
-    # 无真实 AppID 时用 Stub 身份适配器，登录链路可在开发者工具内跑通
+    # 填真实 AppID 不会自动切换实现；需同时把下方 wechat.provider 设为 real（B1 就绪后）
     wechat-appid: ${ZS_WX_APPID:stub-appid}
+    # T13-04：真实 code2session 所需 AppSecret，仅 provider=real 时被 RealWechatIdentityAdapter 消费；
+    # 本 profile 默认留空（stub 模式不需要）。切 real 前必须由环境变量 ZS_WX_APPSECRET 注入，否则启动守卫拒绝。
+    wechat-appsecret: ${ZS_WX_APPSECRET:}
+    wechat:
+      # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B1 真实 code2session
+      provider: stub
+      # T13-04 code2session 端点基址：默认微信正式端点；隔离测试将其指向本地 FakeHttpServer（绝不触达真实微信）
+      base-url: ${ZS_WX_BASE_URL:https://api.weixin.qq.com}
+      # T13-04 有界超时（毫秒）：建连/读取分别限时，微信不可达时不会无限阻塞请求线程
+      connect-timeout-ms: ${ZS_WX_CONNECT_TIMEOUT_MS:3000}
+      read-timeout-ms: ${ZS_WX_READ_TIMEOUT_MS:5000}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:ZGV2LW9ubHktYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzISEh}
+  commerce:
+    payment:
+      # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B4 微信支付
+      provider: stub
   design:
     # 启动时写入计价规则/充值方案/预算规则/示例案例/测试授权码；已存在则跳过
     seed-dev-data: ${ZS_SEED_DEV_DATA:true}
@@ -28,6 +54,24 @@ zhongshu:
     cancel-grace-minutes: ${ZS_CANCEL_GRACE_MINUTES:10}
     no-runtime-grace-minutes: ${ZS_NO_RUNTIME_GRACE_MINUTES:30}
     asset:
+      storage:
+        # T13-01 实现选择：local=本地文件（本 profile 默认）；cos=B2 腾讯云 COS 私有桶
+        provider: local
+        # T13-11：切 provider=cos 时由 CosObjectStorageAdapter 消费。本 profile 默认 local，故以下留空即可；
+        # 逐项联调用环境变量覆盖（如 ZS_COS_ENDPOINT/ZS_COS_REGION/ZS_COS_BUCKET）。机密 secret-id/secret-key
+        # 只经部署环境带外注入，绝不写入本文件；留空且 provider=cos 时启动守卫 RealServiceWiringPolicy 拒绝。
+        # path-style-access：腾讯 COS 用虚拟主机式（false，SDK 自动拼 {bucket}.{endpoint}）；MinIO 兼容端用 true。
+        cos:
+          endpoint: ${ZS_COS_ENDPOINT:}
+          region: ${ZS_COS_REGION:}
+          bucket: ${ZS_COS_BUCKET:}
+          secret-id: ${ZS_COS_SECRET_ID:}
+          secret-key: ${ZS_COS_SECRET_KEY:}
+          path-style-access: ${ZS_COS_PATH_STYLE_ACCESS:false}
+          api-call-timeout-ms: ${ZS_COS_API_CALL_TIMEOUT_MS:20000}
+      moderation:
+        # T13-01 实现选择：stub=直通（内容审核 B3 后置，本期不接真实审核）；real=后续批次真实审核
+        provider: stub
       # 本地存储的 local:// URL 无法被小程序 image 组件加载，开发期凭一次性票据流式输出字节；
       # 切 COS 后关闭，由 COS 签名 URL 取代
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:true}

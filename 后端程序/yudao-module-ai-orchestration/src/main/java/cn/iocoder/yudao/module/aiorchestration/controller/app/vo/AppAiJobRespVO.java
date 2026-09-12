@@ -16,6 +16,8 @@ public class AppAiJobRespVO {
     @Schema(description = "项目编号")
     private String projectId;
 
+    private String userId;
+
     @Schema(description = "阶段：FLAT / ELEVATION")
     private String phase;
 
@@ -29,10 +31,16 @@ public class AppAiJobRespVO {
     private Integer acceptedCount;
 
     @Schema(description = "单价（设计点）")
-    private Integer unitPointCost;
+    private Long unitPointCost;
 
     @Schema(description = "总扣点（快照）")
-    private Integer totalPointCost;
+    private Long totalPointCost;
+
+    @Schema(description = "结算实际退点；未结算或无结算记录时为空")
+    private Long refundedPointCost;
+
+    @Schema(description = "结算后净消耗；未结算时为空")
+    private Long netPointCost;
 
     @Schema(description = "进度百分比 0~100")
     private Integer progress;

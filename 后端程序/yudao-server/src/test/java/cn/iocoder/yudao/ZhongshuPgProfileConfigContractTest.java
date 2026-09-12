@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -97,6 +98,60 @@ class ZhongshuPgProfileConfigContractTest {
         assertThat(locations).isNotBlank();
         for (String module : List.of("platform", "identity", "design", "commerce", "ai-orchestration")) {
             assertThat(locations).as("迁移 locations 必须包含 " + module).contains("classpath:db/migration/" + module);
+        }
+    }
+
+    /**
+     * 安全守卫（T13-01）：pg 是生产安全基线，绝不把任何端口 provider 默认成开发替身（stub/local），
+     * 否则「生产禁止 Stub」合同会退化为静默装配替身。生产 provider 只允许留空（缺失即启动守卫快速失败）
+     * 或显式真实值；开发默认值只放 zsdev profile。
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void pgProfileMustNotDefaultAnyPortToStubProvider() throws Exception {
+        Map<String, Object> zhongshu = (Map<String, Object>) loadPgProfile().get("zhongshu");
+        List<String> stubProviders = new ArrayList<>();
+        collectStubProviders(zhongshu, "zhongshu", stubProviders);
+        assertThat(stubProviders)
+                .as("pg profile 不得把任何 provider 设为开发替身（stub/local）")
+                .isEmpty();
+    }
+
+    /**
+     * 安全守卫（T13-02）：pg 生产安全基线必须把 Actuator env/configprops 的值回显显式设为安全默认 NEVER，
+     * 使「管理端不回显密钥」不依赖框架默认（Boot 3.5 默认 never）。本测试锁定该 profile 级默认值；
+     * 更高优先级来源（命令行/环境变量）仍可覆盖，生产须配合 actuator 访问控制（T13-34），此处不承诺不可覆盖。
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void pgProfileMustHardenActuatorSecretEcho() throws Exception {
+        Map<String, Object> management = (Map<String, Object>) loadPgProfile().get("management");
+        assertThat(management).as("pg profile 必须包含 management 配置块").isNotNull();
+        Map<String, Object> endpoint = (Map<String, Object>) management.get("endpoint");
+        assertThat(endpoint).as("management.endpoint 必须存在").isNotNull();
+        for (String ep : List.of("env", "configprops")) {
+            Map<String, Object> node = (Map<String, Object>) endpoint.get(ep);
+            assertThat(node).as("management.endpoint." + ep + " 必须存在").isNotNull();
+            assertThat(String.valueOf(node.get("show-values")))
+                    .as("management.endpoint." + ep + ".show-values 必须为 NEVER（不回显密钥值）")
+                    .isEqualToIgnoringCase("NEVER");
+        }
+    }
+
+    private void collectStubProviders(Object node, String path, List<String> out) {
+        if (node instanceof Map<?, ?> map) {
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                String key = String.valueOf(e.getKey());
+                String childPath = path + "." + key;
+                Object value = e.getValue();
+                if ("provider".equals(key) && value != null) {
+                    String v = String.valueOf(value).trim();
+                    if (v.equals("stub") || v.equals("local")) {
+                        out.add(childPath + "=" + v);
+                    }
+                }
+                collectStubProviders(value, childPath, out);
+            }
         }
     }
 

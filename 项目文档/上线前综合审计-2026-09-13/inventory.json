@@ -1,0 +1,1333 @@
+{
+  "generatedAt": "2026-09-12T16:51:08.971Z",
+  "head": "ef195160142e43a7a37d44d71216cf6db085b456",
+  "metrics": {
+    "miniOwn": {
+      "files": 114,
+      "lines": 5574,
+      "largest": [
+        {
+          "path": "前端程序/miniprogram/pages/budget/input.js",
+          "lines": 252,
+          "bytes": 15597
+        },
+        {
+          "path": "前端程序/miniprogram/utils/api.js",
+          "lines": 238,
+          "bytes": 10381
+        },
+        {
+          "path": "前端程序/miniprogram/utils/request.js",
+          "lines": 213,
+          "bytes": 15611
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-selection.js",
+          "lines": 208,
+          "bytes": 12077
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-view.js",
+          "lines": 182,
+          "bytes": 18058
+        },
+        {
+          "path": "前端程序/miniprogram/utils/budget-draft.js",
+          "lines": 166,
+          "bytes": 7978
+        },
+        {
+          "path": "前端程序/miniprogram/pages/ai-design/index.js",
+          "lines": 155,
+          "bytes": 6922
+        },
+        {
+          "path": "前端程序/miniprogram/utils/access.js",
+          "lines": 151,
+          "bytes": 5945
+        },
+        {
+          "path": "前端程序/miniprogram/pages/auth/index.js",
+          "lines": 150,
+          "bytes": 9920
+        },
+        {
+          "path": "前端程序/miniprogram/pages/library/detail.js",
+          "lines": 134,
+          "bytes": 7218
+        },
+        {
+          "path": "前端程序/miniprogram/pages/wallet/recharge.js",
+          "lines": 133,
+          "bytes": 5375
+        },
+        {
+          "path": "前端程序/miniprogram/pages/library/index.js",
+          "lines": 111,
+          "bytes": 4421
+        }
+      ]
+    },
+    "adminBusiness": {
+      "files": 26,
+      "lines": 6983,
+      "largest": [
+        {
+          "path": "管理后台/src/views/zs/budget/detail.vue",
+          "lines": 1041,
+          "bytes": 38896
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/index.vue",
+          "lines": 666,
+          "bytes": 23671
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/quote.vue",
+          "lines": 444,
+          "bytes": 16500
+        },
+        {
+          "path": "管理后台/src/views/zs/points/ledger/index.vue",
+          "lines": 409,
+          "bytes": 13991
+        },
+        {
+          "path": "管理后台/src/views/zs/budget/revision-form.ts",
+          "lines": 380,
+          "bytes": 14424
+        },
+        {
+          "path": "管理后台/src/views/zs/case/create.vue",
+          "lines": 363,
+          "bytes": 12504
+        },
+        {
+          "path": "管理后台/src/views/zs/case/index.vue",
+          "lines": 361,
+          "bytes": 11738
+        },
+        {
+          "path": "管理后台/src/views/zs/dashboard/index.vue",
+          "lines": 354,
+          "bytes": 10531
+        },
+        {
+          "path": "管理后台/src/views/zs/recharge/order/index.vue",
+          "lines": 334,
+          "bytes": 12964
+        },
+        {
+          "path": "管理后台/src/views/zs/review/detail.vue",
+          "lines": 268,
+          "bytes": 8576
+        },
+        {
+          "path": "管理后台/src/views/zs/user/index.vue",
+          "lines": 263,
+          "bytes": 8821
+        },
+        {
+          "path": "管理后台/src/views/zs/export/index.vue",
+          "lines": 228,
+          "bytes": 7347
+        }
+      ]
+    },
+    "backendBusiness": {
+      "files": 200,
+      "lines": 18918,
+      "largest": [
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/RechargePaymentService.java",
+          "lines": 1032,
+          "bytes": 57565
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/project/DesignProjectService.java",
+          "lines": 672,
+          "bytes": 37384
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/catalog/CaseCatalogService.java",
+          "lines": 550,
+          "bytes": 31381
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/CosObjectStorageAdapter.java",
+          "lines": 519,
+          "bytes": 32682
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/AdminBudgetRevisionService.java",
+          "lines": 493,
+          "bytes": 41482
+        },
+        {
+          "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/job/AiJobOrchestrationService.java",
+          "lines": 490,
+          "bytes": 27411
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/submission/SubmissionReviewService.java",
+          "lines": 475,
+          "bytes": 29124
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/BudgetCatalogService.java",
+          "lines": 456,
+          "bytes": 34427
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/asset/AssetService.java",
+          "lines": 455,
+          "bytes": 23704
+        },
+        {
+          "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/budget/ItemizedBudgetService.java",
+          "lines": 362,
+          "bytes": 29773
+        },
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/payment/wechat/WechatPaymentAdapter.java",
+          "lines": 355,
+          "bytes": 19030
+        },
+        {
+          "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/points/PointAccountService.java",
+          "lines": 336,
+          "bytes": 16132
+        }
+      ]
+    },
+    "backendInfra": {
+      "files": 22,
+      "lines": 880,
+      "largest": [
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/JdbcDeliveryPort.java",
+          "lines": 190,
+          "bytes": 8988
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/OutboxDispatcherService.java",
+          "lines": 112,
+          "bytes": 5693
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/event/JdbcReliableEventPort.java",
+          "lines": 49,
+          "bytes": 1835
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/audit/AuditEventMessage.java",
+          "lines": 42,
+          "bytes": 859
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/audit/JdbcAuditPort.java",
+          "lines": 42,
+          "bytes": 1644
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/api/AiJobPort.java",
+          "lines": 41,
+          "bytes": 1621
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/ExportJobSnapshot.java",
+          "lines": 41,
+          "bytes": 621
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/DeliveryPort.java",
+          "lines": 38,
+          "bytes": 1794
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/api/IdentitySessionPort.java",
+          "lines": 35,
+          "bytes": 1508
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/TicketConsumption.java",
+          "lines": 34,
+          "bytes": 680
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/event/OutboxEventMessage.java",
+          "lines": 34,
+          "bytes": 804
+        },
+        {
+          "path": "后端程序/yudao-module-infra/src/main/java/cn/iocoder/yudao/module/infra/zhongshu/delivery/ExportJobRequest.java",
+          "lines": 31,
+          "bytes": 689
+        }
+      ]
+    },
+    "backendServer": {
+      "files": 9,
+      "lines": 1247,
+      "largest": [
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/SensitiveLoggingPolicy.java",
+          "lines": 422,
+          "bytes": 32373
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/RealServiceWiringPolicy.java",
+          "lines": 212,
+          "bytes": 15465
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuExportWorker.java",
+          "lines": 165,
+          "bytes": 7834
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/ZhongshuJobDriver.java",
+          "lines": 156,
+          "bytes": 8103
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/dev/DevDataSeeder.java",
+          "lines": 146,
+          "bytes": 7230
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/wiring/ZhongshuWiringEnvironmentPostProcessor.java",
+          "lines": 53,
+          "bytes": 3192
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/resources/db/migration/platform/V20260905.004__zhongshu_admin_menus.sql",
+          "lines": 45,
+          "bytes": 3714
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/java/cn/iocoder/yudao/server/YudaoServerApplication.java",
+          "lines": 37,
+          "bytes": 1792
+        },
+        {
+          "path": "后端程序/yudao-server/src/main/resources/db/migration-undo/platform/V20260905.004__undo_zhongshu_admin_menus.sql",
+          "lines": 11,
+          "bytes": 372
+        }
+      ]
+    }
+  },
+  "controllerFiles": 38,
+  "endpoints": [
+    {
+      "method": "GET",
+      "route": "/design/v1/ai-jobs",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/admin/AiJobAdminController.java",
+      "line": 32,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.AI_JOB_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/ai-jobs/{jobId}",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/admin/AiJobAdminController.java",
+      "line": 48,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.AI_JOB_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/ai-jobs/{jobId}",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/app/AppAiJobController.java",
+      "line": 33,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/ai-jobs/{jobId}/cancellation-requests",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/app/AppAiJobController.java",
+      "line": 43,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/internal-api/design/v1/ai-jobs/claims",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+      "line": 60,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/internal-api/design/v1/ai-jobs/{jobId}/lease-renewals",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+      "line": 83,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/internal-api/design/v1/ai-jobs/{jobId}/progress-events",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+      "line": 93,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/internal-api/design/v1/ai-jobs/{jobId}/result-events",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+      "line": 105,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/internal-api/design/v1/ai-jobs/{jobId}/failure-events",
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/controller/internal/AiJobInternalController.java",
+      "line": 120,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/point-ledger",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/PointAdminController.java",
+      "line": 41,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.POINTS_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/manual-point-adjustments",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/PointAdminController.java",
+      "line": 65,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.POINTS_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/manual-point-adjustments",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/PointAdminController.java",
+      "line": 100,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.POINTS_ADJUST + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/manual-point-adjustments/{adjustmentId}/review-decisions",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/PointAdminController.java",
+      "line": 116,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.POINTS_ADJUST + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-orders",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 35,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.RECHARGE_ORDER_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/recharge-orders/{orderId}/refund-requests",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 100,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-orders/{orderId}",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 112,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.RECHARGE_ORDER_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/recharge-orders/{orderId}/reconciliation",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 152,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/refund-orders",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 163,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/refund-orders/{refundOrderId}",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 211,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/recharge-orders/{orderId}/reconciliation-actions",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 241,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/payment-transactions",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargeOrderAdminController.java",
+      "line": 258,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.PAYMENT_RECONCILE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-plans",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargePlanAdminController.java",
+      "line": 35,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.RECHARGE_PLAN_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/recharge-plans",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargePlanAdminController.java",
+      "line": 75,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.RECHARGE_PLAN_MANAGE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/recharge-plans/{planId}",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/admin/RechargePlanAdminController.java",
+      "line": 89,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.RECHARGE_PLAN_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/generation-price-quotes",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppGenerationPriceController.java",
+      "line": 22,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/point-account",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppPointController.java",
+      "line": 43,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/point-ledger",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppPointController.java",
+      "line": 57,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/recharge-orders",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppRechargeOrderController.java",
+      "line": 48,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-orders",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppRechargeOrderController.java",
+      "line": 65,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-orders/{orderId}",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppRechargeOrderController.java",
+      "line": 79,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-orders/{orderId}/pay-params",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppRechargeOrderController.java",
+      "line": 97,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/recharge-plans",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/app/AppRechargePlanController.java",
+      "line": 31,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/payments/wechat/notify",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/notify/WechatPayNotifyController.java",
+      "line": 84,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/payments/wechat/refund-notify",
+      "path": "后端程序/yudao-module-commerce/src/main/java/cn/iocoder/yudao/module/commerce/controller/notify/WechatPayNotifyController.java",
+      "line": 99,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/regions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 28,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/regions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 35,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/budget/regions/{regionId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 41,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/items",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 47,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/items",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 54,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/budget/items/{itemId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 60,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/options",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 66,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/options",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 73,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/budget/options/{optionId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 79,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/prices",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 85,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/prices",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 93,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/budget/prices/{priceId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 99,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/prices/{priceId}/publish",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 105,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_PRICE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/prices/{priceId}/disable",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetCatalogController.java",
+      "line": 111,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_PRICE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/estimates/{budgetId}/quotes",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetQuoteController.java",
+      "line": 27,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/quotes/{quoteId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetQuoteController.java",
+      "line": 34,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/estimates/{budgetId}/quotes",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetQuoteController.java",
+      "line": 41,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUOTE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/quotes/{quoteId}/publish",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetQuoteController.java",
+      "line": 48,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUOTE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/quotes/{quoteId}/withdraw",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetQuoteController.java",
+      "line": 55,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUOTE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/estimates",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetRevisionController.java",
+      "line": 27,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/estimates/{budgetId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetRevisionController.java",
+      "line": 36,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/estimates/{budgetId}/revisions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetRevisionController.java",
+      "line": 43,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_QUERY + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/estimates/{budgetId}/revisions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetRevisionController.java",
+      "line": 50,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_EDIT + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget/estimates/{budgetId}/items/{lineId}/template",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/AdminBudgetRevisionController.java",
+      "line": 57,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.BUDGET_EDIT + \"') and @ss.hasPermission('\" + PermissionConstants.BUDGET_CONFIGURE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases/{caseId}/images",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 44,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_WRITE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/cases/{caseId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 58,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_READ + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases/{caseId}/assets/{assetId}/preview-tickets",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 74,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_READ + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/cases/{caseId}/assets/{assetId}/content",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 80,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_READ + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/cases",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 90,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_READ + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 106,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_CREATE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/cases/{caseId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 128,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_WRITE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases/{caseId}/publications",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 152,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases/{caseId}/withdrawals",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 160,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/cases/bulk-actions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/CaseAdminController.java",
+      "line": 170,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.CASE_PUBLISH + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/dashboard/summary",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/DashboardAdminController.java",
+      "line": 35,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.DASHBOARD_READ + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/export-jobs",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 38,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.EXPORT_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/export-jobs",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 51,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.EXPORT_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/export-jobs/{exportJobId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 96,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.EXPORT_MANAGE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/export-jobs/{exportJobId}/download-tickets",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 103,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.EXPORT_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/export-jobs/{exportJobId}/content",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 114,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.EXPORT_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/audit-events",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/ExportAuditAdminController.java",
+      "line": 142,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.AUDIT_READ + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/submissions/{submissionId}/assets/{assetId}/preview-tickets",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 46,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/submissions/{submissionId}/assets/{assetId}/content",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 54,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/submissions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 64,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/submissions/{submissionId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 78,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/submissions/{submissionId}/review-decisions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 89,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/submissions/bulk-review-commands",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 101,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/submissions/{submissionId}/publication-commands",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/admin/SubmissionAdminController.java",
+      "line": 132,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.SUBMISSION_REVIEW + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/assets/{assetId}/content",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetContentController.java",
+      "line": 42,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/assets/{assetId}/content",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetContentController.java",
+      "line": 61,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/assets/upload-tickets",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetController.java",
+      "line": 39,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/assets/{assetId}/complete",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetController.java",
+      "line": 55,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/assets/{assetId}/download-tickets",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetController.java",
+      "line": 64,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/assets/{assetId}/downloads",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppAssetController.java",
+      "line": 78,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/regions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetCatalogController.java",
+      "line": 24,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget/options",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetCatalogController.java",
+      "line": 30,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}/budget-inputs",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 61,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/budget-estimates",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 75,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/budget-estimates/itemized",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 107,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/budget-estimates/{estimateId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 118,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/budget-estimates/{budgetId}/save",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 128,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}/budget-estimates",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 138,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}/budget-quotes",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 160,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}/budget-quotes/{quoteId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppBudgetController.java",
+      "line": 168,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/cases",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppCaseController.java",
+      "line": 39,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/cases/{caseId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppCaseController.java",
+      "line": 55,
+      "security": "see class/service security"
+    },
+    {
+      "method": "PUT",
+      "route": "/design/v1/cases/{caseId}/favorite",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppCaseController.java",
+      "line": 83,
+      "security": "see class/service security"
+    },
+    {
+      "method": "DELETE",
+      "route": "/design/v1/cases/{caseId}/favorite",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppCaseController.java",
+      "line": 90,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/favorites",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppCaseController.java",
+      "line": 97,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 57,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 71,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 94,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/design-projects/{projectId}/result-versions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 112,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/revision-requests",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 125,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/flat-jobs",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 141,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/flat-selections",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 155,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/elevation-jobs",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 167,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/elevation-selections",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppDesignProjectController.java",
+      "line": 181,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/home",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppHomeController.java",
+      "line": 28,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/messages",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppMessageController.java",
+      "line": 39,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/messages/unread-count",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppMessageController.java",
+      "line": 52,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/messages/{messageId}/read-receipts",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppMessageController.java",
+      "line": 59,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/publication-validations",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppSubmissionController.java",
+      "line": 49,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/design-projects/{projectId}/submissions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppSubmissionController.java",
+      "line": 73,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/submissions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppSubmissionController.java",
+      "line": 91,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/submissions/{submissionId}",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppSubmissionController.java",
+      "line": 110,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/submissions/{submissionId}/resubmissions",
+      "path": "后端程序/yudao-module-design/src/main/java/cn/iocoder/yudao/module/design/controller/app/AppSubmissionController.java",
+      "line": 121,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/access-codes",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeAdminController.java",
+      "line": 34,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/access-codes/stats",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeAdminController.java",
+      "line": 65,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_MANAGE + \"')\")"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/access-codes/{codeId}",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeAdminController.java",
+      "line": 72,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_MANAGE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/access-code-batches",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeBatchAdminController.java",
+      "line": 38,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_MANAGE + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/access-code-batches/{batchId}/delivery-tickets",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeBatchAdminController.java",
+      "line": 55,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_EXPORT + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/access-code-batches/{batchId}/delivery-exports",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessCodeBatchAdminController.java",
+      "line": 67,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_EXPORT + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/access-grants/{grantId}/revocations",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccessGrantAdminController.java",
+      "line": 27,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCESS_CODE_MANAGE + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/accounts",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccountAdminController.java",
+      "line": 39,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCOUNT_READ + \"')\")"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/accounts/{accountId}",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/admin/AccountAdminController.java",
+      "line": 93,
+      "security": "@PreAuthorize(\"@ss.hasPermission('\" + PermissionConstants.ACCOUNT_READ + \"')\")"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/access-code-redemptions",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppAccessCodeRedemptionController.java",
+      "line": 46,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/access-grant",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppAccessGrantController.java",
+      "line": 32,
+      "security": "@PermitAll"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/auth/token-refresh",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppAuthController.java",
+      "line": 40,
+      "security": "@PermitAll"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/auth/wechat-login",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppAuthController.java",
+      "line": 55,
+      "security": "@PermitAll"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/data-export-requests",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppDataSubjectRequestController.java",
+      "line": 41,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/data-export-requests/{requestId}",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppDataSubjectRequestController.java",
+      "line": 49,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/account-closure-requests",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppDataSubjectRequestController.java",
+      "line": 57,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/account-closure-requests/{requestId}",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppDataSubjectRequestController.java",
+      "line": 65,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/privacy-consents",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppPrivacyController.java",
+      "line": 36,
+      "security": "see class/service security"
+    },
+    {
+      "method": "POST",
+      "route": "/design/v1/privacy-consents",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppPrivacyController.java",
+      "line": 51,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/profile",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppProfileController.java",
+      "line": 50,
+      "security": "see class/service security"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/profile/preferences",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppProfileController.java",
+      "line": 95,
+      "security": "see class/service security"
+    },
+    {
+      "method": "PATCH",
+      "route": "/design/v1/profile",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppProfileController.java",
+      "line": 104,
+      "security": "see class/service security"
+    },
+    {
+      "method": "GET",
+      "route": "/design/v1/support-entry",
+      "path": "后端程序/yudao-module-identity/src/main/java/cn/iocoder/yudao/module/identity/controller/app/AppSupportEntryController.java",
+      "line": 35,
+      "security": "see class/service security"
+    }
+  ],
+  "scope": "Current working tree; excludes .claude worktrees, dependencies, generated files and vendored Mini Program components; source physical lines, not coverage."
+}

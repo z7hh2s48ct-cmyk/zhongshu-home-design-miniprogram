@@ -8,10 +8,6 @@
         <image wx:elif="{{showBrand}}" class="brand-logo" src="/assets/v12/brand-logo.png" mode="widthFix" />
       </view>
       <text wx:if="{{title}}" class="navbar-title">{{title}}</text>
-      <view wx:if="{{showNotice}}" class="notice-button" bindtap="openMessages" aria-label="消息">
-        <t-icon name="notification" size="23px" color="#2f2925" />
-        <view class="notice-dot"></view>
-      </view>
     </view>
   </view>
 </view>

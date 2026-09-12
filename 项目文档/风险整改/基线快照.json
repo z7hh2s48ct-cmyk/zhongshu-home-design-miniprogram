@@ -1,0 +1,256 @@
+{
+  "capturedAt": "2026-09-12T17:28:36.139Z",
+  "base": "ef195160142e43a7a37d44d71216cf6db085b456",
+  "source": "E:/众墅之家设计平台/zhongshu-home-design-miniprogram",
+  "description": "Copy of audited existing uncommitted work and audit evidence; original checkout preserved. Imported as prerequisite, not authored as risk fixes.",
+  "files": [
+    {
+      "path": "scripts/verify.mjs",
+      "sha256": "ada1a8b72c6eb17a5b3d432b6f75d22074d8091bf446d68c3434c1d1ba5b884c"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/ai-design/index.js",
+      "sha256": "21b1b5728e0c03ed0fea78ac571ec9499a684cb215c3ffa0ad81e0101ad88fb5"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/library/index.json",
+      "sha256": "66f30100512371d1f64704c4e63385fedead05e63074c62fe3f214d014e6b965"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/library/index.wxml",
+      "sha256": "c073d0499169dd55e45f71c1c4a27a7fd91dc1f3ffa9d5db63b20d1632030a40"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/messagecenter/messagecenter.json",
+      "sha256": "66f30100512371d1f64704c4e63385fedead05e63074c62fe3f214d014e6b965"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/messagecenter/messagecenter.scss",
+      "sha256": "49cca1b27ad86749cae6648006f6db5c53e3b69be9e9638c1c22036a89592d32"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/messagecenter/messagecenter.wxml",
+      "sha256": "ba0c62f0243409640a3f036b0d031e8057684f27619e9780fa5aa7ce4293d303"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/profile/records.json",
+      "sha256": "af74cc482f1863f918a1ca9c3c7619c3cb3705d436fc27cb1946d24a7d8639a8"
+    },
+    {
+      "path": "前端程序/miniprogram/pages/profile/records.wxml",
+      "sha256": "4eb35611777b91dbd3007e23bb6bbd7862c95980e0b1bbf2c47f617d97a76e03"
+    },
+    {
+      "path": "前端程序/miniprogram/utils/api.js",
+      "sha256": "8dc77f0e3ff667ab3e46384f0e12ea987729815e346c4f208cd13899be64acf9"
+    },
+    {
+      "path": "前端程序/miniprogram/utils/assets.js",
+      "sha256": "bd4d92721a992fbe6b92335f6e8cbf8a8169f61f715801ba2d8e6906df5ab86a"
+    },
+    {
+      "path": "前端程序/miniprogram/utils/avatar-upload.js",
+      "sha256": "46d33352bcb398c2da9a5c7b42d8e8091cdadf4a506f4316b8af3f0d135f290c"
+    },
+    {
+      "path": "后端程序/.env.example",
+      "sha256": "48e714bae3737f554146d0ff22394725fc829491e425c66e27734673cfcfd7cb"
+    },
+    {
+      "path": "后端程序/script/dev/start-local.ps1",
+      "sha256": "2101798325aaa499cace227a2ae9f5208f8489b610cac88cd1125132ad7b33e2"
+    },
+    {
+      "path": "后端程序/yudao-server/src/main/resources/application-pg.yaml",
+      "sha256": "6a518130de92d5499f37f746c43e22fb4a14e67e52bc8bc33f4e4337cb37507a"
+    },
+    {
+      "path": "后端程序/yudao-server/src/main/resources/application-zsdev.yaml",
+      "sha256": "4d4812f0912c0a2a13b900f7ff2535b8bdefc59bb3e7117df46fbbdd0590047c"
+    },
+    {
+      "path": "项目文档/test-baseline.json",
+      "sha256": "f6e207b6cd94d9d9530f9fa49c338a16b9dfd7c99a800714bc7284b64f059747"
+    },
+    {
+      "path": "项目文档/项目状态看板.md",
+      "sha256": "a8a99742ab347a4faed11a306a1db1f0b7101e2f9267f2624a38bf4f5f1e5624"
+    },
+    {
+      "path": "前端程序/miniprogram/components/v12-state/index.js",
+      "sha256": "2429584eea2def02d08e2ac1db6b7c5e33bddf7d0c5a9bf3eb93e6cf680501c4"
+    },
+    {
+      "path": "前端程序/miniprogram/components/v12-state/index.json",
+      "sha256": "63d78bc96b81a3fbfc081a7aa5317aec503467a146d1dd9e03af7d40e4becdb3"
+    },
+    {
+      "path": "前端程序/miniprogram/components/v12-state/index.scss",
+      "sha256": "22a469d373eac219890c54defd51f0cf8bcbf8e08968c607cffb88f25f8d9fa5"
+    },
+    {
+      "path": "前端程序/miniprogram/components/v12-state/index.wxml",
+      "sha256": "8a79d1fe82a22d9b3fd8864f66d08f1f23ac4c68e0964b47f7c37b8fd5a6cd6d"
+    },
+    {
+      "path": "前端程序/tests/api-endpoints.test.js",
+      "sha256": "7ff1f8b95e13d2eb4d7434679687c1fc2b48502f67df1e43151c61fabb379040"
+    },
+    {
+      "path": "前端程序/tests/cos-upload.test.js",
+      "sha256": "370353d37a5067e8ca951a23964ce99cfbee916e535a6b5e6effc1a0f759eee0"
+    },
+    {
+      "path": "前端程序/tests/payment-flow.test.js",
+      "sha256": "222e72e9c75deb157fd34ef0de51e9be0c25bfff17ed25f45fec18dc7a9415f8"
+    },
+    {
+      "path": "前端程序/tests/v12-state.test.js",
+      "sha256": "67867297bc0f6045fcabf099a066cddc1e0e76202c00df9edb54ff2a2bc72136"
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/config/AiProviderConfiguration.java",
+      "sha256": "c691239252b161129acbf4e90f1f6d137caf5113f1090a584230e03967dd6208"
+    },
+    {
+      "path": "后端程序/yudao-module-ai-orchestration/src/main/java/cn/iocoder/yudao/module/aiorchestration/config/AiProviderProperties.java",
+      "sha256": "5b3dfdd8b96d569734842babd6a799ea1149bfc3d1bebb50a8d281845fa5d498"
+    },
+    {
+      "path": "后端程序/yudao-server/src/test/java/cn/iocoder/yudao/server/wiring/RealAcceptanceEvidence.java",
+      "sha256": "24337dbcd878fe59a675eaccc7c3f8835b47f861263a0f145d7e394aa10cdf20"
+    },
+    {
+      "path": "后端程序/yudao-server/src/test/java/cn/iocoder/yudao/server/wiring/RealAcceptanceEvidenceTest.java",
+      "sha256": "30c8b7774a999c83d1d9ce93f9b35fbc50dee2a6668e0d09dc6ea74cacc3d5aa"
+    },
+    {
+      "path": "后端程序/yudao-server/src/test/java/cn/iocoder/yudao/server/wiring/WechatPayRealAcceptanceTest.java",
+      "sha256": "53ea6aac7d14c3961a402a6cad249f10d7fde62afa08fbce0b33f924ec9de265"
+    },
+    {
+      "path": "项目文档/12-三端开发进展全面分析报告-2026-09-09.md",
+      "sha256": "893461e7e31546a65ee9ce31e0b549fbe9ed0f6d82d9cb7fb2831d85ec65c587"
+    },
+    {
+      "path": "项目文档/T13-30-后半-真实资金验收脚手架与证据模板-V1.0.md",
+      "sha256": "58a5a52c703bdb749b5c7d07aa02a1a6b91a14288199e7b6ff37e3a2d4e4397f"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/AuditRiskProbes.java",
+      "sha256": "e3c34cb73aafbeccae83542aaa86a6fc6c58ed8830b98e9a99ce0855d580652a"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/backend-test-summary.json",
+      "sha256": "a538df30575cddd7ad85b52a6cecc3489df6ec11d72c5a8d19c9e0fa4ad12622"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/build-report.mjs",
+      "sha256": "29e5c1a46ea9c60adfd8740d502215746e9e2cc77545c42e72da51be74ed810d"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/collect-evidence.mjs",
+      "sha256": "17665ad941295e78d849004b85a13434ce936f0ca1451edc1bc072abc1087e67"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/concurrent-config-review.json",
+      "sha256": "745d69fead1b4d645d60158c7abd9bfc887af21e173dc050e68fddfcde8410ab"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/dependency-audit.json",
+      "sha256": "f559bf44a75a7ec23b69a6a36bc87b5afaae264fc7456ea96d516a0bdc346dc1"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/dependency-summary.json",
+      "sha256": "53f89c48f8a5dc635db8cbf1bf09b86226e7f6cf23d504909ec1bcd4d9584218"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/inventory-summary.json",
+      "sha256": "d58701209663112b12a20e21dc6bf09000029998f01dd22fea1c3a2295b0fd39"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/inventory.json",
+      "sha256": "b3c3111f8d2cd03ef81f49a14f14c759019db0cf7062fe05f3b66071a9cb7faf"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/inventory.mjs",
+      "sha256": "068ae4adb8d1d351e4a83000969a72d792786f9fcd5eee5d0ef40a5520911bcd"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/mini-assets.json",
+      "sha256": "9aa59cbf147a069d4e82645e3584ed3cf1c3cb046618b59f126c17beff0eed3a"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/record-config-review.mjs",
+      "sha256": "7f686297f32c257e924c13dc39c8ef3184e96685e45819398d8750ba7de0b663"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/report-validation.json",
+      "sha256": "8e5f168ce26fe9901c422cc299fc18bda0790f047a9ad8a8d4e31a995d5f64c6"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/run-isolated-e2e.ps1",
+      "sha256": "bfec3d808b917de6e03463d978acb8e5bc4bc6139f448e42a9b99372c6939f87"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/run-probes.ps1",
+      "sha256": "0ff491aadb28651d15d9ba1331f8dd8c5a4aff0cddae9b416a0d64549027bdf2"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/scope-snapshot.json",
+      "sha256": "2f9718794c6a6084e17d11669fd21eb7ea822b0da15915a52f361d76b957d353"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/secret-format-scan.json",
+      "sha256": "4e3d456b67a9be2d1b986db9447131a5f355dea4672983ba19a8b54eb24bef98"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/source-evidence.json",
+      "sha256": "36f83f7a7692f6463b4287edd841f9dd85b76117474539f8d715f782eccd9b05"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/validate-report.mjs",
+      "sha256": "06777ec2cab17065a6ee1611012ce8b3ece06d8892747206d950f55f7e5f94b0"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/verification-summary.json",
+      "sha256": "b77b48828ba052e7cdf3ed80bde170ebec7775648136e6acf658f3c9eb405245"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/上线前综合分析报告-2026-09-13.md",
+      "sha256": "12f44a2c48be55eee842c0742ac87aa5949a05d6ee83113924971d37ac9c0d05"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/业务流程矩阵.csv",
+      "sha256": "fe3ce15455163a9784b62ccfb087e914b019cdf9866ec07acd1bb3b0a2a13b82"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/业务流程矩阵.json",
+      "sha256": "2aa826107c028eeef3c8263240530f4ecab6205d03fd14dbb50eadd27f2eaba0"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/复核说明.md",
+      "sha256": "75d5180ffec99e6c9fff973d62468b112546067fad65d47262c2efa60e812a48"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/接口清单.md",
+      "sha256": "10d3bab1c59419531ef3e0a3287d1b3f26fb45d34803048f1ae19c1e180352d2"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/源码证据索引.md",
+      "sha256": "5a11eaa03afcb411226d3d64bb25b7a1d829bab34c32f65629eac77203f8d47e"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/页面范围清单.md",
+      "sha256": "79aebcc4c994d8e25a8c3d252583d79655734982d996fcff1377dd9e76ee6a9c"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/风险整改清单.csv",
+      "sha256": "c500b1e90c554d050914547bf5598b160c577a5327cbad5ca1e201bee14a16b8"
+    },
+    {
+      "path": "项目文档/上线前综合审计-2026-09-13/风险清单.json",
+      "sha256": "53c3300b9c1fb907a49429f1210bc26f97a5d97aed6d70e717f3cb5f353bfbff"
+    }
+  ]
+}

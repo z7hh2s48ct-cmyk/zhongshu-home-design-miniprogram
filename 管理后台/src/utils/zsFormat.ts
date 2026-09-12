@@ -10,8 +10,20 @@ export const fmtTime = (value: any): string => {
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) raw = Number(value.trim())
   const date = new Date(raw)
   if (isNaN(date.getTime())) return String(value)
-  const pad = (n: number) => (n < 10 ? '0' + n : '' + n)
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  )
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`
 }
 
 /** 毫秒时间戳 / ISO 字符串 → 「yyyy-MM-dd」 */
