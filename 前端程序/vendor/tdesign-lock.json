@@ -329,5 +329,6 @@
       "path": "miniprogram_npm/tslib/index.js",
       "sha256": "053c4fe111b77847750734252b1d54a7633ba4b6893fa2f62da04c2c92de6d4b"
     }
-  ]
+  ],
+  "hashNormalization": "UTF-8 text with CRLF normalized to LF only; no trimming, BOM removal or other content normalization"
 }
