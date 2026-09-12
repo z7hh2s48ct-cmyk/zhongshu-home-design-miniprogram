@@ -98,6 +98,10 @@ export const getAiJob = (jobId) => request.get({ url: `${BASE}/ai-jobs/${jobId}`
 
 // ---------- 导出 / 审计 ----------
 export const createExportJob = (data) => request.post({ url: `${BASE}/export-jobs`, data })
+export const getPrivacyRequestPage = (params) =>
+  request.get({ url: `${BASE}/privacy-requests`, params })
+export const decidePrivacyRequest = (id: string, data: { approve: boolean; reason: string }) =>
+  request.post({ url: `${BASE}/privacy-requests/${encodeURIComponent(id)}/decision`, data })
 export const getExportJobPage = (params) => request.get({ url: `${BASE}/export-jobs`, params })
 export const getExportJob = (exportJobId) =>
   request.get({ url: `${BASE}/export-jobs/${exportJobId}` })

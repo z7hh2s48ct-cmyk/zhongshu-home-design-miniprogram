@@ -20,5 +20,6 @@
       <view><view class="note-icon"><t-icon name="service" size="20px" color="#7b3f17" /></view><text>授权码失效请联系管理员</text></view>
     </view>
     <view class="contact" bindtap="contact">联系管理员 <t-icon name="chevron-right" size="16px" color="#7b3f17" /></view>
+    <view class="contact" bindtap="openPrivacy">隐私申请与账号关闭</view>
   </view>
 </view>

@@ -37,6 +37,8 @@ import static cn.iocoder.yudao.module.aiorchestration.enums.ErrorCodeConstants.A
 @Slf4j
 @Service
 public class AiJobOrchestrationService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     public enum ReportOutcome {QUARANTINED, DUPLICATE_EVENT, STALE_FENCING, SUPERSEDED, TERMINAL_IGNORED}
 
@@ -83,6 +85,7 @@ public class AiJobOrchestrationService {
         long jobId = IdWorker.getId();
         try {
             txTemplate.execute(status -> {
+                if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
                 jdbcTemplate.update(
                         "INSERT INTO ai_job (id, user_id, project_ref, phase, status, requested_count, "
                                 + "output_prefix, idempotency_key) VALUES (?, ?, ?, ?, 'QUEUED', ?, ?, ?)",

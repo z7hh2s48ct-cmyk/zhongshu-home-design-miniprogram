@@ -57,7 +57,7 @@ class OperationsReadModelContractTest {
         when(storage.getObject("file.csv")).thenAnswer(i -> new java.io.ByteArrayInputStream("id\n1\n".getBytes()));
         long own = job(delivery, 501, "ADMIN"), foreign = job(delivery, 502, "ADMIN");
         job(delivery, 501, "USER");
-        delivery.completeExportJob(own, "file.csv", "hash", 3600);
+        delivery.completeExportJob(own, "file.csv", java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest("id\n1\n".getBytes(java.nio.charset.StandardCharsets.UTF_8))), 3600);
         delivery.completeExportJob(foreign, "other.csv", "hash", 3600);
         var controller = exports(delivery, storage);
         assertThat(controller.getExportJobs(1, 20).getData().getTotal()).isEqualTo(1L);
@@ -73,6 +73,9 @@ class OperationsReadModelContractTest {
         assertThatThrownBy(() -> controller.downloadExportFile(String.valueOf(own), ticket)).isInstanceOf(AccessDeniedException.class);
         String retry = (String) controller.createDownloadTicket(String.valueOf(own)).getData().get("ticket");
         assertThat(controller.downloadExportFile(String.valueOf(own), retry).getBody()).isNotEmpty();
+        when(storage.getObject("file.csv")).thenAnswer(i -> new java.io.ByteArrayInputStream("overwritten".getBytes()));
+        String tampered = (String) controller.createDownloadTicket(String.valueOf(own)).getData().get("ticket");
+        assertThatThrownBy(() -> controller.downloadExportFile(String.valueOf(own), tampered)).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test void expiredExportCannotIssueOrUseAnEarlierTicket() {

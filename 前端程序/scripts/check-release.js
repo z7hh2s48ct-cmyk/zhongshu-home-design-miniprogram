@@ -7,7 +7,8 @@
 //   3) http://        —— 明文地址（含 JS/JSON 中的转义形 http:\/\/，即正斜杠被反斜杠转义），微信小程序生产环境强制 HTTPS。
 // 定位：本脚本是“发布前独立门禁”（npm run check:release），与单元测试（npm test）刻意分离。
 //   按 T13-08 决策 3，config.js 开发期保留 http://localhost，故正式域名接入前本门禁“应当”报红——
-//   这是预期的“尚未就绪”信号，而非缺陷；域名接入后自动转绿。扫描范围排除第三方 vendored 代码与本机私有配置，
+//   发布时 build-release.js 生成独立 prod 目录，再将该目录作为参数传给本门禁；不修改开发源码。
+//   扫描范围排除第三方 vendored 代码与本机私有配置，
 //   只对本项目自有的可发布源码与工程配置负责，避免库自带 http/schema 造成误报噪声。
 
 const fs = require('fs');
@@ -21,6 +22,7 @@ const EXCLUDED_DIRECTORIES = new Set(['tdesign-miniprogram', 'miniprogram_npm', 
 const EXCLUDED_FILES = new Set(['project.private.config.json']);
 
 const RULES = [
+  { id: 'dev-env', desc: '发布配置必须为 prod，禁止保留开发环境标识', pattern: /["']?env["']?\s*:\s*["'](?:dev|test|local|stub)["']/i },
   { id: 'touristappid', desc: 'touristappid 占位 AppID，发布须为正式 AppID', pattern: /touristappid/i },
   { id: 'dev-host', desc: 'localhost/127.0.0.1 开发地址，发布须换正式 HTTPS 域名', pattern: /localhost|127\.0\.0\.1/i },
   { id: 'plain-http', desc: 'http:// 明文地址（含 JS/JSON 转义形 http:\\/\\/），微信生产强制 HTTPS', pattern: /http:(?:\\*\/){2}/i },
@@ -46,15 +48,15 @@ function scanContent(relativePath, content) {
   return violations;
 }
 
-function walk(relativeDirectory, targets) {
-  const absolute = path.join(FRONTEND_ROOT, relativeDirectory);
+function walk(relativeDirectory, targets, root) {
+  const absolute = path.join(root, relativeDirectory);
   if (!fs.existsSync(absolute)) return;
   for (const entry of fs.readdirSync(absolute, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) continue;
     const relativePath = path.join(relativeDirectory, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRECTORIES.has(entry.name)) continue;
-      walk(relativePath, targets);
+      walk(relativePath, targets, root);
     } else if (!EXCLUDED_FILES.has(entry.name) && SCAN_EXTENSIONS.has(path.extname(entry.name))) {
       targets.push(relativePath);
     }
@@ -62,24 +64,27 @@ function walk(relativeDirectory, targets) {
 }
 
 // 发布扫描目标：miniprogram/ 全量自有源码 + 外层发布工程配置（位于 miniprogram/ 之外、DevTools 推荐发布根）。
-function collectTargets() {
+function collectTargets(root = FRONTEND_ROOT) {
   const targets = [];
-  walk('miniprogram', targets);
-  if (fs.existsSync(path.join(FRONTEND_ROOT, 'project.config.json'))) targets.push('project.config.json');
+  walk('miniprogram', targets, root);
+  if (fs.existsSync(path.join(root, 'project.config.json'))) targets.push('project.config.json');
   return targets;
 }
 
-function scanTree() {
+function scanTree(root = FRONTEND_ROOT) {
   const violations = [];
-  for (const relativePath of collectTargets()) {
-    const content = fs.readFileSync(path.join(FRONTEND_ROOT, relativePath), 'utf8');
+  for (const relativePath of collectTargets(root)) {
+    const content = fs.readFileSync(path.join(root, relativePath), 'utf8');
     violations.push(...scanContent(relativePath, content));
   }
+  const configPath = 'miniprogram/utils/config.js';
+  const config = fs.existsSync(path.join(root, configPath)) ? fs.readFileSync(path.join(root, configPath), 'utf8') : '';
+  if (!/["']?env["']?\s*:\s*["']prod["']/.test(config)) violations.push({ ruleId: 'prod-env-required', desc: '发布包需要显式 prod 配置', path: configPath, line: 1, snippet: 'env 必须为 prod' });
   return violations;
 }
 
 function main() {
-  const violations = scanTree();
+  const violations = scanTree(process.argv[2] ? path.resolve(process.argv[2]) : FRONTEND_ROOT);
   if (violations.length === 0) {
     console.log('✓ 发布门禁通过：无 touristappid 占位、无 localhost/127.0.0.1 开发地址、无 http:// 明文');
     return 0;

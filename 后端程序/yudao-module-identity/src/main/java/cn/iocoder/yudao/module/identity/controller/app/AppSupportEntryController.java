@@ -29,6 +29,9 @@ public class AppSupportEntryController {
     @Value("${zhongshu.support.wecom-corp-id:}")
     private String wecomCorpId;
 
+    @Value("${zhongshu.support.wecom-url:}")
+    private String wecomUrl;
+
     @Value("${zhongshu.support.help-url:}")
     private String helpUrl;
 
@@ -38,6 +41,7 @@ public class AppSupportEntryController {
         AppSupportEntryRespVO vo = new AppSupportEntryRespVO();
         vo.setPhone(phone);
         vo.setWecomCorpId(wecomCorpId);
+        vo.setWecomUrl(wecomUrl);
         vo.setHelpUrl(helpUrl);
         return success(vo);
     }

@@ -29,3 +29,5 @@ artifacts/
 tmp/
 temp/
 *.tmp
+# Release staging bundles and CDN upload payloads are generated artifacts.
+前端程序/release/

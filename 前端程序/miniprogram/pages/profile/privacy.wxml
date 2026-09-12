@@ -1,0 +1,23 @@
+<view class="v12-page">
+  <v12-navbar title="隐私与账号" show-back show-brand="{{false}}" />
+  <view class="v12-content">
+    <view class="v12-card privacy-card"><text class="v12-section-title">已同意的协议</text>
+      <view wx:for="{{consents}}" wx:key="policyType">{{item.name}} · {{item.version}}</view>
+      <text wx:if="{{!consents.length}}">暂无可显示的协议记录</text>
+    </view>
+    <view class="v12-card privacy-card"><text class="v12-section-title">资料与记录</text>
+      <text>导出本人资料及业务记录为 JSON 文件，图片提供清单，可在原项目下载。文件生成后 24 小时内可领取一次性下载票据。</text>
+      <button bindtap="createExport" disabled="{{busy}}">申请导出</button>
+      <button bindtap="requestClosure" disabled="{{busy}}">申请关闭账号</button>
+    </view>
+    <view wx:if="{{error}}" class="privacy-error">{{error}}<button bindtap="login">微信登录</button></view>
+    <button bindtap="load" loading="{{loading}}" disabled="{{busy}}">刷新申请状态</button>
+    <view wx:for="{{requests}}" wx:key="requestId" class="v12-card privacy-card">
+      <text>{{item.label}} · {{item.statusText}}</text><text>申请号：{{item.requestId}}</text>
+      <text wx:if="{{item.errorText}}">{{item.errorText}}</text>
+      <button wx:if="{{item.requestType === 'EXPORT' && item.downloadable}}" data-id="{{item.requestId}}" bindtap="download" disabled="{{busy}}">下载并保存文件</button>
+      <text wx:if="{{item.requestType === 'EXPORT' && item.status === 'COMPLETED' && !item.downloadable}}">下载已过期，可重新申请</text>
+    </view>
+    <button bindtap="contact">联系客服</button>
+  </view>
+</view>

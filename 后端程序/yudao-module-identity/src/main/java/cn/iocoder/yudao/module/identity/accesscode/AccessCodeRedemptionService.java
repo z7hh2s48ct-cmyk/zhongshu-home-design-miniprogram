@@ -96,6 +96,10 @@ public class AccessCodeRedemptionService {
         }
 
         long accountId = accountLoginService.resolveAccount(appid, openid, unionid);
+        var activeAccount = jdbcTemplate.queryForList("SELECT status FROM account WHERE id=? AND deleted=FALSE FOR SHARE", String.class, accountId);
+        if (activeAccount.isEmpty() || !"ACTIVE".equals(activeAccount.get(0))) {
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(403, "账号已停用或关闭");
+        }
 
         if ("CONSUMED".equals(status)) {
             // 幂等裁决：同一账号此前兑换过该码 → 返回既有结果；他人兑换 → ALREADY_CONSUMED

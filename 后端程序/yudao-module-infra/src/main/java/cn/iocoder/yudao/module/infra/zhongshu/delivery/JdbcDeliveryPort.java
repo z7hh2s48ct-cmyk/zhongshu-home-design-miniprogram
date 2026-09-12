@@ -117,6 +117,16 @@ public class JdbcDeliveryPort implements DeliveryPort {
         return consumeTicket("one_time_download_ticket", token, consumerId);
     }
 
+    @Override
+    public TicketConsumption consumeOwnedDownloadTicket(String token, long ownerId, String purpose, String bizRef) {
+        if (token == null || token.isBlank()) return TicketConsumption.builder().outcome(TicketConsumption.Outcome.UNKNOWN).build();
+        int consumed = jdbcTemplate.update("UPDATE one_time_download_ticket SET status='CONSUMED',consumed_at=now(),consumer_id=? "
+                + "WHERE ticket_hash=? AND owner_user_id=? AND purpose=? AND biz_ref=? AND status='ACTIVE' AND expires_at>now()",
+                String.valueOf(ownerId),sha256Hex(token),ownerId,purpose,bizRef);
+        return TicketConsumption.builder().outcome(consumed==1?TicketConsumption.Outcome.CONSUMED_NOW:TicketConsumption.Outcome.UNKNOWN)
+                .purpose(consumed==1?purpose:null).bizRef(consumed==1?bizRef:null).build();
+    }
+
     private TicketConsumption consumeTicket(String table, String token, String consumerId) {
         String hash = sha256Hex(token);
         // 先原子标记 CONSUMED：并发与重放都只有一条 UPDATE 命中

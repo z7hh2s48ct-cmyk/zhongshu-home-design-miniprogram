@@ -16,4 +16,7 @@ public interface PermissionConstants {
     /** C 端用户（账号/授权）只读查询 */
     String ACCOUNT_READ = "identity:account:query";
 
+    /** Review data subject requests and approve closure after retention/financial checks. */
+    String PRIVACY_MANAGE = "identity:privacy:manage";
+
 }

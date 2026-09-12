@@ -13,6 +13,9 @@ public class AppSupportEntryRespVO {
     @Schema(description = "企业微信客服标识")
     private String wecomCorpId;
 
+    @Schema(description = "企业微信客服会话地址（与 corpId 配套）")
+    private String wecomUrl;
+
     @Schema(description = "帮助页地址")
     private String helpUrl;
 

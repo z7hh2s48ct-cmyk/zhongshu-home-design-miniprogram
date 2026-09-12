@@ -5,6 +5,8 @@
     <view class="v12-card menu-card">
       <view bindtap="openEdit" role="button"><text>个人资料</text><t-icon name="chevron-right" size="16px" /></view>
       <view bindtap="openAuthorization" role="button"><text>{{authorized ? '授权信息' : '激活账号'}}</text><t-icon name="chevron-right" size="16px" /></view>
+      <view bindtap="contact" role="button"><text>联系客服</text><t-icon name="chevron-right" size="16px" /></view>
+      <view bindtap="openPrivacy" role="button"><text>隐私与账号关闭</text><t-icon name="chevron-right" size="16px" /></view>
     </view>
   </view>
 </view>

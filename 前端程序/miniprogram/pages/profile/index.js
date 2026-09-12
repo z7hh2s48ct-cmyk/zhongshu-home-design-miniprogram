@@ -69,5 +69,5 @@ Page({
     const type = event.currentTarget.dataset.type;
     if (['projects', 'submissions', 'favorites', 'orders'].includes(type)) openFeature('/pages/profile/records?type=' + type);
   },
-  contact() { wx.showToast({ title: '请联系授权管理员开通', icon: 'none' }); }
+  contact() { return require('../../utils/support').contact(); }
 });

@@ -58,6 +58,9 @@ public class RechargePaymentService {
 
     private final PaymentFactValidator factValidator;
 
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
+
     /**
      * T13-29：退款卡单审计宽限期（分钟）。非终态退款单（PROCESSING/UNKNOWN/CREATED）超过此时长
      * 仍未收口，重启补偿 {@link #recoverPendingRefunds()} 落一条 {@code REFUND_STUCK} 审计供人工核对，
@@ -112,6 +115,7 @@ public class RechargePaymentService {
         }
         // 快照方案（事务内）
         OrderSnapshot created = txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             Map<String, Object> plan;
             try {
                 plan = jdbcTemplate.queryForMap(
@@ -156,6 +160,7 @@ public class RechargePaymentService {
     /** Short lease transaction, external call, fenced update. Retries keep the same merchant order. */
     private void ensurePrepay(long userId, long orderId, String sessionOpenid, boolean refresh) {
         PrepayClaim claim = txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             var rows = jdbcTemplate.queryForList("SELECT *, (prepay_expires_at > now()) AS fresh, "
                     + "(prepay_lease_until > now()) AS busy FROM recharge_order "
                     + "WHERE id=? AND user_id=? AND deleted=FALSE FOR UPDATE", orderId, userId);
@@ -1068,7 +1073,7 @@ public class RechargePaymentService {
                             + "update_time = now() WHERE id = ?", orderId);
             reliableEventPort.append(OutboxEventMessage.builder()
                     .eventType("ORDER_REFUND_REVERSED").bizType("refund_order").bizId(String.valueOf(refundId))
-                    .payload(Map.of("refundId", refundId, "orderId", orderId)).build());
+                    .payload(Map.of("refundId", refundId, "orderId", orderId, "userId", userId)).build());
             return null;
         });
     }

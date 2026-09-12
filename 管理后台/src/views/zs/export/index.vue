@@ -13,9 +13,23 @@
       <el-form inline class="zs-filter">
         <el-form-item label="导出类型">
           <el-select v-model="form.jobType" style="width: 220px">
-            <el-option label="设计点流水（全量）" value="POINT_LEDGER" />
-            <el-option label="审计事件（全量）" value="AUDIT_EVENTS" />
+            <el-option label="设计点流水" value="POINT_LEDGER" />
+            <el-option label="审计事件" value="AUDIT_EVENTS" />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="form.jobType === 'POINT_LEDGER'" label="用户编号">
+          <el-input v-model="form.userId" placeholder="可选，精确匹配" clearable />
+        </el-form-item>
+        <el-form-item label="记录类型">
+          <el-input v-model="form.type" placeholder="可选，业务类型代码" clearable />
+        </el-form-item>
+        <el-form-item label="时间范围">
+          <el-date-picker
+            v-model="form.range"
+            type="datetimerange"
+            start-placeholder="开始（含）"
+            end-placeholder="结束（不含）"
+          />
         </el-form-item>
         <el-form-item>
           <el-button class="zs-btn-primary" :loading="creating" @click="create"
@@ -70,9 +84,9 @@
               @click="download(row)"
               >下载</el-button
             >
-            <span v-if="row.status === 'FAILED'" style="font-size: 12px; color: #d0342c"
-              >生成失败</span
-            >
+            <span v-if="row.status === 'FAILED'" style="font-size: 12px; color: #d0342c">{{
+              exportError(row.error)
+            }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -86,7 +100,8 @@
       />
 
       <div class="zs-footnote">
-        安全规则：导出文件下载需一次性票据（600 秒有效、单次消费、留审计）；文件本体 24 小时后过期。
+        每次最多 10,000 条、10 MB，超限请缩小时间范围。导出截至任务创建时的数据；CSV 时间为
+        UTC。下载票据 600 秒内单次有效，文件 24 小时后过期。
       </div>
     </div>
   </div>
@@ -112,7 +127,13 @@ const displayTime = (value: string) =>
     ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
     : '—'
 
-const form = reactive({ jobType: 'POINT_LEDGER' })
+const form = reactive({ jobType: 'POINT_LEDGER', userId: '', type: '', range: [] as Date[] })
+const exportError = (code: string) =>
+  ({
+    EXPORT_ROW_LIMIT: '记录超限，请缩小范围',
+    EXPORT_SIZE_LIMIT: '文件超限，请缩小范围',
+    EXPORT_RETRY_LIMIT: '重试次数超限，请重新创建'
+  })[code] || '生成失败，请重新创建'
 
 const typeText = (t: string) => ({ POINT_LEDGER: '设计点流水', AUDIT_EVENTS: '审计事件' })[t] || t
 const statusTextMap: Record<string, string> = {
@@ -135,7 +156,13 @@ const create = async () => {
   if (creating.value) return
   creating.value = true
   try {
-    await ZsApi.createExportJob({ jobType: form.jobType })
+    await ZsApi.createExportJob({
+      jobType: form.jobType,
+      userId: form.jobType === 'POINT_LEDGER' ? form.userId.trim() : '',
+      type: form.type.trim(),
+      from: form.range?.[0]?.toISOString(),
+      to: form.range?.[1]?.toISOString()
+    })
     if (closed) return
     ElMessage.success('任务已创建，后台生成中')
     await search()

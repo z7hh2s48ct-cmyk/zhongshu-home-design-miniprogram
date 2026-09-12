@@ -28,6 +28,14 @@ yudao:
   security:
     mock-enable: false
 zhongshu:
+  privacy:
+    export-worker-enabled: true
+    retention-policy-version: ${ZS_PRIVACY_RETENTION_POLICY_VERSION:}
+  support:
+    phone: ${ZS_SUPPORT_PHONE:}
+    wecom-corp-id: ${ZS_SUPPORT_WECOM_CORP_ID:}
+    wecom-url: ${ZS_SUPPORT_WECOM_URL:}
+    help-url: ${ZS_SUPPORT_HELP_URL:}
   identity:
     wechat:
       provider: real

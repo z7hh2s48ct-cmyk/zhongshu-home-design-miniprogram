@@ -1,0 +1,81 @@
+{
+  "group": "RG2",
+  "recordedAt": "2026-09-12T19:11:50.925Z",
+  "mini": {
+    "tests": 216,
+    "passed": 216
+  },
+  "admin": {
+    "tests": 76,
+    "passed": 76,
+    "typecheck": true,
+    "lint": true,
+    "productionBuild": true
+  },
+  "backend": {
+    "reports": 138,
+    "tests": 1374,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 11
+  },
+  "e2e": {
+    "passed": 54,
+    "total": 54,
+    "freshDatabase": true,
+    "secondStart": true
+  },
+  "note": "后端为全量执行与最终定向复测后各 Surefire 报告的合并结果；rg2-all/rg2-backend-final 保留中途发现的失败，最终修复证据为 rg2-final-regression 与 rg2-migration-final。并非一次全量运行全部通过。",
+  "logs": [
+    {
+      "path": "artifacts/risk-remediation/rg2-all.log",
+      "bytes": 226904,
+      "sha256": "f8ed194cb6cfe76d3d5ee8aa50a967034977fd297c992ec9bdd8b02f6f4aa1ec"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-backend-final.log",
+      "bytes": 568271,
+      "sha256": "2e11d204a28ebc49fb75d8850c0c8adc249b2ec7ea00480995cfc3a989b83148"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-final-regression.log",
+      "bytes": 112886,
+      "sha256": "62be24772ef8a02cc99825732326e452f34914d6ce91a4308f3bb808d4e34487"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-migration-final.log",
+      "bytes": 60567,
+      "sha256": "163ac47171ef8deaf248fc594a579ee2edbdeb832bc67b434bb0dbac06238a12"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-release-build.log",
+      "bytes": 275,
+      "sha256": "fac8fa761073487bbf2ba1579f902a68d6e8e1d632809c3b8042e5e579a6520c"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-admin-install.log",
+      "bytes": 3381,
+      "sha256": "77b1a04517cf791ca53847c85eec3af509701aabdf5b28a6a5802addf7353425"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-e2e/run.log",
+      "bytes": 2971,
+      "sha256": "e2a7d13981bb7c0f9738b4e565056397c46c84fc15e8508bc5e0b0cf240ab1fa"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-e2e/package.log",
+      "bytes": 58264,
+      "sha256": "8c0db3d8406c2547504ed05d367c08c5f2d89fee2c9711e0f25385eb2a24d1ea"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-e2e/backend-1.stdout.log",
+      "bytes": 17306,
+      "sha256": "87637e80946e89e23d3d42b2fea31e26470b1e15635ca9dc0ff13bccf3f47767"
+    },
+    {
+      "path": "artifacts/risk-remediation/rg2-e2e/backend-2.stdout.log",
+      "bytes": 268489,
+      "sha256": "503c7e941d4233a560adee6a0763a0ef266704f5be37a32d656506d39bedf557"
+    }
+  ]
+}

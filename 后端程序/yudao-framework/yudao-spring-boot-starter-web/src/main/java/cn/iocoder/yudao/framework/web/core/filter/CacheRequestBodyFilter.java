@@ -28,13 +28,24 @@ public class CacheRequestBodyFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
-        filterChain.doFilter(new CacheRequestBodyWrapper(request), response);
+        boolean paymentCallback = request.getRequestURI().contains("/payments/wechat/");
+        int maxBytes = paymentCallback ? 64 * 1024 : 1024 * 1024;
+        try {
+            filterChain.doFilter(new CacheRequestBodyWrapper(request, maxBytes), response);
+        } catch (CacheRequestBodyWrapper.BodyTooLargeException e) {
+            response.setStatus(413);
+            response.setCharacterEncoding("UTF-8");
+            response.setContentType("application/json");
+            response.getWriter().write(paymentCallback ? "{\"code\":\"FAIL\",\"message\":\"请求体超限\"}"
+                    : "{\"code\":413,\"msg\":\"请求内容过大\",\"data\":null}");
+        }
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // 1. 校验是否为排除的 URL
         String requestURI = request.getRequestURI();
+        if (requestURI.contains("/payments/wechat/")) return false;
         if (StrUtil.startWithAny(requestURI, IGNORE_URIS)) {
             return true;
         }
