@@ -82,12 +82,45 @@
         <jimureport.version>2.5.1</jimureport.version>
         <jimubi.version>2.5.0</jimubi.version>
         <weixin-java.version>4.8.6-20260825.155844</weixin-java.version>
-        <bouncycastle.version>1.80</bouncycastle.version>
+        <bouncycastle.version>1.84</bouncycastle.version>
         <alipay-sdk-java.version>4.40.978.ALL</alipay-sdk-java.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- RG3: pin patched families ahead of imported framework BOMs; verify actual packaged JAR via SBOM. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId><artifactId>jackson-bom</artifactId>
+                <version>2.21.5</version><type>pom</type><scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId><artifactId>log4j-bom</artifactId>
+                <version>2.25.5</version><type>pom</type><scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-core</artifactId><version>10.1.59</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-el</artifactId><version>10.1.59</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId><artifactId>tomcat-embed-websocket</artifactId><version>10.1.59</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><version>42.7.12</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId><artifactId>httpcore5</artifactId><version>5.4.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId><artifactId>httpcore5-h2</artifactId><version>5.4.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId><artifactId>httpclient5</artifactId><version>5.6.3</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId><artifactId>commons-compress</artifactId><version>1.28.0</version>
+            </dependency>
             <!-- 统一依赖管理 -->
             <dependency>
                 <groupId>io.netty</groupId>

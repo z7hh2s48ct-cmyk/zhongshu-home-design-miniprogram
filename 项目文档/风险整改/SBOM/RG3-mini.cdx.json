@@ -1,0 +1,1008 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:60fd2f4d-88b7-4d8b-a404-49f9d01dfbd9",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-12T20:40:26+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "manufacturer": {
+            "name": "Aqua Security Software Ltd."
+          },
+          "group": "aquasecurity",
+          "name": "trivy",
+          "version": "0.74.0"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "753b35dd-f249-4cbd-a98d-07379d31447b",
+      "type": "application",
+      "name": "zhongshu-mini-vendored",
+      "properties": []
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:npm/tdesign-miniprogram@1.16.1",
+      "type": "library",
+      "name": "tdesign-miniprogram",
+      "version": "1.16.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tdesign-miniprogram@1.16.1",
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/bus.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/bus.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "726569dea2439d92048dcabebd7c33e581715b5850a0f3a40ed5ff660c805efb"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/bus.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/bus.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "43c99f0f232230002dc9737f59f8744b691408b3c85a00f738dc30b2ebf5a65d"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/common.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/common.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a3e0614cabbf508c568255a7a5c909e7f14e832edb564b5647d8223fdd43e317"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/common.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/common.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "56e1b0c10087ee6ff7f949b15d1ef63cb11228ff93a159a52f9ad7ef851e4e02"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/component.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/component.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ffcde7f012fcf80a8b2363d64b0f53a9a1b9ae4d77ccdae013826a5f4c3993e1"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/component.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/component.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0b1bff33118afb29833b6c5d555527f0aec7ab47603d4bacd8a2235686379dee"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/config.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/config.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a538756f84412ca6177fc0870102c717c0ac9fa0e9ec3a7d08b425055300afe8"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/config.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/config.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "161959dd8c97434cf584766acdcc989e5148290683869eab29431c63d8556cd1"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/index.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/index.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d83d33537ec80203bd1432ac27f51623acc7d5981999aa01398fd48b567bc66c"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/index.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/index.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32422b9d169ed744c32ad5cfbb592286f1c7a8a2ae6dda0a68415f804fa1d460"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/type.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/type.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f3a30cd16946a3fc1f45b7330ce29b03d8a363a3f1a0e0a3cad9ba74f85b70d6"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/type.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/calendar/type.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "56e1b0c10087ee6ff7f949b15d1ef63cb11228ff93a159a52f9ad7ef851e4e02"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/cmyk.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/cmyk.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f5b7aa0d3816ad03806efbfe6aad4a6aba64986f1d22567be7f13d3db27250d5"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/cmyk.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/cmyk.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "79e8d226e8d676fcfef6bb5bb66fe79578df6410b0c7511cff374be5e0090191"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/color.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/color.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c9846acaf473b71ce6d9c2b6e18121d5ba76455143ac152d3d40e40f4987d265"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/color.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/color.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6acab507fb45f86e1437b8cd3c987999d894669ebf7444d342831628a871cfeb"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/gradient.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/gradient.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5816e34e31bbbeefac24c5f1c995511fc41edc6d38ad41981f92c161b6041bdc"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/gradient.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/gradient.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "aee1b5f1ba66dbc9edb968e36ef8ba63f5c6577435ae122517fa9e7cec9d9cb7"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/index.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/index.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7160521a9a5f89f2903ee2ab91c01af9c6f90d8db560c020b5cfd9920dab4b2b"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/index.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/color-picker/index.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ad410271e2bea97eb37e8e253fddb9d68f3df48186ef0ec88c8d2037779a2a4e"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/date.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/date.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9562f6e67a4a843728c6756bb685b3dc46bd6fb6ac2b89d237649eb85208d83e"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/date.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/date.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "826fcda0accf8256a8d80b557d963a5ac54132cca22bea256d1b563696cba70f"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/qrcodegen.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/qrcodegen.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c58afb303be3d37d9969d6aa046201b89bb5cae34d8bafc085c0444f3d0b0435"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/qrcodegen.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/qrcodegen.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d213410791523eace900e5fd8c90dd3c17d1a09aff3b8e21f66308eed9b05b5d"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/types.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/types.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c4c252176795a65e0369f42d7dc53da3a3c86cb56c21575fef00e543730e1b86"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/types.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/types.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "56e1b0c10087ee6ff7f949b15d1ef63cb11228ff93a159a52f9ad7ef851e4e02"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/utils.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/utils.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "48f364171ae927334ccd236bd6183fbde3ba7714c575bd99c5fac4cadeb933d9"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/utils.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/shared/qrcode/utils.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e34d3dabe5431c10895da1fbad8ae39eb421a43634ff6ef9638dc04971a8e146"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/control.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/control.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1f3d92db29de2c1c8edb8d5f529af7803fa444dfb7276bc855651e82fcc32b99"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/control.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/control.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "babdd4ecd19017dba46d0fdcc55f37864dea9b835228684b6350aa01bb6d0945"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/flatTool.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/flatTool.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "08432f3ea0ad8934c2327fe800fd206356490974160bea4cb658d068112171ff"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/flatTool.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/flatTool.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c7a5a55235abded51f83555601a6a93e92dcd435555d3cf75b3b54590875193e"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/index.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/index.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f573fcad250b8774ca15ed5752fdea6d09bc29768888af68d35ede3bc59e4f0"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/index.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/index.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7335aec000e97678bf63e3cf6bdcffdc44f3e8ea34ac884043867ff4d4f9e932"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/instantiationDecorator.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/instantiationDecorator.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5671c8bac2d2f5099b52d2cefb72084f47b98f0ce8fdd77fe786707371d8d067"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/instantiationDecorator.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/instantiationDecorator.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "679a07c3e618cce4df3bf7bfd1378cb235e4c0b015aaf133627827ccef70e9fe"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/superComponent.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/superComponent.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "134d84eb1f4e225e93ba2d3b264817bd1063472bf1b483df3052547cf9f654ce"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/superComponent.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/src/superComponent.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7dd69e98122cef70bc469d3571d866bb48923dd11b049f959baa034996d7d326"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/_variables.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/_variables.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/base.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/base.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/icons.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/icons.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/index.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/index.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "728986ece4beb3d9cda2fbe3a0701e07816b96f48112cd454432691d1cd33ebf"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_border.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_border.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_clearfix.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_clearfix.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_cursor.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_cursor.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_ellipsis.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_ellipsis.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_hairline.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_hairline.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_index.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_index.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_other.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/mixins/_other.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_components.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_components.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cb5184760249d47ff81df1f50d7da41c61850460c3463198d5e731b89f505a76"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_dark.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_dark.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cec96e1f3a943e01c7bc03bcb4a4807dd128011412af0a07201a0d9cb673c292"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_font.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_font.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fbef453387d2cbb8360c2f9d69ebe1415630ea0449aae6307c7ee8e2b622f9d9"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_index.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_index.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f645a060f8dd57c88c19c7bd4681225f27729ef6a0f532f9d1d32010b671fff"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_light.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_light.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7604eecbdd585c4a4af88f4e24864db00f95310df26994d7e74c162d638b85fa"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_radius.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_radius.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "009c6f417a030687cd372f8b02f605285bad269605d4cf2728ac7b8ddd2a89af"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_spacer.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/theme/_spacer.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3f659a36b14ba9a79e0f5e62d32f42520e3cc85aea2597a27b744854fe5dc5f3"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/utilities/_index.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/style/utilities/_index.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "728986ece4beb3d9cda2fbe3a0701e07816b96f48112cd454432691d1cd33ebf"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/badge.wxml",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/badge.wxml",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "76606a8a9803cb071068fd0cc8f91f083f923a47671a37429d33838b1b05b633"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/button.wxml",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/button.wxml",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ecbb2241981a519db4ea3ca8477b3c6886c7a3212f16db7a6ac0a67881213051"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/icon.wxml",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/icon.wxml",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "797f507e6c470707e332ef42726d64f898d91d89c5f73ef4e02e04c19551c070"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/image.wxml",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/template/image.wxml",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "57ad1fee3041956c6c55ad7ad0e9da6427ad39f13bba05cc951baca51ac3e235"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6f3a72ac3ccb6426e2a7ec277073de8ee22aed65febf2ab842dfbdc14503576f"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f6f22639cbe9d21129725ed96b9faf36f9e61a62e7efafed6b0998de4f28c7ee"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.wxs",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/utils.wxs",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c814c7310b07f40ae0b6f56e35b2c4e018e8cc51f819d2524de9774258f84a78"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/validator.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/validator.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a7bd548d8fc8abd3f0d4e8b49fa9fd13a491110b5e9aa7e360203471f1a3f191"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/validator.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/validator.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "25acb59049a1c440a027e50b87dea06f43006d5202bd869025d1d060c11288da"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/version.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/version.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "39d8971a9c22a04710aca3087cc3a2fac7010a1d18563405d20ce41b0639818e"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/version.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/version.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3e8a02eac179bea2cdc081895e6e8db443797ef71f8a00f1659affa63a5291c6"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/wechat.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/wechat.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "283230a024d3beb566630a35ec84799b4aaf552010e967765d749f7112920f0b"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/common/wechat.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/common/wechat.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "acb79bfe66c09f9de00a162f9dcc1e47453d227671665b5584ba334ec0900b2b"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "145b3d08e05fb849428a85bb0b8545aad363c3be91396d4c486c8560de06fffa"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "dcbead1bfbf0e876417c6de31ef917d9cbc1d1acb379f59e9778c945c418f504"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.json",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.json",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "287242f38e4987ef8f97dc020e05cce4bad0b5ccc60fef216139ec88f15825b4"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.wxml",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.wxml",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2908cf7185aea03253282744165b0fb4336e1ba5281c25796d6a18e3c45b9cef"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.wxss",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/icon.wxss",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b4f5dac5ff4ec0740591a9c7e4501edeafbdecb9140048bce31869fad9c5c44b"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/props.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/props.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8e0b8ed2f1a4648549cf8ecdef4240dccec3d456e138e88829a3c996688a621b"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/props.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/props.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "87778186d0fea89038a5e1de01d3a2e1056ef66b091b2c0018e991d1acae0e92"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/type.d.ts",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/type.d.ts",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "397e47bb476d195bfd26953dc45f41a271bc3cd4299be58dd47a416407e020df"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/icon/type.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/icon/type.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "56e1b0c10087ee6ff7f949b15d1ef63cb11228ff93a159a52f9ad7ef851e4e02"
+        }
+      ],
+      "properties": []
+    },
+    {
+      "bom-ref": "前端程序/miniprogram/components/tdesign-miniprogram/miniprogram_npm/tslib/index.js",
+      "type": "application",
+      "name": "前端程序/miniprogram/components/tdesign-miniprogram/miniprogram_npm/tslib/index.js",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "053c4fe111b77847750734252b1d54a7633ba4b6893fa2f62da04c2c92de6d4b"
+        }
+      ],
+      "properties": []
+    }
+  ],
+  "dependencies": null,
+  "vulnerabilities": []
+}

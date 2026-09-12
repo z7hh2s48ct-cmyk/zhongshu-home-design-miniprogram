@@ -23,6 +23,7 @@ test('退款记录区分退款成功、设计点冲正和未支付关闭，显�
   assert.equal(e.page.data.total, '—');
 });
 function environment(file, api = {}) {
+  if (file === 'pages/ai-design/publish.js') api.getResultVersions ||= async () => ({ list: [{ versionId: VERSION, version: 3, superseded: false, selectedFlatAssetId: '11', selectedElevationAssetId: '12' }] });
   let definition;
   const state = { token: 'A', calls: [], timers: [], globalData: { selectedElevationAssetId: '999', selectedFlatAssetId: '998' } };
   const deps = {
@@ -201,6 +202,9 @@ test('投稿提交成功直接进入保存的投稿记录，重试复用同一�
   const calls = []; let fail = true;
   const e = environment('pages/ai-design/publish.js', { validatePublication: async () => ({ valid: true }), submitForPublication: async (...args) => { calls.push(args); if (fail) throw Error('断网'); return { submissionId: '123' }; } });
   Object.assign(e.state.globalData, { projectId: ID, resultVersionId: VERSION }); e.page.onLoad(); await tick();
+  assert.equal(e.page.data.materialCount, 2); assert.equal(e.page.data.versionNumber, 3);
+  await e.page.submit(); assert.equal(calls.length, 0);
+  await e.page.togglePublicDisplay({ detail: { value: true } });
   await e.page.submit(); assert.equal(e.page.data.submitting, false);
   fail = false; await e.page.submit(); assert.equal(calls[0][2], calls[1][2]);
   assert.equal(e.state.calls.at(-1)[1].url, '/pages/profile/record?type=submissions&id=123');
@@ -208,7 +212,7 @@ test('投稿提交成功直接进入保存的投稿记录，重试复用同一�
 
 test('投稿不信任空成功响应，身份变化后不跳转到旧账号记录', async () => {
   let resolve; const e = environment('pages/ai-design/publish.js', { validatePublication: async () => ({ valid: true }), submitForPublication: async () => null });
-  Object.assign(e.state.globalData, { projectId: ID, resultVersionId: VERSION }); e.page.onLoad(); await tick(); await e.page.submit();
+  Object.assign(e.state.globalData, { projectId: ID, resultVersionId: VERSION }); e.page.onLoad(); await tick(); await e.page.togglePublicDisplay({ detail: { value: true } }); await e.page.submit();
   assert.match(e.state.calls.at(-1)[1].title, /未确认保存/);
   e.api.submitForPublication = () => new Promise(r => { resolve = r; }); const pending = e.page.submit();
   e.state.token = 'B'; resolve({ submissionId: '123' }); await pending;

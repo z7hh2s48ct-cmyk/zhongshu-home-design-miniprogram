@@ -56,8 +56,8 @@ zhongshu:
     internal-secret: ${ZS_INTERNAL_SECRET:}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
     # D-11（EXT-05）AI Provider 配置面，2026-09-12 冻结：apilio.ai，OpenAI 兼容 /v1/chat/completions。
-    # ⚠️ 本仓库 ai-orchestration 只做编排/租约/结算，无出站生成引擎——真实 Provider 调用由外部 AI Runtime（P4D）承担，
-    #    Runtime 不在本仓库。故本块为「前向声明的配置面」：AiProviderProperties 仅启动绑定、不装配任何客户端、当前无消费者。
+    # Provider 调用由仓库 ai-runtime/ 独立进程承担，直接读取自己的部署环境。
+    # Java AiProviderProperties 仅保留兼容绑定；Provider 密钥只需注入 Runtime，不会自动转发。
     # 遵 T12「只登记已被消费的键」纪律：api-key 暂不纳入 RealServiceWiringPolicy 强制启动守卫（无消费者时纳入会令生产为无用键失败）。
     # 安全基线：本 profile 不给任何默认值；api-key 属机密，只经部署环境 ZS_AI_API_KEY 带外注入，绝不落文件/提交；
     #    Actuator env/configprops show-values=NEVER（见文件末）兜底不回显。
@@ -76,7 +76,7 @@ zhongshu:
     access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:}
   design:
     seed-dev-data: ${ZS_SEED_DEV_DATA:false}
-    # 生产默认关（驱动器在 P4D 前会“无 Runtime 产出”判 FAILED 全退；接 P4D 后按 Provider 限额决定开启策略）
+    # 基线默认关闭；production profile 显式开启尾程与补偿驱动。
     driver-enabled: ${ZS_DRIVER_ENABLED:false}
     asset:
       dev-content-endpoint: ${ZS_DEV_CONTENT_ENDPOINT:false}

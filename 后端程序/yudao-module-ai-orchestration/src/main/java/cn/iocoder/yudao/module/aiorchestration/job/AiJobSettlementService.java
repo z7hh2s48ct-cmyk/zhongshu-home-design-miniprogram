@@ -186,6 +186,26 @@ public class AiJobSettlementService {
         return existing;
     }
 
+    /** Readiness is rechecked while holding the same job lock used for accepting outputs. */
+    public boolean settleIfReady(long jobId, int deadlineMinutes, int cancelMinutes) {
+        return Boolean.TRUE.equals(txTemplate.execute(status -> {
+            var job = jdbcTemplate.queryForMap("SELECT status, "
+                    + "(create_time < now()-(? * interval '1 minute')) AS expired, "
+                    + "(status='CANCEL_REQUESTED' AND cancel_requested_at < now()-(? * interval '1 minute')) AS cancel_expired, "
+                    + "((SELECT count(*) FROM ai_job_result r WHERE r.job_id=ai_job.id AND r.validation_state='ACCEPTED')>=requested_count) AS full, "
+                    + "(runtime_completed_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ai_job_result r WHERE r.job_id=ai_job.id AND r.validation_state='OUTPUT_QUARANTINED')) AS done "
+                    + "FROM ai_job WHERE id=? FOR UPDATE",deadlineMinutes,cancelMinutes,jobId);
+            if (isTerminal((String)job.get("status"))) return false;
+            if (!Boolean.TRUE.equals(job.get("expired")) && !Boolean.TRUE.equals(job.get("cancel_expired"))
+                    && !Boolean.TRUE.equals(job.get("full")) && !Boolean.TRUE.equals(job.get("done"))) return false;
+            // A timed-out pending validator cannot add billable results after this lock is released.
+            jdbcTemplate.update("UPDATE ai_job_result SET validation_state='REJECTED',reject_reason='JOB_DEADLINE',update_time=now() "
+                    + "WHERE job_id=? AND validation_state='OUTPUT_QUARANTINED'",jobId);
+            settle(jobId,"CANCEL_REQUESTED".equals(job.get("status"))?"CANCEL":"SETTLE");
+            return true;
+        }));
+    }
+
     public record SettlementSummary(String status, long refundedNow, long refundedTotal) {
     }
 

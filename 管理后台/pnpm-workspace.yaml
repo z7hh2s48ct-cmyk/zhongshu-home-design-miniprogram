@@ -2,3 +2,5 @@ allowBuilds:
   '@parcel/watcher': true
   core-js-pure: true
   es5-ext: true
+overrides:
+  '@form-create/designer>@form-create/component-wangeditor': file:./vendor/form-create-editor

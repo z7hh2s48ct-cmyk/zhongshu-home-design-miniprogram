@@ -19,11 +19,11 @@ function refresh(page, stage) {
   }).catch(() => { if (page._quoteSeq === seq) page.setData({ priceText: '报价暂不可用，请稍后重试' }); });
 }
 
-function confirm(stage, count) {
+function confirm(stage, count, description) {
   const http = require('./request');
   const token = http.getToken();
   return quote(stage, count).then(value => new Promise((resolve, reject) => {
-    wx.showModal({ title: '确认生成', content: '生成 ' + count + ' 个方案，本次消耗 ' + value.totalPointCost + ' 设计点。',
+    wx.showModal({ title: '确认生成', content: '生成 ' + count + ' 个方案，本次消耗 ' + value.totalPointCost + ' 设计点。' + (description || ''),
       success: result => {
         if (!result.confirm) { reject({ cancelled: true }); return; }
         if (!http.isSameSession(token)) { reject({ msg: '登录身份已变化，请重试' }); return; }

@@ -32,6 +32,12 @@ class RealServiceWiringPolicyTest {
     /** 全部端口选择真实实现，并齐备真实实现所需的核心机密、appid 与 appsecret（生产放行的完整正确配置）。 */
     private Map<String, String> allReal() {
         Map<String, String> p = new HashMap<>();
+        for(String key:List.of("zhongshu.design.driver-enabled","zhongshu.design.refund-recovery-enabled","zhongshu.design.export-worker-enabled",
+                "zhongshu.design.asset.validation-worker-enabled","zhongshu.privacy.export-worker-enabled")) p.put(key,"true");
+        p.put("zhongshu.design.asset.moderation.secret-id","test-ims-id");
+        p.put("zhongshu.design.asset.moderation.secret-key","test-ims-key");
+        p.put("zhongshu.design.asset.moderation.biz-type","test-policy");
+        p.put("zhongshu.design.asset.moderation.daily-limit","10");
         for (String key : List.of("yudao.security.mock-enable", "zhongshu.design.seed-dev-data",
                 "zhongshu.design.asset.dev-content-endpoint", "spring.datasource.druid.stat-view-servlet.enabled")) p.put(key, "false");
         p.put("management.endpoint.env.show-values", "NEVER");

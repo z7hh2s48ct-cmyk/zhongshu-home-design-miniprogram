@@ -16,7 +16,8 @@ public class AppDesignJobCreateReqVO {
     @Max(value = 4, message = "生成数量最多 4")
     private Integer count;
 
-    @Schema(description = "用户确认的计价规则编号与版本；旧客户端可缺省，新客户端必须随确认提交")
+    @Schema(description = "用户确认的计价规则编号与版本", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "请先确认本次生成价格")
     private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation priceConfirmation;
 
     @Schema(description = "风格编码（立面必填）")

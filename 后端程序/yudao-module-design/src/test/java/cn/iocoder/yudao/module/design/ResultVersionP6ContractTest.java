@@ -163,7 +163,7 @@ class ResultVersionP6ContractTest {
     private long projectWithFlatSelected() {
         givePoints(USER_A, 500);
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
-        var flat = projects.createFlatJob(USER_A, projectId, 2, "flat-" + projectId);
+        var flat = projects.createFlatJob(USER_A, projectId, 2, "flat-" + projectId, confirmed("FLAT"));
         runElevationJobAsFlat(flat.jobId(), 2);
         var candidates = projects.promoteCandidates(USER_A, projectId, flat.jobId());
         projects.selectFlatCandidate(USER_A, projectId, candidates.get(0).candidateId());
@@ -180,7 +180,7 @@ class ResultVersionP6ContractTest {
     void elevationJobRequiresFlatSelection() {
         givePoints(USER_A, 500);
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
-        assertThatThrownBy(() -> projects.createElevationJob(USER_A, projectId, 2, "elev-x", null))
+        assertThatThrownBy(() -> projects.createElevationJob(USER_A, projectId, 2, "elev-x", null, confirmed("ELEVATION")))
                 .isInstanceOfSatisfying(ServiceException.class,
                         e -> assertThat(e.getCode()).isEqualTo(1_071_000_000));
     }
@@ -193,7 +193,7 @@ class ResultVersionP6ContractTest {
 
         // 立面任务 + 选择 → v1
         var elev1 = projects.createElevationJob(USER_A, projectId, 2, "elev-1",
-                Map.of("styleCode", "MODERN", "roofType", "gable"));
+                Map.of("styleCode", "MODERN", "roofType", "gable"), confirmed("ELEVATION"));
         runElevation(elev1.jobId(), 2);
         var candidates = projects.promoteCandidates(USER_A, projectId, elev1.jobId());
         var v1 = projects.selectElevationCandidate(USER_A, projectId, candidates.get(0).candidateId());
@@ -205,7 +205,7 @@ class ResultVersionP6ContractTest {
 
         // 调整请求 → 新立面任务 → 选择 → v2（旧版本只读保留）
         var revision = projects.createRevisionRequest(USER_A, projectId, "屋顶改双坡",
-                Map.of("roofType", "hip"), 1, "elev-2");
+                Map.of("roofType", "hip"), 1, "elev-2", confirmed("ELEVATION"));
         runElevation(revision.newJobId(), 1);
         var allAfterRevision = projects.promoteCandidates(USER_A, projectId, revision.newJobId());
         var candidates2 = allAfterRevision.stream()
@@ -237,7 +237,7 @@ class ResultVersionP6ContractTest {
     @Test
     void repeatedElevationSelectionIsIdempotent() {
         long projectId = projectWithFlatSelected();
-        var elev1 = projects.createElevationJob(USER_A, projectId, 2, "elev-i1", null);
+        var elev1 = projects.createElevationJob(USER_A, projectId, 2, "elev-i1", null, confirmed("ELEVATION"));
         runElevation(elev1.jobId(), 2);
         var candidates = projects.promoteCandidates(USER_A, projectId, elev1.jobId());
 
@@ -256,7 +256,7 @@ class ResultVersionP6ContractTest {
         long USER_B = 4402L;
         assertThatThrownBy(() -> projects.listResultVersions(USER_B, projectId))
                 .isInstanceOf(ServiceException.class);
-        assertThatThrownBy(() -> projects.createElevationJob(USER_B, projectId, 1, "elev-b", null))
+        assertThatThrownBy(() -> projects.createElevationJob(USER_B, projectId, 1, "elev-b", null, confirmed("ELEVATION")))
                 .isInstanceOf(ServiceException.class);
     }
 
@@ -266,7 +266,7 @@ class ResultVersionP6ContractTest {
     void revisionRequiresExistingVersion() {
         long projectId = projectWithFlatSelected();
         assertThatThrownBy(() -> projects.createRevisionRequest(USER_A, projectId, "改屋顶",
-                null, 1, "rev-x"))
+                null, 1, "rev-x", confirmed("ELEVATION")))
                 .isInstanceOfSatisfying(ServiceException.class,
                         e -> assertThat(e.getCode()).isEqualTo(1_071_000_000));
     }
@@ -274,14 +274,14 @@ class ResultVersionP6ContractTest {
     @Test
     void recoveredVersionAssetsUseFrozenSelectionsAndRemainOwnerScoped() {
         long projectId = projectWithFlatSelected();
-        var firstJob = projects.createElevationJob(USER_A, projectId, 1, "recover-one", null);
+        var firstJob = projects.createElevationJob(USER_A, projectId, 1, "recover-one", null, confirmed("ELEVATION"));
         runElevation(firstJob.jobId(), 1);
         var firstCandidate = projects.promoteCandidates(USER_A, projectId, firstJob.jobId()).stream()
                 .filter(c -> c.jobId() == firstJob.jobId()).findFirst().orElseThrow();
         var firstVersion = projects.selectElevationCandidate(USER_A, projectId, firstCandidate.candidateId());
         Long flatAsset = jdbc.queryForObject("SELECT c.asset_id FROM design_selection s JOIN design_candidate c "
                 + "ON c.id = s.candidate_id WHERE s.project_id = ? AND s.stage = 'FLAT' AND s.deleted = FALSE", Long.class, projectId);
-        var second = projects.createRevisionRequest(USER_A, projectId, "改立面", null, 1, "recover-two");
+        var second = projects.createRevisionRequest(USER_A, projectId, "改立面", null, 1, "recover-two", confirmed("ELEVATION"));
         runElevation(second.newJobId(), 1);
         var nextCandidate = projects.promoteCandidates(USER_A, projectId, second.newJobId()).stream()
                 .filter(c -> c.jobId() == second.newJobId()).findFirst().orElseThrow();
@@ -324,4 +324,10 @@ class ResultVersionP6ContractTest {
 
     }
 
+
+    private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmed(String stage) {
+        var rows=jdbc.queryForList("SELECT id,version FROM generation_price_rule WHERE stage=? ORDER BY effective_at DESC,id DESC LIMIT 1",stage);
+        var row=rows.get(0);
+        return new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation(String.valueOf(row.get("id")),((Number)row.get("version")).longValue());
+    }
 }

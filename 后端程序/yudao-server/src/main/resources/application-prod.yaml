@@ -1,6 +1,10 @@
 # RG1/R06: use --spring.profiles.active=pg,prod. Never combine with local/dev/zsdev.
 # Secrets and endpoints are supplied by deployment; no production fallback credentials.
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 8
   data:
     redis:
       host: ${ZS_REDIS_HOST}
@@ -50,13 +54,22 @@ zhongshu:
         notify-url: ${ZS_PAY_NOTIFY_URL}
         refund-notify-url: ${ZS_PAY_REFUND_NOTIFY_URL}
   design:
+    driver-enabled: true
+    refund-recovery-enabled: true
+    export-worker-enabled: true
     seed-dev-data: false
     asset:
+      validation-worker-enabled: true
       dev-content-endpoint: false
       storage:
         provider: cos
       moderation:
         provider: real
+        secret-id: ${ZS_MODERATION_SECRET_ID}
+        secret-key: ${ZS_MODERATION_SECRET_KEY}
+        region: ${ZS_MODERATION_REGION:ap-guangzhou}
+        biz-type: ${ZS_MODERATION_BIZ_TYPE}
+        daily-limit: ${ZS_MODERATION_DAILY_LIMIT}
 management:
   endpoints:
     web:

@@ -25,6 +25,9 @@ public interface AiJobPort {
 
     Optional<JobView> getJob(long jobId);
 
+    /** Must share the creation transaction, so a worker never observes a job without its immutable input. */
+    default boolean freezeInput(long jobId, java.util.Map<String,Object> snapshot) { throw new UnsupportedOperationException("AI_INPUT_NOT_WIRED"); }
+
     default Optional<JobView> latestJob(long userId, long projectId, String phase) { return Optional.empty(); }
 
     /** 已接受的有效候选（仅 ACCEPTED） */

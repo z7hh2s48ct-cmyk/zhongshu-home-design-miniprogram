@@ -112,7 +112,7 @@ class AiJobP4CContractTest {
     void jobReadModelUsesFrozenPricesRealSettlementAndLatestFirst() {
         long userId = 7791;
         givePoints(userId, 100);
-        long id = settlement.createJobWithCharge(userId, "FLAT", 3, "read-model", "project-1");
+        long id = settlement.createJobWithCharge(userId, "FLAT", 3, "read-model", "project-1", confirmed("FLAT"));
         var before = cn.iocoder.yudao.module.aiorchestration.controller.app.AppAiJobController.toVo(orchestration.getJob(id).orElseThrow());
         assertThat(before.getUnitPointCost()).isEqualTo(10L);
         assertThat(before.getTotalPointCost()).isEqualTo(30L);
@@ -133,7 +133,7 @@ class AiJobP4CContractTest {
         assertThat(after.getAllowedActions()).isEmpty();
         var query = new cn.iocoder.yudao.module.aiorchestration.job.AiJobQueryService(dataSource);
         assertThat(query.getJob(id)).isEqualTo(orchestration.getJob(id));
-        long newest = settlement.createJobWithCharge(userId, "FLAT", 1, "read-model-next", "project-1");
+        long newest = settlement.createJobWithCharge(userId, "FLAT", 1, "read-model-next", "project-1", confirmed("FLAT"));
         assertThat(query.pageJobs(null, null, 1, 1)).extracting(AiJobOrchestrationService.JobSnapshot::jobId).containsExactly(newest);
         assertThat(query.pageJobs(null, null, 2, 1)).extracting(AiJobOrchestrationService.JobSnapshot::jobId).containsExactly(id);
     }
@@ -185,8 +185,8 @@ class AiJobP4CContractTest {
     @Test
     void createJobWithChargeDebitsOnceAndIdempotent() {
         givePoints(1L, 100);
-        long job1 = settlement.createJobWithCharge(1L, "FLAT", 2, "key-1", null);
-        long job2 = settlement.createJobWithCharge(1L, "FLAT", 2, "key-1", null);
+        long job1 = settlement.createJobWithCharge(1L, "FLAT", 2, "key-1", null, confirmed("FLAT"));
+        long job2 = settlement.createJobWithCharge(1L, "FLAT", 2, "key-1", null, confirmed("FLAT"));
         assertThat(job2).isEqualTo(job1);
         assertThat(available(1L)).as("同键重放只扣一次").isEqualTo(80);
         assertThat(jdbc.queryForObject(
@@ -204,7 +204,7 @@ class AiJobP4CContractTest {
     @Test
     void insufficientBalanceCreatesNothing() {
         givePoints(2L, 5);
-        assertThatThrownBy(() -> settlement.createJobWithCharge(2L, "FLAT", 2, "key-2", null))
+        assertThatThrownBy(() -> settlement.createJobWithCharge(2L, "FLAT", 2, "key-2", null, confirmed("FLAT")))
                 .isInstanceOfSatisfying(ServiceException.class,
                         e -> assertThat(e.getCode()).isEqualTo(1_072_000_000));
         assertThat(available(2L)).isEqualTo(5);
@@ -240,7 +240,7 @@ class AiJobP4CContractTest {
     void priceChangeAppliesOnlyToNewJobsAndKeepsFrozenSnapshots() {
         givePoints(4L, 100);
         // 旧价 10 点建任务（冻结快照）
-        long jobOld = settlement.createJobWithCharge(4L, "FLAT", 2, "key-4", null);
+        long jobOld = settlement.createJobWithCharge(4L, "FLAT", 2, "key-4", null, confirmed("FLAT"));
         assertThat(jdbc.queryForObject(
                 "SELECT unit_point_cost FROM ai_task_charge WHERE job_id = ?", Long.class, jobOld))
                 .isEqualTo(10);
@@ -250,7 +250,7 @@ class AiJobP4CContractTest {
         jdbc.update("UPDATE generation_price_rule SET status = 'RETIRED' WHERE stage = 'FLAT'");
         jdbc.update("INSERT INTO generation_price_rule (id, stage, unit_point_cost, min_count, max_count, "
                 + "effective_at) VALUES (9002, 'FLAT', 12, 1, 4, now())");
-        long jobNew = settlement.createJobWithCharge(4L, "FLAT", 2, "key-4b", null);
+        long jobNew = settlement.createJobWithCharge(4L, "FLAT", 2, "key-4b", null, confirmed("FLAT"));
         assertThat(jobNew).isNotEqualTo(jobOld);
         assertThat(jdbc.queryForObject(
                 "SELECT unit_point_cost FROM ai_task_charge WHERE job_id = ?", Long.class, jobNew))
@@ -259,7 +259,7 @@ class AiJobP4CContractTest {
 
         // 全部规则停用后再建：系统配置错误路径（非 PRICE_RULE_CHANGED）
         jdbc.update("UPDATE generation_price_rule SET status = 'RETIRED' WHERE stage = 'FLAT'");
-        assertThatThrownBy(() -> settlement.createJobWithCharge(4L, "FLAT", 2, "key-4c", null))
+        assertThatThrownBy(() -> settlement.createJobWithCharge(4L, "FLAT", 2, "key-4c", null, confirmed("FLAT")))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(available(4L)).isEqualTo(56);
     }
@@ -270,7 +270,7 @@ class AiJobP4CContractTest {
     void settlementRulesByAcceptedSlots() {
         // N=2 全成功：不退点
         givePoints(11L, 100);
-        long j1 = settlement.createJobWithCharge(11L, "FLAT", 2, "key-11", null);
+        long j1 = settlement.createJobWithCharge(11L, "FLAT", 2, "key-11", null, confirmed("FLAT"));
         runProvider(j1, 2, 2);
         var s1 = settlement.settle(j1, "SETTLE");
         assertThat(s1.status()).isEqualTo("SUCCEEDED");
@@ -279,7 +279,7 @@ class AiJobP4CContractTest {
 
         // N-1：退 10
         givePoints(12L, 100);
-        long j2 = settlement.createJobWithCharge(12L, "FLAT", 2, "key-12", null);
+        long j2 = settlement.createJobWithCharge(12L, "FLAT", 2, "key-12", null, confirmed("FLAT"));
         runProvider(j2, 1, 2);
         var s2 = settlement.settle(j2, "SETTLE");
         assertThat(s2.status()).isEqualTo("PARTIALLY_SUCCEEDED");
@@ -288,7 +288,7 @@ class AiJobP4CContractTest {
 
         // 0 个有效：FAILED 全退
         givePoints(13L, 100);
-        long j3 = settlement.createJobWithCharge(13L, "FLAT", 2, "key-13", null);
+        long j3 = settlement.createJobWithCharge(13L, "FLAT", 2, "key-13", null, confirmed("FLAT"));
         runProvider(j3, 0, 2);
         var s3 = settlement.settle(j3, "SETTLE");
         assertThat(s3.status()).isEqualTo("FAILED");
@@ -301,7 +301,7 @@ class AiJobP4CContractTest {
     @Test
     void overDeliveryNeverOvercharges() {
         givePoints(14L, 100);
-        long jobId = settlement.createJobWithCharge(14L, "FLAT", 2, "key-14", null);
+        long jobId = settlement.createJobWithCharge(14L, "FLAT", 2, "key-14", null, confirmed("FLAT"));
         var job = orchestration.claim("worker-p4c", 1, 60, "stub").get(0);
         // 提交 4 个结果（槽位 1..4 超出 N=2 的 1..2 会被范围校验拒；合法的只有 1、2）
         for (int slot = 1; slot <= 2; slot++) {
@@ -332,7 +332,7 @@ class AiJobP4CContractTest {
     @Test
     void repeatedSettlementIsIdempotentAndCapped() {
         givePoints(15L, 100);
-        long jobId = settlement.createJobWithCharge(15L, "FLAT", 2, "key-15", null);
+        long jobId = settlement.createJobWithCharge(15L, "FLAT", 2, "key-15", null, confirmed("FLAT"));
         runProvider(jobId, 1, 2);
         var first = settlement.settle(jobId, "SETTLE");
         var second = settlement.settle(jobId, "SETTLE");
@@ -348,7 +348,7 @@ class AiJobP4CContractTest {
     @Test
     void queuedCancellationRefundsInFull() {
         givePoints(17L, 100);
-        long jobId = settlement.createJobWithCharge(17L, "FLAT", 2, "key-17", null);
+        long jobId = settlement.createJobWithCharge(17L, "FLAT", 2, "key-17", null, confirmed("FLAT"));
         assertThat(available(17L)).isEqualTo(80);
 
         // QUEUED 状态直接取消
@@ -368,7 +368,7 @@ class AiJobP4CContractTest {
     @Test
     void cancellationWithPartialResultsSettlesPartially() {
         givePoints(16L, 100);
-        long jobId = settlement.createJobWithCharge(16L, "FLAT", 2, "key-16", null);
+        long jobId = settlement.createJobWithCharge(16L, "FLAT", 2, "key-16", null, confirmed("FLAT"));
         var job = orchestration.claim("worker-p4c", 1, 60, "stub").get(0);
         byte[] content = "partial-1".getBytes(StandardCharsets.UTF_8);
         String objectKey = job.outputPrefix() + "/slot-1.png";
@@ -453,4 +453,62 @@ class AiJobP4CContractTest {
 
     }
 
+
+    @Test
+    void partialResultsWaitForCompletionAndAcceptedBytesCannotBeOverwritten() {
+        givePoints(801,100);
+        long id=settlement.createJobWithCharge(801,"FLAT",2,"barrier",null,confirmed("FLAT"));
+        var claim=orchestration.claim("runtime",1,60,"apilio").get(0);
+        String key=claim.outputPrefix()+"/one.png";byte[] bytes="original".getBytes(StandardCharsets.UTF_8);
+        objectStorage.putObject(key,bytes);
+        orchestration.reportResult(id,claim.attemptNo(),claim.fencingToken(),"apilio","first",1,key,sha256(bytes),"image/png",bytes.length);
+        orchestration.validateQuarantinedResults(id);
+        String accepted=orchestration.listAcceptedResults(id).get(0).objectKey();
+        assertThat(accepted).startsWith("accepted/ai/");
+        objectStorage.putObject(key,"replacement".getBytes(StandardCharsets.UTF_8));
+        assertThat(objectStorage.getObject(accepted)).isEqualTo(bytes);
+        assertThat(settlement.settleIfReady(id,30,10)).isFalse();
+        assertThat(available(801)).isEqualTo(80);
+        assertThat(orchestration.completeAttempt(id,claim.attemptNo(),claim.fencingToken())).isTrue();
+        assertThat(orchestration.reportResult(id,claim.attemptNo(),claim.fencingToken(),"apilio","late",2,key,sha256(bytes),"image/png",bytes.length))
+                .isEqualTo(AiJobOrchestrationService.ReportOutcome.STALE_FENCING);
+        assertThat(settlement.settleIfReady(id,30,10)).isTrue();
+        assertThat(available(801)).isEqualTo(90);
+        assertThat(settlement.settleIfReady(id,30,10)).isFalse();
+        assertThat(available(801)).isEqualTo(90);
+    }
+
+    @Test
+    void queuedWithoutRuntimeAndExhaustedAttemptsConvergeWithoutDuplicateRefund() {
+        givePoints(802,100);
+        long id=settlement.createJobWithCharge(802,"FLAT",2,"no-runtime",null,confirmed("FLAT"));
+        assertThat(settlement.settleIfReady(id,30,10)).isFalse();
+        jdbc.update("UPDATE ai_job SET create_time=now()-interval '31 minutes' WHERE id=?",id);
+        assertThat(orchestration.claim("runtime",1,60,"apilio")).isEmpty();
+        assertThat(settlement.settleIfReady(id,30,10)).isTrue();assertThat(available(802)).isEqualTo(100);
+        long retry=settlement.createJobWithCharge(802,"FLAT",1,"retry-limit",null,confirmed("FLAT"));
+        for(int i=1;i<=3;i++) { var c=orchestration.claim("runtime",1,60,"apilio").get(0);
+            assertThat(orchestration.reportFailure(retry,c.attemptNo(),c.fencingToken(),"apilio","failure-"+i,"FAIL","safe")).isTrue(); }
+        assertThat(orchestration.claim("runtime",1,60,"apilio")).isEmpty();
+        assertThat(settlement.settleIfReady(retry,30,10)).isTrue();assertThat(available(802)).isEqualTo(100);
+    }
+
+    @Test
+    void missingPriceConfirmationNeverDebitsAndCompletedSnapshotCannotBeOverwritten() {
+        givePoints(803,100);
+        assertThatThrownBy(()->settlement.createJobWithCharge(803,"FLAT",1,"no-price",null,null)).isInstanceOf(cn.iocoder.yudao.framework.common.exception.ServiceException.class);
+        assertThat(available(803)).isEqualTo(100);assertThat(count("ai_job")).isZero();
+        new org.springframework.transaction.support.TransactionTemplate(txManager).executeWithoutResult(status->{
+            long id=settlement.createJobWithCharge(803,"FLAT",1,"snapshot",null,confirmed("FLAT"));
+            assertThat(orchestration.freezeInput(id,Map.of("phase","FLAT","requirements",Map.of("width",10)))).isTrue();
+            assertThat(orchestration.freezeInput(id,Map.of("phase","ELEVATION"))).isFalse();
+            assertThat(jdbc.queryForObject("SELECT input_snapshot->>'phase' FROM ai_job WHERE id=?",String.class,id)).isEqualTo("FLAT");
+        });
+    }
+
+    private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmed(String stage) {
+        var rows=jdbc.queryForList("SELECT id,version FROM generation_price_rule WHERE stage=? ORDER BY effective_at DESC,id DESC LIMIT 1",stage);
+        var row=rows.get(0);
+        return new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation(String.valueOf(row.get("id")),((Number)row.get("version")).longValue());
+    }
 }

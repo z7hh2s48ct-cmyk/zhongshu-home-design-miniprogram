@@ -1,18 +1,14 @@
 <view class="v12-page generating-page" wx:if="{{accessReady}}">
   <v12-navbar title="{{stage === 'plane' ? '平面方案生成' : '立面方案生成'}}" show-back show-brand="{{false}}" />
-  <view class="steps"><view class="{{stage === 'plane' ? 'active' : 'done'}}">步骤1 <t-icon wx:if="{{stage === 'elevation'}}" name="check-circle-filled" size="16px" color="#fff" /></view><text>平面方案</text><i></i><view class="{{stage === 'elevation' ? 'active' : ''}}">步骤2</view><text>立面方案</text></view>
-  <view wx:if="{{stage === 'plane'}}" class="v12-card generate-card plane-card">
-    <text class="generate-title">正在生成{{count}}个平面方案</text><text class="percent">{{progress}}%</text><view class="progress"><i style="width: {{progress}}%;"></i></view><text class="generating-copy">AI正在分析需求、规划空间布局、生成平面方案...</text>
-    <view class="plan-preview"><image src="/assets/v12/generating-plan-1.png" mode="aspectFit" /><image src="/assets/v12/generating-plan-2.png" mode="aspectFit" /></view>
-    <view class="task-list"><view><b>✓</b><view class="task-copy"><text>理解需求</text><text>分析宅基地尺寸与家庭需求</text></view><i>已完成</i></view><view><b>✓</b><view class="task-copy"><text>规划空间</text><text>划分功能区，确定空间布局</text></view><i>已完成</i></view><view><b>3</b><view class="task-copy"><text>生成{{count}}个平面方案</text><text>生成备选平面布局方案</text></view><i class="working">进行中</i></view><view><b class="waiting">4</b><view class="task-copy"><text>检查空间关系</text><text>检查动线、采光、通风等关系</text></view><i>待处理</i></view></view>
+  <view class="v12-card generate-card">
+    <text class="generate-title">{{statusText}}</text>
+    <text class="generating-copy">任务 {{jobId}} · 请求 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案</text>
+    <text class="percent">{{progress}}%</text>
+    <view class="progress"><i style="width: {{progress}}%;"></i></view>
+    <text class="generating-copy">审核通过 {{acceptedCount}} 个。候选将在任务结算后开放查看。</text>
+    <text wx:if="{{pollError}}" class="generating-copy">{{pollError}}</text>
   </view>
-  <view wx:else class="v12-card generate-card elevation-card">
-    <view class="elevation-visual"><view><text>{{flatLabel || '已选平面方案'}}</text><view class="locked-plans"><image src="/assets/v12/plan-b-1.png" mode="aspectFit" /><image src="/assets/v12/plan-b-2.png" mode="aspectFit" /></view></view><text class="arrow">→</text><view><text>立面方案生成中</text><image src="/assets/v12/elevation-b.png" mode="aspectFill" /><image src="/assets/v12/elevation-a.png" mode="aspectFill" /></view></view>
-    <text class="generate-title">正在生成 {{count}} 个立面方案</text><view class="progress-line"><view class="progress"><i style="width: {{progress}}%;"></i></view><text>{{progress}}%</text></view>
-    <view class="horizontal-tasks"><view><b>✓</b><text>读取平面方案 B</text><span>已完成</span></view><i></i><view><b>✓</b><text>匹配新中式风格</text><span>已完成</span></view><i></i><view><b class="active">3</b><text>生成 {{count}} 个立面方案</text><span>进行中</span></view><i></i><view><b>4</b><text>检查建筑比例</text><span>待处理</span></view></view>
-    <view class="lock-note"><t-icon name="lock-on" size="22px" color="#7b3f17" /> 平面方案 B 已锁定，立面将严格匹配空间关系</view>
-  </view>
-  <view class="stage-tip"><t-icon name="lightbulb" size="28px" color="#c78217" /><view><text>{{tipTitle}}</text><text>{{tipSubtitle}}</text></view></view>
-  <view class="generate-actions"><view class="v12-primary-button" bindtap="continueLater">后台继续</view><view class="v12-secondary-button" bindtap="cancel">取消生成</view></view>
-  <view class="preview-link" bindtap="previewResult">预览完成状态</view>
+  <view class="stage-tip"><t-icon name="info-circle" size="28px" color="#c78217" /><view><text>进度以任务服务返回为准</text><text>生成失败或数量不足时，按有效方案数量结算，退款可在点数记录查看。</text></view></view>
+  <view class="generate-actions"><view class="v12-primary-button" bindtap="continueLater">后台继续</view><view wx:if="{{canCancel}}" class="v12-secondary-button" bindtap="cancel">{{cancelling ? '取消处理中' : '取消生成'}}</view></view>
+  <view wx:if="{{finished}}" class="preview-link" bindtap="previewResult">查看已生成方案</view>
 </view>

@@ -1,0 +1,24 @@
+services:
+  runtime:
+    build: .
+    image: zhongshu-ai-runtime:1.0.0
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    pids_limit: 64
+    cpus: 1.0
+    stop_grace_period: 30s
+    env_file: .env.runtime
+    environment:
+      ZS_AI_JOURNAL_DIR: /data
+    volumes:
+      - runtime-journal:/data
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    ports:
+      - 127.0.0.1:8081:8081
+volumes:
+  runtime-journal:

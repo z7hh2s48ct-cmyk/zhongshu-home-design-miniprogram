@@ -1,0 +1,41 @@
+{
+  "createdAt": "2026-09-12T20:40:26.688Z",
+  "scanner": "aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969",
+  "backendSha256": "eb4b157d88526ff688f40987f5987bb9af88b1589609c03de1398e24b9cddf9d",
+  "miniProvenance": "tdesign-miniprogram@1.16.1; bundled tslib separate version not inferred",
+  "reports": [
+    {
+      "name": "mini",
+      "file": "RG3-mini.cdx.json",
+      "sha256": "8889d6ee4488ceb427c53bda4a4a9713ceb4e7efe5e2bb28a62b25dae5f5c3b0",
+      "components": 81,
+      "vulnerabilities": 0,
+      "highOrCritical": []
+    },
+    {
+      "name": "admin",
+      "file": "RG3-admin.cdx.json",
+      "sha256": "ce3b91ad05e49d5ec8a719424a1c60ff0b1ebaa67a91aba921b5b58ba60b49a3",
+      "components": 606,
+      "vulnerabilities": 0,
+      "highOrCritical": []
+    },
+    {
+      "name": "backend",
+      "file": "RG3-backend.cdx.json",
+      "sha256": "b229ced9d22c035d5e5960e55bfca9d5ef21edb298584890626a63f933ed8bb2",
+      "components": 299,
+      "vulnerabilities": 1,
+      "highOrCritical": []
+    },
+    {
+      "name": "runtime",
+      "file": "RG3-runtime.cdx.json",
+      "sha256": "8756802921badf8be7e71baa3c1091e8f9770e2f19996663766e8d8e82867bcd",
+      "components": 21,
+      "vulnerabilities": 0,
+      "highOrCritical": []
+    }
+  ],
+  "sourceSummarySha256": "07d86fd777e362b675734c1f5cb519be003cfffddc3581b2240f52629c019bc3"
+}

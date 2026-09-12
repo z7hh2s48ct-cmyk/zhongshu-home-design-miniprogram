@@ -92,6 +92,34 @@ class AssetP3AContractTest {
     }
 
     @Test
+    void moderationOutageRemainsPendingAndRecoveryRecordsDecisionBeforeAcceptance() throws Exception {
+        var original=assetService;
+        java.util.concurrent.atomic.AtomicBoolean unavailable=new java.util.concurrent.atomic.AtomicBoolean(true);
+        var port=new cn.iocoder.yudao.module.design.asset.ContentModerationPort() {
+            public boolean pass(String type,byte[] content) { return review(type,content).accepted(); }
+            public Decision review(String type,byte[] content) {
+                if(unavailable.get()) throw new cn.iocoder.yudao.module.design.asset.ModerationUnavailableException();
+                return new Decision(true,"tencent-ims","test-request","Pass","test-policy");
+            }
+        };
+        org.springframework.test.util.ReflectionTestUtils.setField(assetService,"contentModerationPort",port);
+        try {
+            byte[] content=pngBytes(20,20);
+            String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
+            var ticket=assetService.createUploadTicket(USER_A,"USER_SKETCH","image/png",content.length,hash);
+            String key=jdbc.queryForObject("SELECT object_key FROM asset WHERE id=?",String.class,ticket.assetId());storage.putObject(key,content);
+            assertThat(assetService.completeUpload(USER_A,ticket.assetId())).isEqualTo("PENDING");
+            assertThatThrownBy(()->assetService.requestDownloadTicket(USER_A,ticket.assetId())).isInstanceOf(ServiceException.class);
+            unavailable.set(false);jdbc.update("UPDATE asset SET moderation_retry_at=now()-interval '1 second' WHERE id=?",ticket.assetId());
+            new cn.iocoder.yudao.module.design.asset.AssetValidationRecoveryJob(jdbc.getDataSource(),assetService) {{
+                org.springframework.test.util.ReflectionTestUtils.setField(this,"enabled",true);
+            }}.tick();
+            assertThat(jdbc.queryForObject("SELECT upload_status FROM asset WHERE id=?",String.class,ticket.assetId())).isEqualTo("ACCEPTED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM asset_scan_result WHERE asset_id=? AND status='PASSED' AND detail::text LIKE '%test-request%'",Long.class,ticket.assetId())).isEqualTo(1);
+        } finally { org.springframework.test.util.ReflectionTestUtils.setField(original,"contentModerationPort",new StubContentModerationAdapter()); }
+    }
+
+    @Test
     void companyImageUploadScansAssociatesVersionsAndSeparatesRights() throws Exception {
         long id = cases.createCompanyCase(501, "上传测试", null, "MODERN", 2, 120, null, null, null, null);
         var cover = companyImages.upload(id, 501, 1, "COVER", null, "image/png", pngBytes(32,32), true, false);
@@ -378,7 +406,7 @@ class AssetP3AContractTest {
         assertThat(assetService.completeUpload(USER_A, assetId)).isEqualTo("ACCEPTED");
         assertThat(assetService.completeUpload(USER_A, assetId)).isEqualTo("ACCEPTED");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM asset_scan_result WHERE asset_id = ?",
-                Integer.class, assetId)).as("不重复记扫描").isZero();
+                Integer.class, assetId)).as("首次记录审核证据，重放不重复记扫描").isEqualTo(1);
     }
 
     private int countScan(long assetId, String scanType, String status) {

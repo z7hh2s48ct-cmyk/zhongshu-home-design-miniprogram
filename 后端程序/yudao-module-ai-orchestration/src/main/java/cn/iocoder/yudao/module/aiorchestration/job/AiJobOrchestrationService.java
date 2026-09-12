@@ -74,6 +74,14 @@ public class AiJobOrchestrationService {
 
     // ========== 任务创建 / 查询 ==========
 
+    public boolean freezeInput(long jobId, Map<String,Object> snapshot) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("AI_INPUT_REQUIRES_TRANSACTION");
+        try {
+            return jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
+                    new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(snapshot),jobId)==1;
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("AI_INPUT_INVALID"); }
+    }
+
     public long createJob(long userId, String phase, int count, String idempotencyKey, String projectRef) {
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
             List<Long> existing = jdbcTemplate.query(
@@ -140,8 +148,9 @@ public class AiJobOrchestrationService {
                     "UPDATE ai_job SET status = 'RUNNING', claimed_by = ?, claim_expires_at = "
                             + "now() + (? * interval '1 second'), fencing_token = fencing_token + 1, "
                             + "update_time = now() WHERE id IN ("
-                            + "  SELECT id FROM ai_job WHERE status = 'QUEUED' "
-                            + "     OR (status = 'RUNNING' AND claim_expires_at < now()) "
+                            + "  SELECT id FROM ai_job WHERE deleted=FALSE AND create_time > now()-interval '30 minutes' "
+                            + "  AND (SELECT count(*) FROM ai_job_attempt a WHERE a.job_id=ai_job.id) < 3 "
+                            + "  AND (status = 'QUEUED' OR (status = 'RUNNING' AND claim_expires_at < now())) "
                             + "  ORDER BY id LIMIT ? FOR UPDATE SKIP LOCKED"
                             + ") RETURNING id",
                             Long.class, workerId, leaseSeconds, maxJobs);
@@ -171,7 +180,7 @@ public class AiJobOrchestrationService {
     public boolean renewLease(long jobId, int attemptNo, long fencingToken, long leaseSeconds) {
         return jdbcTemplate.update(
                 "UPDATE ai_job SET claim_expires_at = now() + (? * interval '1 second'), update_time = now() "
-                        + "WHERE id = ? AND status IN ('RUNNING','VALIDATING') AND fencing_token = ? "
+                        + "WHERE id = ? AND status='RUNNING' AND claim_expires_at>now() AND fencing_token = ? "
                         + "AND EXISTS (SELECT 1 FROM ai_job_attempt a WHERE a.job_id = ai_job.id "
                         + "  AND a.attempt_no = ? AND a.fencing_token = ?)",
                 leaseSeconds, jobId, fencingToken, attemptNo, fencingToken) == 1;
@@ -180,7 +189,7 @@ public class AiJobOrchestrationService {
     public void reportProgress(long jobId, int attemptNo, long fencingToken, int progress, String stage) {
         if (fencingMatches(jobId, attemptNo, fencingToken)) {
             jdbcTemplate.update(
-                    "UPDATE ai_job SET progress = ?, update_time = now() WHERE id = ? AND fencing_token = ?",
+                    "UPDATE ai_job SET progress = GREATEST(progress,?), update_time = now() WHERE id = ? AND fencing_token = ? AND status='RUNNING' AND claim_expires_at>now()",
                     Math.max(0, Math.min(progress, 100)), jobId, fencingToken);
         }
     }
@@ -194,7 +203,7 @@ public class AiJobOrchestrationService {
                                       String contentSha256, String mimeType, long sizeBytes) {
         return txTemplate.execute(status -> {
                 Map<String, Object> job = jdbcTemplate.queryForMap(
-                        "SELECT status, fencing_token, cancel_seq, output_prefix, decision_seq FROM ai_job "
+                        "SELECT status, fencing_token, cancel_seq, output_prefix, decision_seq, claim_expires_at, runtime_completed_at FROM ai_job "
                                 + "WHERE id = ? FOR UPDATE", jobId);
                 long currentFencing = ((Number) job.get("fencing_token")).longValue();
                 if (currentFencing != fencingToken || !attemptIsLatest(jobId, attemptNo, fencingToken)) {
@@ -206,6 +215,10 @@ public class AiJobOrchestrationService {
                             Map.of("note", "terminal-late"), 0L, "SUPERSEDED");
                     return ReportOutcome.TERMINAL_IGNORED;
                 }
+                if (job.get("runtime_completed_at") != null || (!"CANCEL_REQUESTED".equals(jobStatus)
+                        && (!"RUNNING".equals(jobStatus) || job.get("claim_expires_at") == null
+                        || ((java.sql.Timestamp)job.get("claim_expires_at")).toInstant().isBefore(java.time.Instant.now()))))
+                    return ReportOutcome.STALE_FENCING;
                 long receivedSeq = ((Number) job.get("decision_seq")).longValue() + 1;
                 Object cancelSeq = job.get("cancel_seq");
                 boolean superseded = cancelSeq != null
@@ -215,18 +228,16 @@ public class AiJobOrchestrationService {
                         receivedSeq, jobId);
 
                 String inboxStatus = superseded ? "SUPERSEDED" : "RECEIVED";
-                try {
-                    jdbcTemplate.update(
+                int inserted = jdbcTemplate.update(
                             "INSERT INTO ai_result_event_inbox (id, job_id, attempt_no, provider_code, "
                                     + "source_event_id, event_kind, payload, received_seq, process_status) "
                                     + "VALUES (?, ?, ?, ?, ?, 'RESULT', "
-                                    + "JSONB_BUILD_OBJECT('slot', ?, 'objectKey', ?, 'sha256', ?, 'mime', ?, 'size', ?), ?, ?)",
+                                    + "JSONB_BUILD_OBJECT('slot', ?, 'objectKey', ?, 'sha256', ?, 'mime', ?, 'size', ?), ?, ?) "
+                                    + "ON CONFLICT (provider_code, source_event_id) DO NOTHING",
                             IdWorker.getId(), jobId, attemptNo, providerCode, sourceEventId,
                             candidateSlotNo, objectKey, contentSha256, mimeType, sizeBytes,
                             receivedSeq, inboxStatus);
-                } catch (DuplicateKeyException e) {
-                    return ReportOutcome.DUPLICATE_EVENT;
-                }
+                if (inserted == 0) return ReportOutcome.DUPLICATE_EVENT;
                 if (superseded) {
                     return ReportOutcome.SUPERSEDED;
                 }
@@ -271,8 +282,9 @@ public class AiJobOrchestrationService {
                     errorCode + ": " + message, jobId, attemptNo);
             if ("RUNNING".equals(st)) {
                 jdbcTemplate.update(
-                        "UPDATE ai_job SET status = 'QUEUED', claimed_by = NULL, claim_expires_at = NULL, "
-                                + "update_time = now() WHERE id = ?", jobId);
+                        "UPDATE ai_job SET status = CASE WHEN ? >= 3 THEN 'VALIDATING' ELSE 'QUEUED' END, "
+                                + "runtime_completed_at=CASE WHEN ? >= 3 THEN now() ELSE NULL END, claimed_by = NULL, claim_expires_at = NULL, "
+                                + "update_time = now() WHERE id = ?", attemptNo, attemptNo, jobId);
             }
             return true;
         });
@@ -280,11 +292,24 @@ public class AiJobOrchestrationService {
 
     // ========== Core 校验器：隔离结果 → ACCEPTED / REJECTED（事务外校验 + 短事务固化） ==========
 
+    /** Stable completion barrier: no subsequent output from this attempt may become billable. */
+    public boolean completeAttempt(long jobId, int attemptNo, long fence) {
+        return txTemplate.execute(status -> {
+            var row = jdbcTemplate.queryForMap("SELECT status,fencing_token,runtime_completed_at FROM ai_job WHERE id=? FOR UPDATE", jobId);
+            if (((Number)row.get("fencing_token")).longValue()!=fence || !attemptIsLatest(jobId,attemptNo,fence)) return false;
+            if (row.get("runtime_completed_at") != null || isTerminal((String)row.get("status"))) return true;
+            int updated = jdbcTemplate.update("UPDATE ai_job SET runtime_completed_at=now(), status=CASE WHEN status='CANCEL_REQUESTED' THEN status ELSE 'VALIDATING' END, "
+                    + "update_time=now() WHERE id=? AND status IN ('RUNNING','CANCEL_REQUESTED') AND claim_expires_at>now()", jobId);
+            if (updated==1) jdbcTemplate.update("UPDATE ai_job_attempt SET finished_at=now() WHERE job_id=? AND attempt_no=?",jobId,attemptNo);
+            return updated==1;
+        });
+    }
+
     public int validateQuarantinedResults(long jobId) {
         List<Map<String, Object>> quarantined = jdbcTemplate.queryForList(
                 "SELECT id, candidate_slot_no, content_sha256, object_key, mime_type, size_bytes "
                         + "FROM ai_job_result WHERE job_id = ? AND validation_state = 'OUTPUT_QUARANTINED' "
-                        + "ORDER BY id LIMIT 8", jobId);
+                        + "AND validation_due_at<=now() AND (validation_expires_at IS NULL OR validation_expires_at<now()) ORDER BY id LIMIT 8", jobId);
         if (quarantined.isEmpty()) {
             return 0;
         }
@@ -295,9 +320,16 @@ public class AiJobOrchestrationService {
         int accepted = 0;
         for (Map<String, Object> r : quarantined) {
             long resultId = ((Number) r.get("id")).longValue();
-            String rejectReason = validateOne(requestedCount, outputPrefix, r);
-            if (Boolean.TRUE.equals(finalizeResult(resultId, jobId, rejectReason))) {
-                accepted++;
+            String token = java.util.UUID.randomUUID().toString();
+            if (jdbcTemplate.update("UPDATE ai_job_result SET validation_token=?,validation_expires_at=now()+interval '2 minutes' "
+                    + "WHERE id=? AND validation_state='OUTPUT_QUARANTINED' AND (validation_expires_at IS NULL OR validation_expires_at<now())",token,resultId)!=1) continue;
+            r.put("validation_token", token);
+            try {
+                String rejectReason = validateOne(requestedCount, outputPrefix, r);
+                if (Boolean.TRUE.equals(finalizeResult(resultId, jobId, rejectReason, r))) accepted++;
+            } catch (RuntimeException e) {
+                jdbcTemplate.update("UPDATE ai_job_result SET validation_due_at=now()+interval '60 seconds',validation_expires_at=NULL, "
+                        + "reject_reason='VALIDATION_RETRY' WHERE id=? AND validation_token=? AND validation_state='OUTPUT_QUARANTINED'",resultId,token);
             }
         }
         syncAcceptedCount(jobId);
@@ -309,24 +341,34 @@ public class AiJobOrchestrationService {
         String objectKey = (String) r.get("object_key");
         long sizeBytes = ((Number) r.get("size_bytes")).longValue();
         int slotNo = ((Number) r.get("candidate_slot_no")).intValue();
+        if (sizeBytes <= 0 || sizeBytes > 20 * 1024 * 1024 || !java.util.List.of("image/png","image/jpeg").contains(r.get("mime_type"))) return "OUTPUT_POLICY";
         if (slotNo < 1 || slotNo > requestedCount) {
             return "SLOT_OUT_OF_RANGE: 槽位 " + slotNo + " 超出请求数 " + requestedCount;
         }
-        if (!objectKey.startsWith(outputPrefix + "/")) {
+        if (objectKey == null || !objectKey.startsWith(outputPrefix + "/")) {
             return "OBJECT_KEY_PREFIX: 输出不在任务隔离前缀内";
         }
         if (!quarantineObjectPort.existsWithSize(objectKey, sizeBytes)) {
             return "OBJECT_MISSING: 隔离区不存在声明大小的对象";
         }
         byte[] content = quarantineObjectPort.getObject(objectKey);
+        if (content.length != sizeBytes) return "SIZE_MISMATCH";
         String actualSha = sha256Hex(content);
         if (!actualSha.equalsIgnoreCase((String) r.get("content_sha256"))) {
             return "SHA_MISMATCH: 对象内容与声明 SHA-256 不一致";
         }
         var outcome = contentScanPort.scan((String) r.get("mime_type"), content);
+        r.put("scan_evidence",outcome.evidence());
         if (!outcome.passed()) {
             return "CONTENT_FAILED: " + String.join("; ", outcome.failures());
         }
+        byte[] sanitized = outcome.sanitizedContent() == null ? content : outcome.sanitizedContent();
+        if (sanitized.length > 20*1024*1024) return "SANITIZED_SIZE_LIMIT";
+        String acceptedKey = "accepted/ai/" + r.get("id") + "/" + r.get("validation_token")
+                + ("image/png".equals(r.get("mime_type")) ? ".png" : ".jpg");
+        quarantineObjectPort.putObject(acceptedKey,sanitized);
+        r.put("accepted_key",acceptedKey); r.put("accepted_sha",sha256Hex(sanitized)); r.put("accepted_size",sanitized.length);
+        r.put("scan_evidence",outcome.evidence());
         return null;
     }
 
@@ -334,13 +376,16 @@ public class AiJobOrchestrationService {
      * 短事务 CAS 固化：取任务行锁（串行化同任务接受、与取消互斥）→ 终态/容量闸门 →
      * ACCEPT CAS（savepoint 内捕获部分唯一冲突，回滚到 savepoint 后落 REJECTED——PG 事务中止后不能直接续写）。
      */
-    private boolean finalizeResult(long resultId, long jobId, String rejectReason) {
+    private boolean finalizeResult(long resultId, long jobId, String rejectReason, Map<String,Object> result) {
         return Boolean.TRUE.equals(txTemplate.execute(status -> {
+            jdbcTemplate.queryForMap("SELECT id FROM ai_job WHERE id=? FOR UPDATE",jobId);
+            if (jdbcTemplate.queryForObject("SELECT count(*) FROM ai_job_result WHERE id=? AND validation_token=? AND validation_state='OUTPUT_QUARANTINED'",
+                    Integer.class,resultId,result.get("validation_token")) != 1) return false;
             if (rejectReason != null) {
                 jdbcTemplate.update(
-                        "UPDATE ai_job_result SET validation_state = 'REJECTED', reject_reason = ?, "
+                        "UPDATE ai_job_result SET validation_state = 'REJECTED', reject_reason = ?, scan_evidence=?, "
                                 + "update_time = now() WHERE id = ? AND validation_state = 'OUTPUT_QUARANTINED'",
-                        rejectReason, resultId);
+                        rejectReason, result.get("scan_evidence"), resultId);
                 return false;
             }
             Map<String, Object> job = jdbcTemplate.queryForMap(
@@ -356,11 +401,11 @@ public class AiJobOrchestrationService {
             Object savepoint = status.createSavepoint();
             try {
                 int updated = jdbcTemplate.update(
-                        "UPDATE ai_job_result SET validation_state = 'ACCEPTED', update_time = now() "
+                        "UPDATE ai_job_result SET validation_state = 'ACCEPTED', object_key=?,content_sha256=?,size_bytes=?,scan_evidence=?, update_time = now() "
                                 + "WHERE id = ? AND validation_state = 'OUTPUT_QUARANTINED' "
                                 + "AND (SELECT count(*) FROM ai_job_result "
                                 + "      WHERE job_id = ? AND validation_state = 'ACCEPTED') < ?",
-                        resultId, jobId, requestedCount);
+                        result.get("accepted_key"),result.get("accepted_sha"),result.get("accepted_size"),result.get("scan_evidence"),resultId, jobId, requestedCount);
                 return updated == 1;
             } catch (DuplicateKeyException e) {
                 status.rollbackToSavepoint(savepoint);

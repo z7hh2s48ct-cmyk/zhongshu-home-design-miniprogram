@@ -62,19 +62,22 @@ protectedPage({
   regenerate() {
     if (!this.current(this._seq) || !this.data.latest || this.data.readOnly || this.data.regenerating) return;
     const seq = this._seq;
-    wx.showModal({ title: '重新生成方案', content: '将创建新的立面任务并消耗设计点，原方案保留。是否继续？',
-      success: result => {
-        if (!result.confirm || !this.current(seq) || this.data.regenerating) return;
-        this.setData({ regenerating: true });
-        this._revisionKey = this._revisionKey || 'revision-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-        api.createRevisionRequest(this._projectId, { reason: '用户发起重新生成', count: 2 }, this._revisionKey).then(vo => {
+    this.setData({ regenerating: true });
+    return require('../../utils/generation-price').confirm('ELEVATION', 2, '原方案保留，本次重新生成立面，不包含局部修改。').then(priceConfirmation => {
+        if (!this.current(seq)) throw { cancelled: true };
+        const payload = { reason: '用户发起重新生成立面', count: 2, priceConfirmation };
+        const signature = JSON.stringify(payload);
+        if (signature !== this._revisionBody) {
+          this._revisionBody = signature;
+          this._revisionKey = 'revision-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+        }
+        return api.createRevisionRequest(this._projectId, payload, this._revisionKey).then(vo => {
           if (!this.current(seq)) return;
           if (!vo || !view.id(vo.jobId)) throw Error('任务编号无效');
           Object.assign(getApp().globalData, { projectId: this._projectId, jobId: vo.jobId });
           wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=2' });
-        }).catch(error => { if (this.current(seq)) wx.showToast({ title: view.errorText(error), icon: 'none' }); })
-          .then(() => { if (this.current(seq)) this.setData({ regenerating: false }); });
-      }
-    });
+        });
+    }).catch(error => { if (this.current(seq) && !error.cancelled) wx.showToast({ title: view.errorText(error), icon: 'none' }); })
+      .then(() => { if (this.current(seq)) this.setData({ regenerating: false }); });
   }
 });

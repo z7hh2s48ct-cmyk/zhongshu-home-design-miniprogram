@@ -1,0 +1,339 @@
+{
+  "schemaVersion": 1,
+  "scope": "RG3 isolated HTTP E2E; synthetic payment, moderation and AI output",
+  "runId": "1789245976628-c094afc3",
+  "status": "PASS",
+  "startedAt": "2026-09-12T20:46:16.629Z",
+  "finishedAt": "2026-09-12T20:47:01.278Z",
+  "passed": 54,
+  "total": 54,
+  "freshDatabaseStartup": true,
+  "repeatStartup": true,
+  "testResourcesCleaned": true,
+  "checkpoints": [
+    {
+      "index": 1,
+      "name": "服务健康检查",
+      "status": "PASS",
+      "durationMs": 36
+    },
+    {
+      "index": 2,
+      "name": "匿名首页可访问",
+      "status": "PASS",
+      "durationMs": 15
+    },
+    {
+      "index": 3,
+      "name": "公开户型库含开发种子",
+      "status": "PASS",
+      "durationMs": 32
+    },
+    {
+      "index": 4,
+      "name": "管理端账号登录",
+      "status": "PASS",
+      "durationMs": 409
+    },
+    {
+      "index": 5,
+      "name": "管理端生成一次性授权码",
+      "status": "PASS",
+      "durationMs": 52
+    },
+    {
+      "index": 6,
+      "name": "微信 Stub 登录签发受限会话",
+      "status": "PASS",
+      "durationMs": 71
+    },
+    {
+      "index": 7,
+      "name": "受限会话授权快照为 NONE",
+      "status": "PASS",
+      "durationMs": 36
+    },
+    {
+      "index": 8,
+      "name": "受保护端点拦截受限会话",
+      "status": "PASS",
+      "durationMs": 39
+    },
+    {
+      "index": 9,
+      "name": "授权码兑换并激活",
+      "status": "PASS",
+      "durationMs": 41
+    },
+    {
+      "index": 10,
+      "name": "个人资料升级并锁定账号标识",
+      "status": "PASS",
+      "durationMs": 80
+    },
+    {
+      "index": 11,
+      "name": "充值方案可购买",
+      "status": "PASS",
+      "durationMs": 24
+    },
+    {
+      "index": 12,
+      "name": "充值订单进入待支付",
+      "status": "PASS",
+      "durationMs": 64
+    },
+    {
+      "index": 13,
+      "name": "主动对账驱动 Stub 支付",
+      "status": "PASS",
+      "durationMs": 55
+    },
+    {
+      "index": 14,
+      "name": "充值到账且点数可见",
+      "status": "PASS",
+      "durationMs": 77
+    },
+    {
+      "index": 15,
+      "name": "创建自主设计项目",
+      "status": "PASS",
+      "durationMs": 38
+    },
+    {
+      "index": 16,
+      "name": "创建平面任务并扣点",
+      "status": "PASS",
+      "durationMs": 114
+    },
+    {
+      "index": 17,
+      "name": "Runtime HMAC 领取平面任务",
+      "status": "PASS",
+      "durationMs": 26
+    },
+    {
+      "index": 18,
+      "name": "Runtime 回写平面隔离区 PNG",
+      "status": "PASS",
+      "durationMs": 42
+    },
+    {
+      "index": 19,
+      "name": "驱动器完成平面结算",
+      "status": "PASS",
+      "durationMs": 18402
+    },
+    {
+      "index": 20,
+      "name": "平面候选按任务晋升",
+      "status": "PASS",
+      "durationMs": 50
+    },
+    {
+      "index": 21,
+      "name": "选定平面并开放立面生成",
+      "status": "PASS",
+      "durationMs": 34
+    },
+    {
+      "index": 22,
+      "name": "创建立面任务",
+      "status": "PASS",
+      "durationMs": 51
+    },
+    {
+      "index": 23,
+      "name": "Runtime HMAC 领取立面任务",
+      "status": "PASS",
+      "durationMs": 12
+    },
+    {
+      "index": 24,
+      "name": "Runtime 回写立面隔离区 PNG",
+      "status": "PASS",
+      "durationMs": 44
+    },
+    {
+      "index": 25,
+      "name": "驱动器完成立面结算",
+      "status": "PASS",
+      "durationMs": 10232
+    },
+    {
+      "index": 26,
+      "name": "立面候选晋升并选定",
+      "status": "PASS",
+      "durationMs": 58
+    },
+    {
+      "index": 27,
+      "name": "最终结果版本可回读",
+      "status": "PASS",
+      "durationMs": 171
+    },
+    {
+      "index": 28,
+      "name": "旧预算冻结规则与输入快照",
+      "status": "PASS",
+      "durationMs": 38
+    },
+    {
+      "index": 29,
+      "name": "管理端创建并启用预算地区",
+      "status": "PASS",
+      "durationMs": 71
+    },
+    {
+      "index": 30,
+      "name": "管理端启用标准预算项与选项",
+      "status": "PASS",
+      "durationMs": 1415
+    },
+    {
+      "index": 31,
+      "name": "管理端发布十三项标准价格",
+      "status": "PASS",
+      "durationMs": 772
+    },
+    {
+      "index": 32,
+      "name": "管理端新增自定义预算模板并发布区域价格",
+      "status": "PASS",
+      "durationMs": 135
+    },
+    {
+      "index": 33,
+      "name": "小程序预算目录只公开可选项且隐藏单价",
+      "status": "PASS",
+      "durationMs": 71
+    },
+    {
+      "index": 34,
+      "name": "小程序导入版本绑定的预算参数",
+      "status": "PASS",
+      "durationMs": 20
+    },
+    {
+      "index": 35,
+      "name": "小程序生成黄金分项预算并验证重复提交",
+      "status": "PASS",
+      "durationMs": 129
+    },
+    {
+      "index": 36,
+      "name": "幂等键异体请求被拒绝且预算未重复",
+      "status": "PASS",
+      "durationMs": 60
+    },
+    {
+      "index": 37,
+      "name": "小程序保存预算并在历史中回读",
+      "status": "PASS",
+      "durationMs": 63
+    },
+    {
+      "index": 38,
+      "name": "管理端读取预算并新增排水沟修订",
+      "status": "PASS",
+      "durationMs": 106
+    },
+    {
+      "index": 39,
+      "name": "旧预算修订保持冻结且后台新修订不外泄",
+      "status": "PASS",
+      "durationMs": 91
+    },
+    {
+      "index": 40,
+      "name": "管理端创建正式报价草稿且小程序不可见",
+      "status": "PASS",
+      "durationMs": 106
+    },
+    {
+      "index": 41,
+      "name": "无预算权限管理员被拒绝",
+      "status": "PASS",
+      "durationMs": 33
+    },
+    {
+      "index": 42,
+      "name": "管理端发布报价并验证重复提交",
+      "status": "PASS",
+      "durationMs": 110
+    },
+    {
+      "index": 43,
+      "name": "小程序查看脱敏的正式报价",
+      "status": "PASS",
+      "durationMs": 31
+    },
+    {
+      "index": 44,
+      "name": "管理端创建并发布调价后第二版报价",
+      "status": "PASS",
+      "durationMs": 84
+    },
+    {
+      "index": 45,
+      "name": "旧报价金额冻结且新报价成为当前版",
+      "status": "PASS",
+      "durationMs": 85
+    },
+    {
+      "index": 46,
+      "name": "发布前校核通过",
+      "status": "PASS",
+      "durationMs": 19
+    },
+    {
+      "index": 47,
+      "name": "用户提交投稿",
+      "status": "PASS",
+      "durationMs": 104
+    },
+    {
+      "index": 48,
+      "name": "管理端审核队列可见",
+      "status": "PASS",
+      "durationMs": 34
+    },
+    {
+      "index": 49,
+      "name": "审核通过并生成站内信",
+      "status": "PASS",
+      "durationMs": 6182
+    },
+    {
+      "index": 50,
+      "name": "独立发布且户型库可见",
+      "status": "PASS",
+      "durationMs": 128
+    },
+    {
+      "index": 51,
+      "name": "用户统计与 AI 运维读模型可见",
+      "status": "PASS",
+      "durationMs": 70
+    },
+    {
+      "index": 52,
+      "name": "人工调点执行双人控制",
+      "status": "PASS",
+      "durationMs": 115
+    },
+    {
+      "index": 53,
+      "name": "导出、一次性票据与审计可追溯",
+      "status": "PASS",
+      "durationMs": 4216
+    },
+    {
+      "index": 54,
+      "name": "解绑后会话实时降级",
+      "status": "PASS",
+      "durationMs": 54
+    }
+  ]
+}
