@@ -40,6 +40,9 @@ public class AiJobInternalController {
     @Resource
     private InternalSignatureVerifier signatureVerifier;
 
+    @org.springframework.beans.factory.annotation.Value("${zhongshu.ai.provider-code:apilio}")
+    private String providerCode;
+
     /** 审查 C6：每个 internal 端点先验服务签名（HMAC+时间戳防重放），未配置密钥即全拒。
      *  body 字节由底座全局 CacheRequestBodyFilter 包装提供（请求可重复读）。 */
     private void requireSignature(HttpServletRequest request) {
@@ -65,7 +68,7 @@ public class AiJobInternalController {
         List<InternalClaimRespVO> jobs = orchestrationService
                 .claim(reqVO.getWorkerId(),
                         reqVO.getMaxJobs() == null ? 1 : reqVO.getMaxJobs(),
-                        60, "stub")
+                        60, providerCode)
                 .stream().map(job -> {
                     InternalClaimRespVO vo = new InternalClaimRespVO();
                     vo.setJobId(String.valueOf(job.jobId()));
@@ -127,6 +130,13 @@ public class AiJobInternalController {
                 reqVO.getAttemptNo(), reqVO.getFencingToken(),
                 reqVO.getProviderCode(), reqVO.getSourceEventId(),
                 reqVO.getErrorCode(), reqVO.getMessage()));
+    }
+
+    @PostMapping("/{jobId}/completion-events")
+    public CommonResult<Boolean> complete(@PathVariable("jobId") String jobId, HttpServletRequest request,
+            @Valid @RequestBody InternalEventReqVO event) {
+        requireSignature(request);
+        return success(orchestrationService.completeAttempt(Long.parseLong(jobId),event.getAttemptNo(),event.getFencingToken()));
     }
 
 }

@@ -3,20 +3,20 @@
   "asOf": "2026-09-13",
   "inventory": {
     "mini": {
-      "executableFiles": 22,
-      "declaredTestCalls": 221
+      "executableFiles": 23,
+      "declaredTestCalls": 224
     },
     "backend": {
-      "ordinaryFiles": 50,
-      "declaredOrdinaryTestMethods": 548,
+      "ordinaryFiles": 53,
+      "declaredOrdinaryTestMethods": 564,
       "excludedRealAcceptanceFiles": 3,
       "contractFiles": 35,
-      "testMethods": 329,
+      "testMethods": 333,
       "parameterizedMethods": 0
     },
     "admin": {
-      "executableFiles": 10,
-      "declaredTestCalls": 70
+      "executableFiles": 11,
+      "declaredTestCalls": 72
     },
     "e2e": {
       "checkpoints": 54

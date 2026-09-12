@@ -10,7 +10,10 @@ public interface ContentScanPort {
     ScanOutcome scan(String declaredMime, byte[] content);
 
     record ScanOutcome(boolean passed, java.util.List<String> failures,
-                       Integer width, Integer height, Integer pageCount) {
+                       Integer width, Integer height, Integer pageCount, byte[] sanitizedContent, String evidence) {
+        public ScanOutcome(boolean passed, java.util.List<String> failures, Integer width, Integer height, Integer pageCount) {
+            this(passed, failures, width, height, pageCount, null, "test-scanner");
+        }
     }
 
 }

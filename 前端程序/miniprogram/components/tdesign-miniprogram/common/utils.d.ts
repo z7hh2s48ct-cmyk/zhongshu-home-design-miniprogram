@@ -36,6 +36,7 @@ export declare const setIcon: (iconName: any, icon: any, defaultIcon: any) => {
     [x: string]: any;
 };
 export declare const toCamel: (str: any) => any;
+export declare function toKebabCase(str: string): string;
 export declare const getCurrentPage: <T>() => T & WechatMiniprogram.OptionalInterface<WechatMiniprogram.Page.ILifetime> & WechatMiniprogram.Page.InstanceProperties & WechatMiniprogram.Page.InstanceMethods<WechatMiniprogram.IAnyObject> & WechatMiniprogram.Page.Data<WechatMiniprogram.IAnyObject> & WechatMiniprogram.IAnyObject;
 export declare const uniqueFactory: (compName: any) => () => string;
 export declare const calcIcon: (icon: string | Record<string, any>, defaultIcon?: string) => Record<string, any>;

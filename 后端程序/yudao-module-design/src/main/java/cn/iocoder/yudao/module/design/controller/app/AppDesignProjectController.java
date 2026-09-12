@@ -126,7 +126,7 @@ public class AppDesignProjectController {
     @Operation(summary = "发起调整请求（生成新的不可变结果版本）")
     public CommonResult<AppDesignProjectRespVO> createRevisionRequest(
             @PathVariable("projectId") String projectId,
-            @Valid @RequestBody(required = false) AppRevisionRequestReqVO reqVO,
+            @Valid @RequestBody AppRevisionRequestReqVO reqVO,
             @Parameter(description = "幂等键") @RequestHeader(value = "Idempotency-Key", required = false)
             String idempotencyKey,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
@@ -134,7 +134,7 @@ public class AppDesignProjectController {
         AppRevisionRequestReqVO req = reqVO == null ? new AppRevisionRequestReqVO() : reqVO;
         var created = designProjectService.createRevisionRequest(userId, Long.parseLong(projectId),
                 req.getReason(), req.getConfigUpdates(),
-                req.getCount() == null ? 2 : req.getCount(), idempotencyKey);
+                req.getCount() == null ? 2 : req.getCount(), idempotencyKey, req.getPriceConfirmation());
         return success(jobAcceptedVo(projectId, created.newJobId()));
     }
 

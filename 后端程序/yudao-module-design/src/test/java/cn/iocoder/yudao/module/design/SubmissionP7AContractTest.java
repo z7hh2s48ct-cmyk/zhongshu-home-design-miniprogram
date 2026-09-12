@@ -164,6 +164,7 @@ class SubmissionP7AContractTest {
                     "image/png", content.length);
         }
         orchestration.validateQuarantinedResults(jobId);
+        for (var accepted : orchestration.listAcceptedResults(jobId)) assetStorage.putObject(accepted.objectKey(),quarantine.getObject(accepted.objectKey()));
         settlement.settle(jobId, "SETTLE");
     }
 
@@ -172,12 +173,12 @@ class SubmissionP7AContractTest {
         givePoints(userId);
         long projectId = projects.createProject(userId, "SELF_UPLOAD", null, null,
                 Map.of("budgetInputs", Map.of("footprintArea", "123", "floorCount", 3)));
-        var flat = projects.createFlatJob(userId, projectId, 2, "flat-" + projectId);
+        var flat = projects.createFlatJob(userId, projectId, 2, "flat-" + projectId, confirmed("FLAT"));
         runJob(flat.jobId(), 2);
         var flatCandidates = projects.promoteCandidates(userId, projectId, flat.jobId());
         projects.selectFlatCandidate(userId, projectId, flatCandidates.get(0).candidateId());
         var elev = projects.createElevationJob(userId, projectId, 2, "elev-" + projectId,
-                Map.of("styleCode", "MODERN"));
+                Map.of("styleCode", "MODERN"), confirmed("ELEVATION"));
         runJob(elev.jobId(), 2);
         var elevCandidates = projects.promoteCandidates(userId, projectId, elev.jobId()).stream()
                 .filter(c -> c.jobId() == elev.jobId()).toList();
@@ -191,7 +192,7 @@ class SubmissionP7AContractTest {
     void validationRejectsIncompleteSubmission() {
         givePoints(USER_A);
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
-        var flat = projects.createFlatJob(USER_A, projectId, 1, "flat-v");
+        var flat = projects.createFlatJob(USER_A, projectId, 1, "flat-v", confirmed("FLAT"));
         runJob(flat.jobId(), 1);
         var flatCandidates = projects.promoteCandidates(USER_A, projectId, flat.jobId());
         projects.selectFlatCandidate(USER_A, projectId, flatCandidates.get(0).candidateId());
@@ -361,4 +362,10 @@ class SubmissionP7AContractTest {
 
     }
 
+
+    private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmed(String stage) {
+        var rows=jdbc.queryForList("SELECT id,version FROM generation_price_rule WHERE stage=? ORDER BY effective_at DESC,id DESC LIMIT 1",stage);
+        var row=rows.get(0);
+        return new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation(String.valueOf(row.get("id")),((Number)row.get("version")).longValue());
+    }
 }

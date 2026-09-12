@@ -11,6 +11,9 @@ import java.util.Map;
 @Data
 public class AppRevisionRequestReqVO {
 
+    @jakarta.validation.constraints.NotNull(message = "请先确认本次生成价格")
+    private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation priceConfirmation;
+
     @Schema(description = "调整原因（留档，供审计与后续版本对照）")
     private String reason;
 

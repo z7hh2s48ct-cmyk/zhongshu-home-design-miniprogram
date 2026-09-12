@@ -59,7 +59,8 @@ import {
   // ElFormItem,
   // ElOption
 } from 'element-plus'
-import FcDesigner from '@form-create/designer'
+// The upstream dist embeds wangEditor 4. Build its shipped source with our reviewed editor bridge.
+import FcDesigner from '@form-create/designer/src/index.js'
 import formCreate from '@form-create/element-ui'
 import install from '@form-create/element-ui/auto-import'
 

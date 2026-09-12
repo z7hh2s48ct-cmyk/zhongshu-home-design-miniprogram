@@ -149,7 +149,7 @@ class DesignProjectP5ContractTest {
         cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort identities = token -> java.util.Optional.of(
                 new cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort.SessionContext(USER_A, "app", "id", false));
         org.springframework.test.util.ReflectionTestUtils.setField(controller, "identitySessionPort", identities);
-        long jobId = projects.createFlatJob(USER_A, projectId, 2, "resume-job").jobId();
+        long jobId = projects.createFlatJob(USER_A, projectId, 2, "resume-job", confirmed("FLAT")).jobId();
         var running = controller.getProject(String.valueOf(projectId), null, "owner").getData();
         assertThat(running.getJobId()).isEqualTo(String.valueOf(jobId));
         assertThat(running.getResumeAction()).isEqualTo("POLL_JOB");
@@ -259,11 +259,11 @@ class DesignProjectP5ContractTest {
 
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null,
                 Map.of("layout", "三室两厅", "floors", 2));
-        var created = projects.createFlatJob(USER_A, projectId, 2, "flat-key-1");
+        var created = projects.createFlatJob(USER_A, projectId, 2, "flat-key-1", confirmed("FLAT"));
         assertThat(available(USER_A)).as("创建任务扣 2×10 点").isEqualTo(80);
 
         // 幂等键防重复点击
-        var replay = projects.createFlatJob(USER_A, projectId, 2, "flat-key-1");
+        var replay = projects.createFlatJob(USER_A, projectId, 2, "flat-key-1", confirmed("FLAT"));
         assertThat(replay.jobId()).isEqualTo(created.jobId());
         assertThat(available(USER_A)).isEqualTo(80);
 
@@ -303,14 +303,14 @@ class DesignProjectP5ContractTest {
 
         // 仅公开（无生成参考授权）→ 建项目可以，建任务被拒
         long projectId = projects.createProject(USER_A, "CASE_REFERENCE", ungrantedCase, null, null);
-        assertThatThrownBy(() -> projects.createFlatJob(USER_A, projectId, 2, "flat-x"))
+        assertThatThrownBy(() -> projects.createFlatJob(USER_A, projectId, 2, "flat-x", confirmed("FLAT")))
                 .isInstanceOfSatisfying(ServiceException.class,
                         e -> assertThat(e.getCode()).isEqualTo(1_071_000_003));
         assertThat(available(USER_A)).as("拒绝时不扣点").isEqualTo(100);
 
         // 有授权 → 建任务成功并冻结授权快照
         long projectId2 = projects.createProject(USER_A, "CASE_REFERENCE", grantedCase, null, null);
-        var created = projects.createFlatJob(USER_A, projectId2, 2, "flat-ok");
+        var created = projects.createFlatJob(USER_A, projectId2, 2, "flat-ok", confirmed("FLAT"));
         assertThat(created.jobId()).isPositive();
         assertThat(jdbc.queryForObject(
                 "SELECT rights_grant_id FROM design_project WHERE id = ?", Long.class, projectId2))
@@ -322,7 +322,7 @@ class DesignProjectP5ContractTest {
                         + "FROM design_case_asset WHERE case_version_id = (SELECT ref_version_id "
                         + "FROM design_project WHERE id = ?)) LIMIT 1", Long.class, projectId2);
         rights.withdraw(grantId, "admin");
-        assertThatThrownBy(() -> projects.createFlatJob(USER_A, projectId2, 2, "flat-after-revoke"))
+        assertThatThrownBy(() -> projects.createFlatJob(USER_A, projectId2, 2, "flat-after-revoke", confirmed("FLAT")))
                 .isInstanceOf(ServiceException.class);
     }
 
@@ -332,7 +332,7 @@ class DesignProjectP5ContractTest {
     void crossUserAccessRejected() {
         points.credit(USER_A, "RECHARGE_BASE_CREDIT", 100, "recharge_order", "r3", "k-seed-c", null, null);
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
-        var created = projects.createFlatJob(USER_A, projectId, 1, "flat-b");
+        var created = projects.createFlatJob(USER_A, projectId, 1, "flat-b", confirmed("FLAT"));
         runProviderToSettled(created.jobId(), 1, 1);
         var candidates = projects.promoteCandidates(USER_A, projectId, created.jobId());
 
@@ -350,7 +350,7 @@ class DesignProjectP5ContractTest {
     void partialResultsPromoteAndRefundDifference() {
         points.credit(USER_A, "RECHARGE_BASE_CREDIT", 100, "recharge_order", "r4", "k-seed-d", null, null);
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
-        var created = projects.createFlatJob(USER_A, projectId, 2, "flat-partial");
+        var created = projects.createFlatJob(USER_A, projectId, 2, "flat-partial", confirmed("FLAT"));
 
         runProviderToSettled(created.jobId(), 1, 2);
         var candidates = projects.promoteCandidates(USER_A, projectId, created.jobId());
@@ -371,7 +371,7 @@ class DesignProjectP5ContractTest {
         for (int i = 0; i < 3; i++) {
             futures.add(pool.submit(() -> {
                 start.await();
-                return projects.createFlatJob(USER_A, projectId, 2, "flat-race").jobId();
+                return projects.createFlatJob(USER_A, projectId, 2, "flat-race", confirmed("FLAT")).jobId();
             }));
         }
         start.countDown();
@@ -420,4 +420,10 @@ class DesignProjectP5ContractTest {
 
     }
 
+
+    private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmed(String stage) {
+        var rows=jdbc.queryForList("SELECT id,version FROM generation_price_rule WHERE stage=? ORDER BY effective_at DESC,id DESC LIMIT 1",stage);
+        var row=rows.get(0);
+        return new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation(String.valueOf(row.get("id")),((Number)row.get("version")).longValue());
+    }
 }

@@ -144,6 +144,8 @@ public class AssetService {
                     && !("VALIDATING".equals(row.uploadStatus()) && isStale(row.id()))) {
                 throw exception(ASSET_VALIDATION_FAILED);
             }
+            Integer waiting = jdbcTemplate.queryForObject("SELECT count(*) FROM asset WHERE id=? AND moderation_retry_at > now()", Integer.class, assetId);
+            if (waiting != null && waiting > 0) throw new ModerationUnavailableException();
             String validationToken = java.util.UUID.randomUUID().toString();
             jdbcTemplate.update(
                     "UPDATE asset SET upload_status = 'VALIDATING', validation_token = ?, update_time = now() WHERE id = ?",
@@ -186,13 +188,26 @@ public class AssetService {
                 rejectReason = String.join("; ", report.failures());
             }
         }
-        boolean moderationFailed = rejectReason == null
-                && !contentModerationPort.pass(asset.assetType(), report.sanitizedContent());
+        ContentModerationPort.Decision moderation = null;
+        try {
+            if (rejectReason == null) moderation = contentModerationPort.review(asset.assetType(), report.sanitizedContent());
+        } catch (ModerationUnavailableException e) {
+            txTemplate.executeWithoutResult(status -> {
+                int updated = jdbcTemplate.update("UPDATE asset SET upload_status=CASE WHEN moderation_attempts >= 7 THEN 'REJECTED' ELSE 'PENDING' END, "
+                        + "moderation_attempts=moderation_attempts+1, moderation_retry_at=now()+interval '5 minutes', "
+                        + "rejected_reason='MODERATION_UNAVAILABLE', update_time=now() WHERE id=? AND validation_token=? AND upload_status='VALIDATING'",
+                        assetId, asset.validationToken());
+                if (updated == 1) recordScan(assetId, "CONTENT_MODERATION", "PENDING", "UPSTREAM_UNAVAILABLE");
+            });
+            return load(assetId).uploadStatus();
+        }
+        boolean moderationFailed = moderation != null && !moderation.accepted();
 
         // (c) 短事务：按 VALIDATING→终态 CAS 固化；并发完成者在此落败
         final String finalRejectReason = rejectReason;
         final boolean finalModerationFailed = moderationFailed;
         final AssetContentScanner.ScanReport finalReport = report;
+        final ContentModerationPort.Decision finalModeration = moderation;
         final byte[] sanitized = report == null ? null : report.sanitizedContent();
         // The original PUT URL must never address the approved object. Every attempt writes
         // a unique server-only key outside the DB transaction; CAS chooses the winning version.
@@ -205,10 +220,15 @@ public class AssetService {
                 };
         if (rejectReason == null && !moderationFailed) storage.putObject(acceptedKey, sanitized);
         return txTemplate.execute(status -> {
+            AssetRow current = loadForUpdate(assetId);
+            if (!asset.validationToken().equals(current.validationToken()) || !"VALIDATING".equals(current.uploadStatus()))
+                throw exception(ASSET_VALIDATION_FAILED);
             int updated;
             if (finalReport != null) {
                 recordScanResults(assetId, finalReport);
             }
+            if (finalModeration != null) recordScan(assetId, "CONTENT_MODERATION", finalModeration.accepted() ? "PASSED" : "REJECTED",
+                    finalModeration.provider() + ":" + finalModeration.requestId() + ":" + finalModeration.suggestion() + ":" + finalModeration.policy());
             if (finalRejectReason != null) {
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET upload_status = 'REJECTED', security_scan_status = 'REJECTED', "
@@ -222,7 +242,6 @@ public class AssetService {
                 throw exception(ASSET_VALIDATION_FAILED);
             }
             if (finalModerationFailed) {
-                recordScan(assetId, "CONTENT_MODERATION", "REJECTED", null);
                 updated = jdbcTemplate.update(
                         "UPDATE asset SET moderation_status = 'REJECTED', upload_status = 'REJECTED', "
                                 + "rejected_reason = 'CONTENT_MODERATION', update_time = now() "

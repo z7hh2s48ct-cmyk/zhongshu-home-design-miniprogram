@@ -1,7 +1,7 @@
 <view class="v12-page setup-page" wx:if="{{accessReady}}">
   <v12-navbar title="立面方案设置" show-back show-brand="{{false}}" />
   <view class="steps"><view>步骤1 ✓</view><text>平面方案</text><i></i><view class="active">步骤2</view><text>立面方案</text></view>
-  <view class="v12-card selected-plan"><text>{{flatLabel}}</text><view><image src="{{flatImageUrl || '/assets/v12/plan-b-1.png'}}" mode="aspectFit" /><image wx:if="{{!flatImageUrl}}" src="/assets/v12/plan-b-2.png" mode="aspectFit" /><view><text>平面已锁定</text><span>查看 〉</span></view></view></view>
+  <view class="v12-card selected-plan"><text>{{flatLabel}}</text><view><image wx:if="{{flatImageUrl}}" src="{{flatImageUrl}}" mode="aspectFit" /><text wx:else>本项目平面图片暂不可用</text><view><text>平面已锁定</text></view></view></view>
   <view class="v12-card option-card"><text>建筑风格</text><view><text wx:for="{{styleOptions}}" wx:key="code" class="{{style === item.code ? 'selected' : ''}}" data-field="style" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{style === item.code}}">✓</i></text></view></view>
   <view class="v12-card option-card"><text>屋顶形式</text><view><text wx:for="{{roofOptions}}" wx:key="code" class="{{roof === item.code ? 'selected' : ''}}" data-field="roof" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{roof === item.code}}">✓</i></text></view></view>
   <view class="v12-card option-card"><text>外墙材质</text><view><text wx:for="{{wallOptions}}" wx:key="code" class="{{wall === item.code ? 'selected' : ''}}" data-field="wall" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{wall === item.code}}">✓</i></text></view></view>

@@ -13,6 +13,8 @@ public class AssetQuarantineAdapter implements QuarantineObjectPort, ContentScan
     private final ObjectStoragePort storage;
 
     private final AssetContentScanner scanner;
+    @jakarta.annotation.Resource
+    private ContentModerationPort moderation;
 
     public AssetQuarantineAdapter(ObjectStoragePort storage, AssetContentScanner scanner) {
         this.storage = storage;
@@ -27,7 +29,9 @@ public class AssetQuarantineAdapter implements QuarantineObjectPort, ContentScan
     @Override
     public byte[] getObject(String objectKey) {
         try (var in = storage.getObject(objectKey)) {
-            return in.readAllBytes();
+            byte[] bytes = in.readNBytes(20 * 1024 * 1024 + 1);
+            if (bytes.length > 20 * 1024 * 1024) throw new IllegalStateException("AI_OBJECT_LIMIT");
+            return bytes;
         } catch (Exception e) {
             throw new IllegalStateException("对象读取失败: " + objectKey, e);
         }
@@ -41,7 +45,13 @@ public class AssetQuarantineAdapter implements QuarantineObjectPort, ContentScan
     @Override
     public ScanOutcome scan(String declaredMime, byte[] content) {
         var report = scanner.scan(declaredMime, content);
-        return new ScanOutcome(report.passed(), report.failures(), report.width(), report.height(), report.pageCount());
+        if (!report.passed()) return new ScanOutcome(false, report.failures(), report.width(), report.height(), report.pageCount());
+        // Required bean in Spring; explicitly supplied in non-Spring integration tests.
+        if (moderation == null) throw new IllegalStateException("CONTENT_MODERATION_NOT_WIRED");
+        var decision = moderation.review("AI_OUTPUT", report.sanitizedContent());
+        return new ScanOutcome(decision.accepted(), decision.accepted() ? java.util.List.of() : java.util.List.of("CONTENT_MODERATION"),
+                report.width(), report.height(), report.pageCount(), report.sanitizedContent(),
+                decision.provider() + ":" + decision.requestId() + ":" + decision.suggestion() + ":" + decision.policy());
     }
 
 }

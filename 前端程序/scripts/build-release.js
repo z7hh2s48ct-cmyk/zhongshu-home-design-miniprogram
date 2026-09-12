@@ -25,6 +25,8 @@ function buildRelease({ apiBase, assetBase, appid, outName, root = FRONTEND_ROOT
   if (!/^wx[0-9a-f]{16}$/.test(appid || '')) throw Error('必须提供正式小程序 AppID');
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(outName || '')) throw Error('构建名称只允许字母、数字、下划线和短横线');
   root = path.resolve(root);
+  if (root === FRONTEND_ROOT) require('node:child_process').execFileSync(process.execPath,
+    [path.resolve(root, '../scripts/check-vendored.mjs')], { stdio: 'pipe' });
   const source = path.join(root, 'miniprogram'), destination = path.join(root, 'release', outName);
   if (fs.existsSync(destination)) throw Error('构建目录已存在，请使用新的名称；不会覆盖既有制品');
   const files = walk(source).filter(file => !path.basename(file).startsWith('.') && !['project.private.config.json', 'project.config.json'].includes(path.basename(file)));
@@ -61,8 +63,12 @@ function buildRelease({ apiBase, assetBase, appid, outName, root = FRONTEND_ROOT
   project.appid = appid; project.miniprogramRoot = 'miniprogram/';
   project.setting = { ...project.setting, urlCheck: true, uploadWithSourceMap: false, ignoreUploadUnusedFiles: true };
   write('project.config.json', JSON.stringify(project, null, 2) + '\n');
+  const vendorLicense = path.join(root, 'vendor/tdesign-LICENSE');
+  if (fs.existsSync(vendorLicense)) write('THIRD_PARTY_LICENSES.txt', fs.readFileSync(vendorLicense));
   const violations = scanTree(destination);
   if (violations.length) throw Error('发布门禁失败：' + violations.map(item => item.path + ':' + item.ruleId).join(', '));
+  require('node:child_process').execFileSync(process.execPath,
+    [path.resolve(__dirname, '../../scripts/check-secrets.mjs'), '--root', destination], { stdio: ['ignore', 'pipe', 'pipe'] });
   const inventory = walk(path.join(destination, 'miniprogram')).map(file => {
     const bytes = fs.readFileSync(file);
     return { path: path.relative(destination, file).split(path.sep).join('/'), bytes: bytes.length, sha256: digest(bytes) };

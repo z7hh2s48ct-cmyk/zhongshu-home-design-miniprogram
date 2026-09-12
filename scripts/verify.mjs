@@ -19,6 +19,7 @@ const supportedTargets = new Set([
   "admin",
   "backend",
   "e2e",
+  "runtime",
 ]);
 const isWindows = process.platform === "win32";
 
@@ -187,6 +188,7 @@ function doctor(target) {
 }
 
 function verifyMiniProgram() {
+  runStep("mini", "第三方组件来源及摘要", process.execPath, ["scripts/check-vendored.mjs"], repositoryDirectory);
   runStep(
     "inventory",
     "测试资产口径漂移检查",
@@ -280,7 +282,7 @@ function verifyE2E() {
 
 function usage() {
   console.log(
-    "用法：node scripts/verify.mjs [all|full|doctor|mini|admin|backend|e2e]",
+    "用法：node scripts/verify.mjs [all|full|doctor|mini|admin|runtime|backend|e2e]",
   );
 }
 
@@ -291,20 +293,23 @@ try {
   }
 
   const doctorTarget = requestedTarget === "doctor" ? "all" : requestedTarget;
+  if (requestedTarget !== "doctor") runStep("secrets", "源码凭据格式门禁", process.execPath, ["scripts/check-secrets.mjs"], repositoryDirectory);
   doctor(doctorTarget);
   if (requestedTarget === "doctor") process.exit(0);
 
   const stages =
     requestedTarget === "all"
-      ? ["mini", "admin", "backend"]
+      ? ["mini", "admin", "runtime", "backend"]
       : requestedTarget === "full"
-        ? ["mini", "admin", "backend", "e2e"]
+        ? ["mini", "admin", "runtime", "backend", "e2e"]
         : [requestedTarget];
   for (const stage of stages) {
     if (stage === "mini") verifyMiniProgram();
     if (stage === "admin") verifyAdmin();
     if (stage === "backend") verifyBackend();
     if (stage === "e2e") verifyE2E();
+    if (stage === "runtime") runStep("runtime", "Runtime 无真实消费合同测试", process.execPath,
+      ["--test", ...readdirSync(join(repositoryDirectory,"ai-runtime/test")).filter(name=>name.endsWith('.test.mjs')).map(name=>join(repositoryDirectory,"ai-runtime/test",name))], repositoryDirectory);
   }
   console.log(`\n[verify] ${stages.join(" -> ")} 全部通过`);
 } catch (error) {

@@ -1,0 +1,173 @@
+{
+  "createdAt": "2026-09-12T20:51:39.318Z",
+  "worktree": "E:/众墅之家设计平台/zs-rg3",
+  "baseMain": "b06facc236071566a453e0920b7f19a49ff7b0c2",
+  "toolchain": {
+    "jdk": "Temurin 17.0.20.1+1",
+    "node": "24.19.0",
+    "pnpm": "11.19.0",
+    "trivy": "0.74.0"
+  },
+  "limitations": [
+    "Local implementer review, not independent approval",
+    "No live WeChat/COS/IMS/apilio calls",
+    "Mini SBOM identifies upstream TDesign and file hashes; does not infer bundled tslib version",
+    "Logs retained in RG3 worktree artifacts; binaries/dependencies not committed"
+  ],
+  "evidence": [
+    {
+      "file": "artifacts/risk-remediation/rg3-all-verified.log",
+      "command": "node scripts/verify.mjs all",
+      "result": "PASS: mini 219, admin 78, runtime 9; backend 141 reports / 1390 tests / 0 failures / 0 errors / 11 skipped",
+      "bytes": 617757,
+      "sha256": "0272981f51b5cfd33b0c745cb579498deb8f233ca1cb6defc119ba33a6c71945"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-admin-frozen-install.log",
+      "command": "pnpm install --frozen-lockfile --offline --ignore-scripts",
+      "result": "PASS",
+      "bytes": 284,
+      "sha256": "14e84c8c8298d7ab48921da1397f46e25e7139b03fbeac493f04ac69a8e0953d"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-admin-frozen-verified.log",
+      "command": "node scripts/verify.mjs admin",
+      "result": "PASS after frozen install: tests/type/lint/build",
+      "bytes": 29863,
+      "sha256": "383735122b3ea91d0791a26c5d7c3ed183a9c221455840fd18a35f7883203289"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-runtime-container-test.log",
+      "command": "docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges [read-only tests mount and tmpfs] zhongshu-ai-runtime:rg3-review node --test test/*.test.mjs",
+      "result": "9/9 PASS; no external channel",
+      "bytes": 1008,
+      "sha256": "a2098e8e060b7867840170a6744289316ff202a0a1b7e411a7772cb7c354f534"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-patched-dependencies-test-final.log",
+      "command": "./mvnw.cmd -B -o -Dtest=TencentImsModerationAdapterTest,StaticDatasourceRoutingTest -Dsurefire.failIfNoSpecifiedTests=false -pl yudao-server -am test",
+      "result": "PASS: 5 IMS cases + actual datasource auto-configuration test",
+      "bytes": 37784,
+      "sha256": "2f297e5d45862852127f9a0d217a216063fcfd80904714ee79828b04ec136216"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-supply-chain-final-verified.log",
+      "command": "node scripts/supply-chain.mjs",
+      "result": "PASS: all four targets actually scanned; 0 high/critical; backend 1 medium retained",
+      "bytes": 5034,
+      "sha256": "227dfdebd7fda1222961b4ec0edf69e99baaed940a4d8c1a1a1fc5a1ad9612a7"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-source-secrets-final.json",
+      "command": "node scripts/check-secrets.mjs",
+      "result": "PASS: supported credential patterns, no findings; excludes history and binary contents",
+      "bytes": 40,
+      "sha256": "76d13366ce51133c366255f1c21fa711f6aeb48b498509702f497865a02e8e77"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-release-fixture.log",
+      "command": "ZS_RELEASE_API_BASE=https://api.example.com ZS_RELEASE_ASSET_BASE=https://cdn.example.com ZS_RELEASE_APPID=wx5753299f05a5c138 node 前端程序/scripts/build-release.js rg3-review-20260913",
+      "result": "PASS: source 926819 bytes / 233 files / 4 CDN assets; compiled package and CDN not verified",
+      "bytes": 268,
+      "sha256": "44aa1adb24a9180a67869f15fae78a70c24da2ef3e35fe7b75c5160260b90b81"
+    },
+    {
+      "file": "前端程序/release/rg3-review-20260913/release-manifest.json",
+      "command": "release builder output",
+      "result": "Source manifest only; example domains",
+      "bytes": 44060,
+      "sha256": "d05d2f573accd82c407ef53d2cfdcede0219920b5cf31fd360e8afa10ba75209"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-isolated-e2e-final.log",
+      "command": "scripts/verify-isolated-e2e.ps1 -RunName rg3-final",
+      "result": "54/54 PASS; new DB and repeat startup; own resources cleaned",
+      "bytes": 1030,
+      "sha256": "a40f2c230c97ed700b440918af09949bf95c163518599045dcc3b35adc9eebf0"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-final-e2e/results/latest.json",
+      "command": "e2e/zs-e2e.mjs against isolated backend",
+      "result": "54/54 PASS; controlled report omits detailed returned identifiers",
+      "bytes": 11073,
+      "sha256": "8a1c109decf82b1d84c71cbdf314bac1824f1ed0bca3c39a2f2d3536b5d19ecd"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-final-e2e/cleanup.log",
+      "command": "docker compose -p zs-risk-rg3-final down --volumes",
+      "result": "Own test containers/volumes/network removed",
+      "bytes": 679,
+      "sha256": "59aa7222347c2f907296a05777d40134af07dcf592d19337c1dd25116ac1665b"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-all-first.log",
+      "command": "Initial all gate",
+      "result": "FAIL: missing Actuator compile dependency; fixed and final full gate passed",
+      "bytes": 557350,
+      "sha256": "3435e8895bfb7fd05066e56593a925d56aff727b02ab8d74d921a02824a7c610"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-isolated-e2e.log",
+      "command": "Initial isolated E2E",
+      "result": "FAIL before application startup: offline BOM repository cache missing; root Reactor cache populated and rerun passed",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-runtime-debian-initial-sbom.json",
+      "command": "Initial Runtime base image scan",
+      "result": "236 components, 122 advisories; replaced and rescanned",
+      "bytes": 802573,
+      "sha256": "c12fb96d5b6209f659627023ef517cc434143ce25204e5aa5dcd977eb9354c17"
+    },
+    {
+      "file": "artifacts/risk-remediation/rg3-backend-initial-sbom.json",
+      "command": "Initial actual backend JAR scan",
+      "result": "299 components, 17 advisories; patched and rescanned",
+      "bytes": 345599,
+      "sha256": "f93d43df00a2be676fb9f0651638855d54ac98aee79a99d054e42953f7063f55"
+    },
+    {
+      "file": "管理后台/dist/dependency-reachability.json",
+      "command": "Vite generateBundle module graph gate",
+      "result": "legacyEditorModules=0, designerSource=true, safeEditorBridge=true",
+      "bytes": 84,
+      "sha256": "3bce7e6f351ef432c8110bc2c0cd9c0ad3a3213ac6da95f10723073c80b7e2f8"
+    },
+    {
+      "file": "项目文档/风险整改/SBOM/RG3-mini.cdx.json",
+      "command": "Trivy 0.74.0 CycloneDX output",
+      "result": "Controlled copy; digest identical to raw scan output",
+      "bytes": 35532,
+      "sha256": "8889d6ee4488ceb427c53bda4a4a9713ceb4e7efe5e2bb28a62b25dae5f5c3b0"
+    },
+    {
+      "file": "项目文档/风险整改/SBOM/RG3-admin.cdx.json",
+      "command": "Trivy 0.74.0 CycloneDX output",
+      "result": "Controlled copy; digest identical to raw scan output",
+      "bytes": 364512,
+      "sha256": "ce3b91ad05e49d5ec8a719424a1c60ff0b1ebaa67a91aba921b5b58ba60b49a3"
+    },
+    {
+      "file": "项目文档/风险整改/SBOM/RG3-backend.cdx.json",
+      "command": "Trivy 0.74.0 CycloneDX output",
+      "result": "Controlled copy; digest identical to raw scan output",
+      "bytes": 286882,
+      "sha256": "b229ced9d22c035d5e5960e55bfca9d5ef21edb298584890626a63f933ed8bb2"
+    },
+    {
+      "file": "项目文档/风险整改/SBOM/RG3-runtime.cdx.json",
+      "command": "Trivy 0.74.0 CycloneDX output",
+      "result": "Controlled copy; digest identical to raw scan output",
+      "bytes": 35186,
+      "sha256": "8756802921badf8be7e71baa3c1091e8f9770e2f19996663766e8d8e82867bcd"
+    },
+    {
+      "file": "项目文档/风险整改/SBOM/RG3-summary.json",
+      "command": "Scan summary with controlled filenames",
+      "result": "Backend binary digest linked to actual scanned JAR",
+      "bytes": 1397,
+      "sha256": "81f85045f83f68d90c07a2c7ae1b39ff42ecb5647386387f7a1bc0a2e7b9f9ee"
+    }
+  ]
+}
