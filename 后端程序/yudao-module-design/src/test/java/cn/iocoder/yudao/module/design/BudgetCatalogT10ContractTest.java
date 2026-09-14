@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.tenant.core.context.TenantContextHolder;
+import cn.iocoder.yudao.module.design.budget.BudgetAccountPriceService;
 import cn.iocoder.yudao.module.design.budget.BudgetCatalogService;
 import cn.iocoder.yudao.module.design.controller.admin.AdminBudgetCatalogController;
 import cn.iocoder.yudao.module.design.controller.admin.vo.AdminBudgetCatalogVO.*;
@@ -262,6 +263,9 @@ class BudgetCatalogT10ContractTest {
             context.register(SecurityConfig.class);
             context.registerBean("ss", PermissionProbe.class, () -> permissions);
             context.registerBean(BudgetCatalogService.class, () -> catalog);
+            // T14：管理控制器新增的覆盖价只读依赖，沿用同一真库夹具
+            context.registerBean(BudgetAccountPriceService.class,
+                    () -> new BudgetAccountPriceService(ds, new DataSourceTransactionManager(ds), new JdbcAuditPort(ds)));
             context.registerBean(AdminBudgetCatalogController.class);
             context.refresh();
             var admin = context.getBean(AdminBudgetCatalogController.class);

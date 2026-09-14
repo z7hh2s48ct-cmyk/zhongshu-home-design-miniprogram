@@ -60,6 +60,17 @@ public class ItemizedBudgetService {
     private record Request(Long resultVersionId, Map<String, Object> overrides, List<Long> optionIds,
                            List<String> requirementSnapshotIds) {}
     private record FrozenLine(BudgetCalculator.LineInput input, Long priceVersionId, Map<String, Object> pricingSnapshot) {}
+    /** T14: the caller's ACTIVE budget_account_price rows, keyed by option id. */
+    private record AccountOverride(long accountPriceId, long version, long unitPriceCents) {}
+
+    private Map<Long, AccountOverride> activePriceOverrides(long accountId) {
+        Map<Long, AccountOverride> result = new HashMap<>();
+        for (var row : jdbc.queryForList("SELECT id, version, unit_price_cents, option_id FROM budget_account_price "
+                + "WHERE tenant_id = 0 AND account_id = ? AND status = 'ACTIVE' AND deleted = FALSE", accountId)) {
+            result.put(number(row, "option_id"), new AccountOverride(number(row, "id"), number(row, "version"), number(row, "unit_price_cents")));
+        }
+        return result;
+    }
 
     public AppItemizedBudgetRespVO create(long userId, long projectId, Map<String, Object> body, String key) {
         Request request = parseRequest(body);
@@ -149,6 +160,7 @@ public class ItemizedBudgetService {
         List<FrozenLine> frozen = new ArrayList<>();
         Set<String> selectedGroups = new HashSet<>();
         Set<Long> selectedItemIds = new HashSet<>();
+        Map<Long, AccountOverride> overrides = activePriceOverrides(userId);
         for (long optionId : request.optionIds()) {
             var optionRows = jdbc.queryForList("SELECT * FROM budget_option WHERE tenant_id = 0 AND id = ? AND enabled = TRUE AND deleted = FALSE FOR SHARE", optionId);
             if (optionRows.isEmpty()) throw exception(BUDGET_INPUT_INVALID);
@@ -163,10 +175,15 @@ public class ItemizedBudgetService {
             if (prices.size() > 1) throw exception(BUDGET_PRICE_CONFLICT);
             if (prices.isEmpty() && "CUSTOM_TEMPLATE".equals(item.get("source"))) throw exception(BUDGET_INPUT_INVALID);
             Map<String, Object> price = prices.isEmpty() ? Map.of() : prices.get(0);
+            // T14: the account's own override wins over the fixed baseline catalog, standard items only; it can also fill a missing baseline price.
+            var override = "STANDARD".equals(item.get("source")) ? overrides.get(optionId) : null;
+            Long unitPriceCents;
+            if (override != null) unitPriceCents = override.unitPriceCents();
+            else unitPriceCents = price.get("unit_price_cents") == null ? null : number(price, "unit_price_cents");
             var quantity = BudgetCalculator.resolveQuantity(current, (String) option.get("unit"), (String) option.get("quantity_source"), (String) option.get("quantity_key"));
             var input = new BudgetCalculator.LineInput(String.valueOf(IdWorker.getId()), String.valueOf(itemId), (String) item.get("code"), (String) item.get("category"),
                     (String) item.get("name"), String.valueOf(optionId), (String) option.get("label"), (String) option.get("unit"), quantity.value(),
-                    price.get("unit_price_cents") == null ? null : number(price, "unit_price_cents"), (String) price.get("free_reason"), null, (String) item.get("source"));
+                    unitPriceCents, override == null ? (String) price.get("free_reason") : null, null, (String) item.get("source"));
             Map<String, Object> pricingSnapshot = new LinkedHashMap<>();
             pricingSnapshot.put("regionId", String.valueOf(number(region, "id")));
             pricingSnapshot.put("regionVersion", region.get("version"));
@@ -181,6 +198,11 @@ public class ItemizedBudgetService {
             pricingSnapshot.put("priceVersion", price.get("version"));
             pricingSnapshot.put("effectiveAt", instant(price.get("effective_at")));
             pricingSnapshot.put("expiresAt", instant(price.get("expires_at")));
+            pricingSnapshot.put("priceSource", override == null ? "DEFAULT" : "ACCOUNT_OVERRIDE");
+            if (override != null) {
+                pricingSnapshot.put("accountPriceId", override.accountPriceId());
+                pricingSnapshot.put("accountPriceVersion", override.version());
+            }
             frozen.add(new FrozenLine(input, price.get("id") == null ? null : number(price, "id"), pricingSnapshot));
         }
         for (String code : STANDARD_CODES) {

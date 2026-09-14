@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.design.controller.admin;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.module.design.budget.BudgetAccountPriceService;
 import cn.iocoder.yudao.module.design.budget.BudgetCatalogService;
 import cn.iocoder.yudao.module.design.controller.admin.vo.AdminBudgetCatalogVO.*;
 import cn.iocoder.yudao.module.design.enums.PermissionConstants;
@@ -22,6 +23,8 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 public class AdminBudgetCatalogController {
     @Resource
     private BudgetCatalogService budgetCatalogService;
+    @Resource
+    private BudgetAccountPriceService accountPriceService;
     @Value("${zhongshu.design.budget-admin-tenant-id:1}")
     private long adminTenantId = 1L;
 
@@ -112,6 +115,15 @@ public class AdminBudgetCatalogController {
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_PRICE_PUBLISH + "')")
     public CommonResult<Price> disablePrice(@PathVariable String priceId, @RequestHeader("Idempotency-Key") String key, @RequestBody Map<String, Object> body) {
         return success(budgetCatalogService.disablePrice(actor(), key, priceId, body));
+    }
+
+    @GetMapping("/account-prices")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_QUERY + "')")
+    public CommonResult<PageResult<BudgetAccountPriceService.AdminAccountPrice>> accountPrices(@RequestParam long accountId,
+            @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
+        actor();
+        // T14: 只读审计视图；用户覆盖价的干预（重置/清空）不在本期开放
+        return success(accountPriceService.pageByAccount(accountId, pageNo, pageSize));
     }
 
     private long actor() {
