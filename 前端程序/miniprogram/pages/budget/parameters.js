@@ -90,6 +90,11 @@ protectedPage({
     }
   },
   restore() { if (this.currentSession() && this.data.draft) this.updateDraft(draftStore.restore(this.data.draft)); },
+  // T14：跳转我的当地单价（把基准价调成当地成本价，跟账号永久生效）
+  openMyPrices() {
+    const regionCode = this.data.draft ? draftStore.values(this.data.draft).regionCode : '';
+    wx.navigateTo({ url: '/pages/budget/prices' + (regionCode ? '?regionCode=' + encodeURIComponent(regionCode) : '') });
+  },
   save() {
     if (!this.currentSession() || this.data.saving || !this.data.draft) return;
     const validation = draftStore.validate(this.data.draft, this.data.regions);

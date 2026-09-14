@@ -175,6 +175,18 @@ module.exports = {
   getBudgetOptions: function (regionCode) {
     return http.get(BASE + '/budget/options?regionCode=' + encodeURIComponent(regionCode));
   },
+  // T14 我的当地单价：基准价与账号覆盖价并列；覆盖跟账号永久生效，恢复默认即回基准价
+  getMyPrices: function (regionCode) {
+    return http.get(BASE + '/budget/my-prices?regionCode=' + encodeURIComponent(regionCode));
+  },
+  setMyPrice: function (optionId, regionCode, unitPriceCents, reason) {
+    var body = { unitPriceCents: unitPriceCents };
+    if (reason) body.reason = reason;
+    return http.put(BASE + '/budget/my-prices/' + encodeURIComponent(optionId) + '?regionCode=' + encodeURIComponent(regionCode), body);
+  },
+  resetMyPrice: function (optionId, regionCode) {
+    return http.del(BASE + '/budget/my-prices/' + encodeURIComponent(optionId) + '?regionCode=' + encodeURIComponent(regionCode));
+  },
   createBudgetEstimate: function (projectId, input) {
     return http.post(BASE + '/design-projects/' + projectId + '/budget-estimates', input);
   },

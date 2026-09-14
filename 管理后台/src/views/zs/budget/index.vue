@@ -3,14 +3,14 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">预算配置</h1>
-        <div class="zs-page-subtitle">地区价、标准选项与自定义模板；历史预算按快照保留</div>
+        <div class="zs-page-subtitle">基准价格（武汉参考价）、标准选项与自定义模板；历史预算按快照保留</div>
       </div>
       <div class="flex flex-wrap gap-8px">
         <router-link v-if="canQuery" to="/zs/budget-estimates">
           <el-button>项目预算与修订</el-button>
         </router-link>
         <el-button
-          v-if="canConfigure"
+          v-if="canConfigure && kind !== 'regions' && kind !== 'account-prices'"
           class="zs-btn-primary"
           :disabled="loading"
           @click="openEditor()"
@@ -30,19 +30,30 @@
         <el-tab-pane label="建造地区" name="regions" />
         <el-tab-pane label="预算项 / 自定义模板" name="items" />
         <el-tab-pane label="计价选项" name="options" />
-        <el-tab-pane label="地区价格" name="prices" />
+        <el-tab-pane label="基准价格" name="prices" />
+        <el-tab-pane label="用户覆盖价" name="account-prices" />
       </el-tabs>
       <el-alert
         :title="
           kind === 'prices'
-            ? '保存只形成草稿；发布后才用于新预算。空单价是待补，0元必须说明免费原因。'
-            : '标准3+7项身份固定；自定义模板默认仅后台使用，公开选择需要明确开启并配置有效价格。'
+            ? '基准价即平台统一参考价（武汉基准）；保存只形成草稿，发布后才用于新预算。空单价是待补，0元必须说明免费原因。激活用户可在其账号内覆盖单价，不影响本目录。'
+            : kind === 'account-prices'
+              ? '只读审计视图：用户覆盖价跟账号永久生效，仅影响其本人新测算；既有预算与报价快照不变，本期不提供干预入口。'
+              : '标准3+7项身份固定；自定义模板默认仅后台使用，公开选择需要明确开启并配置有效价格。'
         "
         type="info"
         :closable="false"
         class="mb-16px"
       />
       <div class="budget-filters">
+        <el-input
+          v-if="kind === 'account-prices'"
+          v-model="accountFilter"
+          class="budget-select"
+          clearable
+          placeholder="输入账号 ID"
+          @keyup.enter="refresh"
+        />
         <el-select
           v-if="kind === 'options' || kind === 'prices'"
           v-model="itemFilter"
@@ -100,9 +111,32 @@
         :data="rows"
         v-loading="loading"
         stripe
-        :empty-text="kind === 'prices' && !regionFilter ? '请先选择建造地区' : '暂无配置'"
+        :empty-text="
+          kind === 'prices' && !regionFilter
+            ? '请先选择建造地区'
+            : kind === 'account-prices' && !accountFilter
+              ? '请输入账号 ID 查询'
+              : '暂无配置'
+        "
       >
-        <el-table-column v-if="kind !== 'prices'" label="名称 / 编码" min-width="230">
+        <template v-if="kind === 'account-prices'">
+          <el-table-column label="选项 / 预算项" min-width="230">
+            <template #default="{ row }"
+              ><div>{{ row.optionLabel }}</div
+              ><small>{{ row.itemCode }} · 选项 {{ row.optionId }}</small></template
+            >
+          </el-table-column>
+          <el-table-column label="覆盖单价（元）" min-width="120">
+            <template #default="{ row }">{{ formatCents(row.unitPriceCents) }}</template>
+          </el-table-column>
+          <el-table-column label="填写原因" min-width="180">
+            <template #default="{ row }">{{ row.reason || '未填写' }}</template>
+          </el-table-column>
+          <el-table-column label="更新时间" min-width="170">
+            <template #default="{ row }">{{ displayTime(row.updatedAt) }}</template>
+          </el-table-column>
+        </template>
+        <el-table-column v-if="kind !== 'prices' && kind !== 'account-prices'" label="名称 / 编码" min-width="230">
           <template #default="{ row }"
             ><div>{{ row.name || row.label }}</div
             ><small>{{ row.code }}</small></template
@@ -155,18 +189,30 @@
                   ? row.status === 'PUBLISHED'
                     ? 'success'
                     : 'info'
-                  : row.enabled
-                    ? 'success'
-                    : 'info'
+                  : kind === 'account-prices'
+                    ? row.status === 'ACTIVE'
+                      ? 'success'
+                      : 'info'
+                    : row.enabled
+                      ? 'success'
+                      : 'info'
               "
               >{{
-                kind === 'prices' ? priceStatus[row.status] : row.enabled ? '启用' : '停用'
+                kind === 'prices'
+                  ? priceStatus[row.status]
+                  : kind === 'account-prices'
+                    ? row.status === 'ACTIVE'
+                      ? '生效中'
+                      : '已恢复默认'
+                    : row.enabled
+                      ? '启用'
+                      : '停用'
               }}</el-tag
             ></template
           >
         </el-table-column>
-        <el-table-column label="版本" prop="version" width="75" />
-        <el-table-column label="操作" min-width="210" fixed="right">
+        <el-table-column v-if="kind !== 'account-prices'" label="版本" prop="version" width="75" />
+        <el-table-column v-if="kind !== 'account-prices'" label="操作" min-width="210" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="canConfigure && (kind !== 'prices' || row.status === 'DRAFT')"
@@ -380,7 +426,7 @@
 
     <el-dialog
       v-model="transitionVisible"
-      :title="transitionAction === 'publish' ? '确认发布地区价格' : '确认停用地区价格'"
+      :title="transitionAction === 'publish' ? '确认发布基准价格' : '确认停用基准价格'"
       width="min(520px, 94vw)"
       :close-on-click-modal="false"
       :close-on-press-escape="!saving"
@@ -444,18 +490,20 @@ const labels = {
   regions: '建造地区',
   items: '自定义预算项',
   options: '计价选项',
-  prices: '地区价格草稿'
+  prices: '基准价格草稿',
+  'account-prices': '用户覆盖价（只读）'
 }
 const priceStatus = { DRAFT: '草稿', PUBLISHED: '已发布', DISABLED: '已停用' }
-const kind = ref<CatalogKind>('regions')
-const rows = ref<CatalogRow[]>([])
+const kind = ref<CatalogKind | 'account-prices'>('regions')
+const rows = ref<(CatalogRow | BudgetApi.AccountPriceRow)[]>([])
 const total = ref(0),
   pageNo = ref(1),
   loading = ref(false),
   saving = ref(false)
 const itemFilter = ref(''),
   regionFilter = ref(''),
-  optionFilter = ref('')
+  optionFilter = ref(''),
+  accountFilter = ref('')
 const loadError = ref(''),
   saveError = ref('')
 const choices = reactive({
@@ -489,8 +537,24 @@ async function load() {
     loading.value = false
     return
   }
+  if (kind.value === 'account-prices' && !accountFilter.value.trim()) {
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
+    if (kind.value === 'account-prices') {
+      const result = await BudgetApi.getAccountPrices({
+        accountId: accountFilter.value.trim(),
+        pageNo: pageNo.value,
+        pageSize: 20
+      })
+      if (sequence === readSequence) {
+        rows.value = result.list
+        total.value = result.total
+      }
+      return
+    }
     const result = await BudgetApi.getCatalogPage(kind.value, {
       pageNo: pageNo.value,
       pageSize: 20,
@@ -535,7 +599,7 @@ async function refresh() {
   }
   await load()
 }
-watch([kind, itemFilter, regionFilter, optionFilter], () => {
+watch([kind, itemFilter, regionFilter, optionFilter, accountFilter], () => {
   pageNo.value = 1
   void load()
 })
@@ -564,6 +628,7 @@ function openEditor(row?: CatalogRow) {
   if (
     !canConfigure.value ||
     saving.value ||
+    kind.value === 'account-prices' ||
     (kind.value === 'prices' && row && row.status !== 'DRAFT')
   )
     return

@@ -1,0 +1,38 @@
+<view class="v12-page budget-page prices-page" wx:if="{{accessReady}}">
+  <v12-navbar title="我的当地单价" show-back show-brand="{{false}}" />
+  <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>覆盖价跟账号生效，只影响你自己的新预算测算；平台基准价与他人不受影响。</text></view>
+  <view class="budget-card prices-card">
+    <picker range="{{regionNames}}" value="{{regionIndex < 0 ? 0 : regionIndex}}" bindchange="onRegionChange" disabled="{{!regions.length}}">
+      <view class="parameter-row"><text>建造地区</text><view class="input-value"><text>{{regionNames[regionIndex] || '请选择'}}</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view></view>
+    </picker>
+    <view wx:if="{{overriddenCount}}" class="prices-hint">已启用 {{overriddenCount}} 项当地单价</view>
+  </view>
+  <view wx:if="{{loading}}" class="budget-card state-card">正在读取单价…</view>
+  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="retry">重试</button></view>
+  <block wx:elif="{{groups.length}}">
+    <view class="budget-card prices-group" wx:for="{{groups}}" wx:key="itemId">
+      <view class="prices-head"><text class="section-title">{{item.itemName}}</text></view>
+      <view class="price-row {{editOptionId === option.optionId ? 'editing' : ''}}" wx:for="{{item.options}}" wx:for-item="option" wx:key="optionId">
+        <view class="price-copy">
+          <text class="price-label">{{option.label}}<text class="price-unit"> · {{option.unitLabel}}</text></text>
+          <text class="row-description">基准价 {{option.baselineText}}</text>
+          <text wx:if="{{option.overridden}}" class="price-mine">我的单价 {{option.myText}}<text wx:if="{{option.reason}}" class="price-reason">（{{option.reason}}）</text></text>
+          <text wx:elif="{{option.missing}}" class="row-description">平台暂无此项目基准价，可先填入你当地的行情价</text>
+        </view>
+        <view class="price-actions">
+          <view wx:if="{{editOptionId === option.optionId}}" class="price-editor">
+            <input type="digit" value="{{inputValue}}" focus placeholder="元/{{option.unitLabel}}" maxlength="12" bindinput="onPriceInput" aria-label="单价" />
+            <button class="text-action" data-option-id="{{option.optionId}}" bindtap="confirmEdit" disabled="{{saving}}" loading="{{saving}}">保存</button>
+            <button class="text-action" bindtap="cancelEdit">取消</button>
+          </view>
+          <block wx:else>
+            <button class="text-action" data-option-id="{{option.optionId}}" bindtap="startEdit" aria-label="调整{{option.label}}单价">{{option.overridden ? '修改' : '调整'}}</button>
+            <button wx:if="{{option.overridden}}" class="text-action muted-action" data-option-id="{{option.optionId}}" bindtap="reset" disabled="{{resetting}}" loading="{{resetting}}">恢复默认</button>
+          </block>
+        </view>
+      </view>
+    </view>
+    <view class="explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">填写说明</text><text class="muted">单价按各项目计价单位填写，最多两位小数<text class="help-line">保存后新生成的预算即按当地单价计算</text><text class="help-line">已保存的预算与平台报价不受影响</text></text></view></view>
+  </block>
+  <view wx:elif="{{!loading && !error}}" class="budget-card state-card"><text>当前地区暂无可配置的预算项目</text></view>
+</view>

@@ -61,3 +61,22 @@ export const transitionPrice = (
     data,
     headers: { 'Idempotency-Key': key }
   })
+
+// T14：用户覆盖价（我的当地单价）只读审计视图；管理端不提供干预入口
+export interface AccountPriceRow {
+  accountId: string
+  optionId: string
+  optionLabel: string
+  itemCode: string
+  unitPriceCents: number
+  reason: string | null
+  status: 'ACTIVE' | 'REMOVED'
+  updatedAt: string
+}
+export interface AccountPricePage {
+  list: AccountPriceRow[]
+  total: number
+}
+
+export const getAccountPrices = (params: { accountId: string; pageNo: number; pageSize: number }) =>
+  request.get<AccountPricePage>({ url: `${BASE}/account-prices`, params })
