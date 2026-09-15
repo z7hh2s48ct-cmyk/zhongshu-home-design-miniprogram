@@ -275,16 +275,30 @@ public class BudgetCatalogService {
     }
 
     public AppBudgetCatalogRespVO publicOptions(String regionCode) {
+        return publicOptions(regionCode, null);
+    }
+
+    /** accountId 非空时，该账号的覆盖价也算本地价（T14）；自定义模板仍要求自身已发布价。 */
+    public AppBudgetCatalogRespVO publicOptions(String regionCode, Long accountId) {
         long regionId = regionByCode(regionCode, true);
         var parents = jdbc.query("SELECT * FROM budget_item WHERE tenant_id = ? AND enabled = TRUE AND public_selectable = TRUE AND deleted = FALSE ORDER BY sort_order, id", ITEM, tenant());
         List<AppBudgetCatalogRespVO.Item> result = new ArrayList<>();
         for (Item parent : parents) {
-            var children = jdbc.query("SELECT o.id, o.code, o.label, o.selection_group, EXISTS (SELECT 1 FROM budget_item_price p WHERE p.tenant_id = o.tenant_id "
+            List<Object> args = new ArrayList<>(List.of(regionId));
+            // 覆盖价只存在于 STANDARD 项（写入侧已校验）；CUSTOM_TEMPLATE 不参与，纵深防御不再拼入
+            String overrideAvailable = "";
+            if (accountId != null && "STANDARD".equals(parent.source())) {
+                overrideAvailable = " OR EXISTS (SELECT 1 FROM budget_account_price a WHERE a.tenant_id = o.tenant_id "
+                        + "AND a.account_id = ? AND a.option_id = o.id AND a.status = 'ACTIVE' AND a.deleted = FALSE)";
+                args.add(accountId);
+            }
+            args.addAll(List.of(tenant(), Long.parseLong(parent.itemId())));
+            var children = jdbc.query("SELECT o.id, o.code, o.label, o.selection_group, (EXISTS (SELECT 1 FROM budget_item_price p WHERE p.tenant_id = o.tenant_id "
                             + "AND p.region_id = ? AND p.option_id = o.id AND p.status = 'PUBLISHED' AND p.deleted = FALSE AND p.effective_at <= now() "
-                            + "AND (p.expires_at IS NULL OR p.expires_at > now())) AS available FROM budget_option o WHERE o.tenant_id = ? AND o.item_id = ? "
+                            + "AND (p.expires_at IS NULL OR p.expires_at > now()))" + overrideAvailable + ") AS available FROM budget_option o WHERE o.tenant_id = ? AND o.item_id = ? "
                             + "AND o.enabled = TRUE AND o.deleted = FALSE ORDER BY o.sort_order, o.id",
                     (rs, index) -> new AppBudgetCatalogRespVO.Option(rs.getString("id"), rs.getString("code"), rs.getString("label"), rs.getString("selection_group"),
-                            rs.getBoolean("available") ? "AVAILABLE" : "MISSING_PRICE"), regionId, tenant(), Long.parseLong(parent.itemId()));
+                            rs.getBoolean("available") ? "AVAILABLE" : "MISSING_PRICE"), args.toArray());
             // Custom templates are opt-in and region-complete. Standard identities remain visible with missing price markers.
             if ("CUSTOM_TEMPLATE".equals(parent.source())) children = children.stream().filter(value -> "AVAILABLE".equals(value.availability())).toList();
             if ("CUSTOM_TEMPLATE".equals(parent.source()) && children.isEmpty()) continue;

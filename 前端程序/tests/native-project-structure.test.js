@@ -73,6 +73,7 @@ const flowPages = [
   'pages/budget/body-detail',
   'pages/budget/exterior-detail',
   'pages/budget/history',
+  'pages/budget/prices',
   'pages/wallet/recharge',
   'pages/payment/success',
   'pages/messagecenter/messagecenter',

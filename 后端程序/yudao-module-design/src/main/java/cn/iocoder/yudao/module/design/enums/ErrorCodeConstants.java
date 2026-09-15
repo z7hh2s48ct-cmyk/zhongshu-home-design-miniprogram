@@ -19,5 +19,6 @@ public interface ErrorCodeConstants {
     ErrorCode BUDGET_INCOMPLETE = new ErrorCode(1_071_000_101, "预算存在待补或待复核项，不能形成完整报价");
     ErrorCode BUDGET_PRICE_CONFLICT = new ErrorCode(1_071_000_102, "同地区选项的价格生效区间冲突");
     ErrorCode BUDGET_AMOUNT_LIMIT = new ErrorCode(1_071_000_103, "预算金额超过允许范围");
+    ErrorCode BUDGET_ACCOUNT_PRICE_INVALID = new ErrorCode(1_071_000_104, "账号单价覆盖不符合字段或范围要求");
 
 }

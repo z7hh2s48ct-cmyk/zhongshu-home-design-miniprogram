@@ -307,7 +307,10 @@ test('切换会话后的旧响应不写草稿、不覆盖新请求状态，旧�
 test('两页不显示内部工程量或默认金额，生成绑定真实动作，旧版保留字符串ID', async () => {
   const input = fs.readFileSync(path.join(root, 'pages/budget/input.wxml'), 'utf8');
   const params = fs.readFileSync(path.join(root, 'pages/budget/parameters.wxml'), 'utf8');
-  assert.doesNotMatch(input + params, /方案B|52\.86|单价|灯具米数|12\.6|13\.8/);
+  // T14 豁免：parameters 页的“我的当地单价”入口是用户自己的调价功能导航，不是内部计价数据；
+  // 其余“单价”字样与内部工程量、默认金额仍一律禁止出现在这两页。
+  const protectedText = (input + params).replaceAll('我的当地单价', '').replaceAll('按当地成本调价', '');
+  assert.doesNotMatch(protectedText, /方案B|52\.86|单价|灯具米数|12\.6|13\.8/);
   assert.match(input, /bindtap="generate"[^>]*disabled="{{!canGenerate/);
   assert.match(input, /待补充预算，不视为完整总价/);
   assert.match(params, /本机草稿/);

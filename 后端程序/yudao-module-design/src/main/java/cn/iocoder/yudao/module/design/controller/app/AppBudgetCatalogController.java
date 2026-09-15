@@ -30,12 +30,16 @@ public class AppBudgetCatalogController {
     @GetMapping("/options")
     public CommonResult<AppBudgetCatalogRespVO> options(@RequestParam String regionCode,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
-        requireUnrestricted(authorization);
-        return success(budgetCatalogService.publicOptions(regionCode));
+        // T14: 可用性按当前账号判定——本人覆盖价同样算本地价
+        long accountId = identitySessionPort.requireUnrestricted(bearerToken(authorization)).accountId();
+        return success(budgetCatalogService.publicOptions(regionCode, accountId));
     }
 
     private void requireUnrestricted(String authorization) {
-        String token = authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : authorization;
-        identitySessionPort.requireUnrestricted(token);
+        identitySessionPort.requireUnrestricted(bearerToken(authorization));
+    }
+
+    private String bearerToken(String authorization) {
+        return authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : authorization;
     }
 }
