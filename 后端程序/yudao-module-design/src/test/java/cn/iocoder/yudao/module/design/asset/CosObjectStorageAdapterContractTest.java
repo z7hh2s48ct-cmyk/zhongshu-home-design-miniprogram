@@ -70,8 +70,12 @@ import static org.mockito.Mockito.when;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CosObjectStorageAdapterContractTest {
 
-    /** 固定 MinIO 版本（可复现；已在本地缓存，避免 latest 漂移）。 */
-    private static final String MINIO_IMAGE = "minio/minio:RELEASE.2024-01-16T16-07-38Z";
+    /**
+     * 固定 MinIO 版本（可复现，避免 latest 漂移）。
+     * 官方 minio/minio 已下架 Docker Hub（2026-09-11~14 删除），quay.io 自 2026-09-24 起要求鉴权，
+     * 故改用社区重建镜像 pgsty/minio（同源、匿名可拉、S3 API 行为一致）。
+     */
+    private static final String MINIO_IMAGE = "pgsty/minio:RELEASE.2026-08-04T00-00-00Z";
     /** 本地临时容器 root 口令（MinIO 要求 ≥8 字符）；仅测试用，非任何真实凭据。 */
     private static final String ROOT_USER = "zhongshuadmin";
     private static final String ROOT_PASSWORD = "zhongshu-local-test-secret";
