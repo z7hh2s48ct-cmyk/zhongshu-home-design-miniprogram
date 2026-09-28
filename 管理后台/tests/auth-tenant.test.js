@@ -16,8 +16,7 @@ function evaluate(file, env, mocks, globals = {}) {
 }
 function auth(env, cachedTenant = 99) {
   return evaluate('utils/auth.ts', env, {
-    '@/hooks/web/useCache': { useCache: () => ({ wsCache: { get: () => cachedTenant } }), CACHE_KEY: { TenantId: 'tenant' } },
-    '@/utils/jsencrypt': {}
+    '@/hooks/web/useCache': { useCache: () => ({ wsCache: { get: () => cachedTenant } }), CACHE_KEY: { TenantId: 'tenant' } }
   })
 }
 function transport(env) {

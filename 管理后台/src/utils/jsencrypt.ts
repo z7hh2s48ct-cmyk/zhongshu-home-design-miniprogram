@@ -1,31 +1,15 @@
-import { JSEncrypt } from 'jsencrypt'
-
-// 密钥对生成 http://web.chacuo.net/netrsakeypair
-
-const publicKey =
-  'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKoR8mX0rGKLqzcWmOzbfj64K8ZIgOdH\n' +
-  'nzkXSOVOZbFu/TJhZ7rFAN+eaGkl3C4buccQd/EjEsj9ir7ijT7h96MCAwEAAQ=='
-
-const privateKey =
-  'MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAqhHyZfSsYourNxaY\n' +
-  '7Nt+PrgrxkiA50efORdI5U5lsW79MmFnusUA355oaSXcLhu5xxB38SMSyP2KvuKN\n' +
-  'PuH3owIDAQABAkAfoiLyL+Z4lf4Myxk6xUDgLaWGximj20CUf+5BKKnlrK+Ed8gA\n' +
-  'kM0HqoTt2UZwA5E2MzS4EI2gjfQhz5X28uqxAiEA3wNFxfrCZlSZHb0gn2zDpWow\n' +
-  'cSxQAgiCstxGUoOqlW8CIQDDOerGKH5OmCJ4Z21v+F25WaHYPxCFMvwxpcw99Ecv\n' +
-  'DQIgIdhDTIqD2jfYjPTY8Jj3EDGPbH2HHuffvflECt3Ek60CIQCFRlCkHpi7hthh\n' +
-  'YhovyloRYsM+IS9h/0BzlEAuO0ktMQIgSPT3aFAgJYwKpqRYKlLDVcflZFCKY7u3\n' +
-  'UP8iWi1Qw0Y='
-
-// 加密
-export const encrypt = (txt: string) => {
-  const encryptor = new JSEncrypt()
-  encryptor.setPublicKey(publicKey) // 设置公钥
-  return encryptor.encrypt(txt) // 对数据进行加密
-}
-
-// 解密
-export const decrypt = (txt: string) => {
-  const encryptor = new JSEncrypt()
-  encryptor.setPrivateKey(privateKey) // 设置私钥
-  return encryptor.decrypt(txt) // 对数据进行解密
-}
+/**
+ * 已废弃：本模块原以硬编码 RSA 密钥对加解密「记住我」的登录口令。
+ *
+ * 安全说明（2026-09-28 整改）：
+ * - 私钥内联在前端产物中随 JS 分发给所有浏览器用户，等同于未加密；
+ * - 配合 localStorage 持久化，任意脚本均可还原出明文口令。
+ *
+ * 口令持久化已整体移除（见 `utils/auth.ts` 的 `RememberedLoginFormType`），
+ * 本模块不再对外提供任何加解密能力，保留文件仅为避免破坏既有 import 路径。
+ *
+ * ⚠️ 历史版本中的密钥对已随 git 历史泄露，必须视为**已泄露**并作废，不得复用于任何环境。
+ *
+ * 若确需请求体加密，请使用 `utils/encrypt.ts`（密钥来自环境变量，不落仓库）。
+ */
+export {};

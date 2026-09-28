@@ -284,7 +284,10 @@ yudao:
     admin-ui:
       url: http://dashboard.yudao.iocoder.cn # Admin 管理后台 UI 的地址
   xss:
-    enable: false
+    # 2026-09-28 整改：恢复框架默认开启（YudaoXssAutoConfiguration 的 matchIfMissing=true）。
+    # 此前为 yudao 上游模板随基线一并导入的 enable=false，并非本项目决策；
+    # 关闭后用户输入（案例名、需求文本、退款原因、评论）不做清洗直接落库，前端富文本回显即构成存储型 XSS。
+    enable: true
     exclude-urls: # 如下两个 url，仅仅是为了演示，去掉配置也没关系
       - ${spring.boot.admin.context-path}/** # 不处理 Spring Boot Admin 的请求
       - ${management.endpoints.web.base-path}/** # 不处理 Actuator 的请求

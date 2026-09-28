@@ -56,3 +56,7 @@ application-my.yaml
 
 # 工具状态目录
 .omc/
+
+# 环境变量：本机与各环境实际值绝不入库；仅示例文件（占位值）可发布
+.env
+!.env.example

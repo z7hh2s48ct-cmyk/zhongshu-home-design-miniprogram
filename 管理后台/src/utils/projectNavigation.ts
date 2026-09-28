@@ -11,7 +11,10 @@ const businessPermissions: Record<string, string> = {
   account: 'identity:account:query',
   'ai-job': 'aiorchestration:job:query',
   export: 'design:export:manage',
-  audit: 'design:audit:query'
+  audit: 'design:audit:query',
+  // 此前遗漏该键，导致「隐私申请」页因 permission 恒为 falsy 而永不出现在菜单（只能手输 URL）。
+  // 权限码与后端 PrivacyAdminController 类级 @PreAuthorize 保持一致。
+  privacy: 'identity:privacy:manage',
 }
 
 const supportPaths = new Set([
