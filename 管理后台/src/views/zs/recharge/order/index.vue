@@ -16,6 +16,14 @@
         <el-tab-pane label="渠道流水" name="TRANSACTIONS" />
       </el-tabs>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="订单数据加载失败，请勿据此判断账务状态，请重试"
+        style="margin-bottom: 12px"
+      />
+
       <el-table
         v-if="activeTab !== 'REFUNDS' && activeTab !== 'TRANSACTIONS'"
         :data="list"
@@ -206,6 +214,8 @@ const message = useMessage()
 
 const activeTab = ref('ALL')
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ pageNo: 1, pageSize: 10 })
@@ -263,6 +273,7 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     if (activeTab.value === 'REFUNDS') {
       const res = await ZsApi.getRefundOrderPage({ ...query })
@@ -287,8 +298,10 @@ const load = async () => {
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 订单属财务流水：加载失败必须显式提示，不能被当成"没有订单"
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

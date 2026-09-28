@@ -62,6 +62,14 @@
         <el-button size="small" @click="bulk(false)">批量下架</el-button>
       </div>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="案例列表加载失败，请重试（当前列表不代表完整案例库）"
+        style="margin-bottom: 12px"
+      />
+
       <!-- 表格 -->
       <el-table
         :data="list"
@@ -186,6 +194,8 @@ defineOptions({ name: 'ZsCaseManage' })
 const message = useMessage()
 
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const selectedIds = ref<string[]>([])
@@ -271,13 +281,16 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getCasePage({ ...query, keyword: query.keyword || undefined })
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 加载失败必须与"没有案例"区分，避免运营误以为案例库为空
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

@@ -15,6 +15,14 @@
         <el-tab-pane label="已拒绝" name="REJECTED" />
       </el-tabs>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="投稿列表加载失败，请重试"
+        style="margin-bottom: 12px"
+      />
+
       <el-table
         v-if="activeTab === 'SUBMITTED'"
         :data="list"
@@ -134,6 +142,8 @@ defineOptions({ name: 'ZsReview' })
 
 const activeTab = ref('SUBMITTED')
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: 'SUBMITTED', pageNo: 1, pageSize: 10 })
@@ -149,13 +159,16 @@ const load = async () => {
   query.status = activeTab.value
   selection.value = []
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getSubmissionPage({ ...query })
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 加载失败必须与"没有待审内容"区分，避免审核员误判为已清空
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

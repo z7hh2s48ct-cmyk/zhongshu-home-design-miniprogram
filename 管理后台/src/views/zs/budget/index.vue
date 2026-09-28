@@ -3,7 +3,9 @@
     <div class="zs-page-header">
       <div>
         <h1 class="zs-page-title">预算配置</h1>
-        <div class="zs-page-subtitle">基准价格（武汉参考价）、标准选项与自定义模板；历史预算按快照保留</div>
+        <div class="zs-page-subtitle"
+          >基准价格（武汉参考价）、标准选项与自定义模板；历史预算按快照保留</div
+        >
       </div>
       <div class="flex flex-wrap gap-8px">
         <router-link v-if="canQuery" to="/zs/budget-estimates">
@@ -136,7 +138,11 @@
             <template #default="{ row }">{{ displayTime(row.updatedAt) }}</template>
           </el-table-column>
         </template>
-        <el-table-column v-if="kind !== 'prices' && kind !== 'account-prices'" label="名称 / 编码" min-width="230">
+        <el-table-column
+          v-if="kind !== 'prices' && kind !== 'account-prices'"
+          label="名称 / 编码"
+          min-width="230"
+        >
           <template #default="{ row }"
             ><div>{{ row.name || row.label }}</div
             ><small>{{ row.code }}</small></template
@@ -212,7 +218,12 @@
           >
         </el-table-column>
         <el-table-column v-if="kind !== 'account-prices'" label="版本" prop="version" width="75" />
-        <el-table-column v-if="kind !== 'account-prices'" label="操作" min-width="210" fixed="right">
+        <el-table-column
+          v-if="kind !== 'account-prices'"
+          label="操作"
+          min-width="210"
+          fixed="right"
+        >
           <template #default="{ row }">
             <el-button
               v-if="canConfigure && (kind !== 'prices' || row.status === 'DRAFT')"
@@ -576,12 +587,24 @@ async function load() {
     if (sequence === readSequence) loading.value = false
   }
 }
+/**
+ * 目录下拉框需一次拉全量供筛选，因此走循环分页。
+ * 这里设硬上限：50 页 × 100 条 = 5000 条。超限时抛错而非静默截断，
+ * 避免用户在下拉框里看到"看起来完整"却实际缺失的选项。
+ * 目录体量超过该阈值时，应先治理数据或改为服务端搜索，而不是放开上限。
+ */
+const MAX_CHOICE_PAGES = 50
 async function loadChoices() {
   if (!canQuery.value) return
   await Promise.all(
     (['regions', 'items', 'options'] as const).map(async (resource) => {
       const all: CatalogRow[] = []
       for (let page = 1; ; page++) {
+        if (page > MAX_CHOICE_PAGES) {
+          throw new Error(
+            `目录选项「${resource}」已超过 ${MAX_CHOICE_PAGES * 100} 条上限，已中止加载以免使用不完整数据`
+          )
+        }
         const result = await BudgetApi.getCatalogPage(resource, { pageNo: page, pageSize: 100 })
         all.push(...result.list)
         if (all.length >= result.total || !result.list.length) break

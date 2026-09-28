@@ -45,6 +45,14 @@
         </el-form-item>
       </el-form>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="AI 任务加载失败，请重试后再排查"
+        style="margin-bottom: 12px"
+      />
+
       <el-table :data="list" v-loading="loading" stripe @row-click="openDetail">
         <el-table-column label="任务号" prop="jobId" width="200" />
         <el-table-column label="阶段" width="100">
@@ -130,6 +138,8 @@ import { fmtTime } from '@/utils/zsFormat'
 defineOptions({ name: 'ZsAiJob' })
 
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: '', phase: '', pageNo: 1, pageSize: 10 })
@@ -168,6 +178,7 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getAiJobPage({
       ...query,
@@ -177,8 +188,10 @@ const load = async () => {
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 加载失败必须与"没有任务"区分，避免排障时误判为队列为空
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }
