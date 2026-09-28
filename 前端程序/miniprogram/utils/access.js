@@ -114,7 +114,10 @@ function returnHome() {
 }
 
 function checkPage(page, fromAction = false) {
-  const allowed = getApp().homeSeen && isAuthorized();
+  // 激活是资金前置条件，任何入口都必须满足；"先看过首页"只对普通入口生效——
+  // 分享/扫码直达属于用户手持明确目标，视为已满足该引导前置（见 app.js deepLinkEntry）。
+  const app = getApp();
+  const allowed = isAuthorized() && (app.homeSeen || app.deepLinkEntry);
   if (allowed) {
     page.setData({ accessReady: true });
     page._returningHome = false;

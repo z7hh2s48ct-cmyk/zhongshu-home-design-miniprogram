@@ -11,7 +11,7 @@
   </view>
   <scroll-view scroll-x class="detail-tabs"><view wx:for="{{drawings}}" wx:key="label" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item.label}}</view></scroll-view>
   <view class="plan-card">
-    <image wx:if="{{drawings[tab].status === 'ready'}}" class="floor-plan" src="{{drawings[tab].url}}" mode="aspectFit" data-index="{{tab}}" binderror="imageError" />
+    <image wx:if="{{drawings[tab].status === 'ready'}}" class="floor-plan" src="{{drawings[tab].url}}" mode="aspectFit" lazy-load data-index="{{tab}}" binderror="imageError" />
     <view wx:else class="image-state"><text>{{drawings[tab].status === 'loading' ? '图纸加载中…' : drawings[tab].status === 'error' ? '图纸加载失败' : '暂无该图纸'}}</text><button wx:if="{{drawings[tab].status === 'error'}}" size="mini" data-index="{{tab}}" bindtap="retryImage">重试加载</button></view>
     <view wx:if="{{tab === 0}}" class="design-copy"><text>设计说明</text><text>{{caseDetail.description || '该方案暂无设计说明。'}}</text></view>
   </view>

@@ -5,7 +5,7 @@
     <form wx:else bindsubmit="save">
       <view class="v12-card edit-card">
         <button class="avatar-action" open-type="chooseAvatar" bindchooseavatar="chooseAvatar" disabled="{{saving}}" aria-label="更换头像">
-          <image wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" />
+          <image wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" lazy-load />
           <view wx:else class="avatar-placeholder"><t-icon name="user" size="36px" color="#9a6d39" /></view>
           <text>更换头像</text>
         </button>

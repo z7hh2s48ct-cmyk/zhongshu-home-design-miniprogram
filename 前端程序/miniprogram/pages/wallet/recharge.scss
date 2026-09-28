@@ -29,3 +29,6 @@
 .pay-bar text + text { margin-top: 12rpx; }
 .pay-bar b { color: #8a3d0d; font-size: 34rpx; }
 .pay-bar .v12-primary-button { height: 86rpx; }
+/* iOS 端虚拟商品支付隔离提示（苹果政策：iOS 不得以微信支付购买虚拟商品） */
+.ios-notice { padding: 30rpx 35rpx; display: flex; align-items: flex-start; gap: 14rpx; color: #777; font-size: 24rpx; line-height: 1.6; }
+.ios-notice text { flex: 1; }

@@ -54,5 +54,6 @@
   "style": "v2",
   "componentFramework": "glass-easel",
   "lazyCodeLoading": "requiredComponents",
+  "__usePrivacyCheck__": true,
   "sitemapLocation": "sitemap.json"
 }

@@ -12,7 +12,7 @@
     <view class="sort-row"><text>共 {{visibleCases.length}} 套方案</text><view>面积从小到大 <t-icon name="chevron-down" size="15px" color="#786858" /></view></view>
     <view class="case-grid">
       <view class="v12-card case-card" wx:for="{{visibleCases}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
-        <view class="image-wrap"><image src="{{item.image}}" mode="aspectFill" /><text>{{item.tag}}</text></view>
+        <view class="image-wrap"><image src="{{item.image}}" mode="aspectFill" lazy-load /><text>{{item.tag}}</text></view>
         <view class="case-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view>
       </view>
     </view>
