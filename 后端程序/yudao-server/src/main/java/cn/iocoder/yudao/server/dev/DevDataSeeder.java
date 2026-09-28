@@ -105,12 +105,28 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
         }
         for (Long assetId : jdbcTemplate.queryForList("SELECT asset_id FROM design_case_asset WHERE case_version_id=? AND deleted=FALSE", Long.class, versionId)) {
             if (!rights.hasEffectiveGrant(assetId, "PUBLIC_DISPLAY")) {
-                rights.createGrant(admin, assetId, "PUBLIC_DISPLAY", "开发示例", "*", "示例展示", Instant.now().minusSeconds(1), null);
+                rights.createGrant(admin, assetId, "PUBLIC_DISPLAY", "开发示例", "*", "示例展示", seedGrantEffectiveFrom(), null);
             }
         }
         String state = jdbcTemplate.queryForObject("SELECT publication_status FROM design_case WHERE id=?", String.class, caseId);
         if (!"PUBLISHED".equals(state)) caseCatalogService.publish(caseId, "dev-seeder");
         log.info("[DevDataSeeder][示例案例 {} 已发布]", caseId);
+    }
+
+    /**
+     * 播种授权生效时间必须由**数据库事务时钟**派生，不能用 JVM 墙钟。
+     *
+     * <p>播种与上架在同一个事务里完成，而 {@code requireCompanyPublishable} 判定的是 PostgreSQL 的
+     * {@code now()}——它是**事务开始时间**，在事务内恒定不变。若这里写 {@code Instant.now().minusSeconds(1)}，
+     * 一旦「事务开始 → 建授权」这段耗时超过 1 秒（冷启动、慢磁盘、CI runner 抖动），写入的
+     * {@code effective_at} 就会晚于事务 {@code now()}，示例案例上架被拒，后端启动直接失败。
+     * 本机实测该余量仅约 0.3 秒，属真实偶发缺陷（CI 上同一提交一过一挂）。
+     *
+     * <p>改为 {@code now() - interval '1 second'} 后，{@code effective_at <= now()} 恒成立，与耗时无关。
+     */
+    private Instant seedGrantEffectiveFrom() {
+        return jdbcTemplate.queryForObject("SELECT now() - interval '1 second'",
+                (rs, rowNum) -> rs.getTimestamp(1).toInstant());
     }
 
     private void insertRel(long versionId, long assetId, String role, Integer floorNo) {
