@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ZhongshuErrorCodeRegistryTest {
 
-    /** 架构 §7.6 及已批准 T10 预算合同的稳定错误码字符串标识。 */
+    /** 架构 §7.6 及已批准的 T10 / T14 预算合同的稳定错误码字符串标识。 */
     private static final Set<String> STABLE_NAMES = Set.of(
             // identity 1-070
             "ACCESS_CODE_INVALID", "ACCESS_CODE_EXPIRED", "ACCESS_CODE_DISABLED",
@@ -29,6 +29,8 @@ class ZhongshuErrorCodeRegistryTest {
             "DESIGN_STAGE_CONFLICT", "ASSET_VALIDATION_FAILED", "PUBLICATION_VALIDATION_FAILED",
             "GENERATION_REFERENCE_NOT_AUTHORIZED", "SUBMISSION_STATE_CONFLICT",
             "BUDGET_INPUT_INVALID", "BUDGET_INCOMPLETE", "BUDGET_PRICE_CONFLICT", "BUDGET_AMOUNT_LIMIT",
+            // T14 账号级预算单价覆盖（T14 方案 §2 已批准新增码，本次回填登记）
+            "BUDGET_ACCOUNT_PRICE_INVALID",
             // ai-orchestration 1-073
             "AI_JOB_NOT_CANCELLABLE",
             // commerce 1-072
