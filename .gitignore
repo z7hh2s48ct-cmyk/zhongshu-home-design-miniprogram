@@ -34,4 +34,8 @@ temp/
 
 # Agent 本机状态与并行工作树：只存在于单机，不参与版本控制。
 .workbuddy/
-.claude/worktrees/
+.claude/
+
+# 临时文件与 Maven 守护进程 dump（surefire 会散落在 target 之外）。
+_tmp_*
+*.dumpstream
