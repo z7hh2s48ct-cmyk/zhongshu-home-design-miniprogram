@@ -73,14 +73,18 @@ jobs:
       - name: 检出源码
         uses: actions/checkout@v6
 
-      - name: 安装 Node.js、pnpm 与冻结依赖
+      - name: 安装 pnpm 与 Node.js 并缓存 store
         uses: pnpm/setup@v2
         with:
           version: 11.19.0
           runtime: node@24.19.0
-          working-directory: 管理后台
+          install: false
           cache: true
-          require-lockfile: true
+          cache-dependency-path: 管理后台/pnpm-lock.yaml
+
+      - name: 冻结安装管理端依赖
+        working-directory: 管理后台
+        run: pnpm install --frozen-lockfile
 
       - name: 执行管理端验证
         run: node scripts/verify.mjs admin
