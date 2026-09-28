@@ -40,6 +40,26 @@
 
 顶部状态栏、右上角微信胶囊和底部系统安全区由设备与微信运行时控制；页面自身通过胶囊测量、`rpx` 和 `env(safe-area-inset-bottom)` 适配不同设备。
 
+## 素材外置与迁移（COS）
+
+主包减重靠**构建期外置**：`build:release` 会把「被引用且 >64KiB」的 `assets/**` 改写为 CDN 地址，原件不再进主包，同时把待传副本落到 `release/<name>/cdn/**`。四步闭环，任一步未绿都不得发布：
+
+| 步骤 | 命令 | 通过标志 |
+|---|---|---|
+| 1. 构建 | `npm run build:release -- <name>` | 生成清单，`cdnUploaded=false` |
+| 2. 上传 | `npm run upload:cos -- <name>` | 带签名 HEAD 逐个校验可达，回写 `cdnUploaded=true` |
+| 3. **公开校验** | `npm run verify:cdn -- <name>` | 匿名 GET 逐个比对字节数/sha256/图片魔数，落盘 `cdn-verification.json` |
+| 4. **清理暂存** | `npm run prune:cdn -- <name>` → 复核后 `-- --yes` | 三闸通过后删除 `release/<name>/cdn/**`，落盘审计记录 |
+
+**为什么第 3 步不能省**：第 2 步用的是**带签名的 HEAD**，只能证明「对象进了桶」，不能证明「终端用户能匿名取到」。桶若为私有读、或 CDN 域名未绑定/未回源，第 2 步照样全绿，但小程序里图片会全部 404。`verify-cdn` 只做匿名 GET（不携带任何凭据），校验的正是终端用户视角，并额外识别图片魔数，识破「HTTP 200 但返回 HTML 错误页」的假成功。任一对象不通过即退出码非 0、报告 `allReachable=false`。
+
+**关于「删除本地素材」**：本批只清理 `release/<name>/cdn/**` 暂存副本（上传后的纯重复副本），由 `prune:cdn` 执行，内置三道闸：①`cdnUploaded=true`；②`cdn-verification.json` 的 `allReachable=true`；③报告 `manifestFingerprint` 与当前清单一致（重新构建会让旧报告自动失效，防止按陈旧结论错删）。默认**预演**，必须显式 `--yes` 才真正删除，删除后落盘 `cdn-prune-record.json` 审计记录；暂存目录若含清单未登记的文件一律拒绝删除。
+
+`miniprogram/assets/**` **不在本次删除范围**，且要区分两类：
+
+- **未被任何 WXML/JS/WXSS 引用**的图片（现有 10 张、约 3.20 MB）：属闲置资源，但**删除不会减小主包**——`build:release` 本就不把未引用素材打进包，删了只减小仓库体积；
+- **被引用并已外置**的源图（现有 4 张、约 2.71 MB）：**不可删除**——`build:release` 需要读源图来算哈希、生成 CDN 对象，删掉后重新构建会在发布副本里留下 `assets/**` 死链。
+
 ## 首页视觉校准（2026-09-05）
 
 首页已对照 `../V1.2/effects/01-首页.png` 调整：完整场景替代房屋窄裁图，去掉大面积白色覆盖，恢复精选户型的图片比例及进入箭头。主图通过参考图编辑补全被 UI 遮挡的区域，旧素材保留。差异、生成提示词与验证边界见 [校准记录](qa/2026-09-05-激活门禁与首页校准.md)。

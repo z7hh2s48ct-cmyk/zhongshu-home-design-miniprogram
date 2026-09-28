@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "asOf": "2026-09-28",
-  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。",
+  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。同日追加 CDN 迁移前置门禁（scripts/verify-cdn.js）与暂存副本删除守卫（scripts/prune-cdn-staging.js）及其用例，mini 29 文件/281 调用。",
   "inventory": {
     "mini": {
-      "executableFiles": 27,
-      "declaredTestCalls": 261
+      "executableFiles": 29,
+      "declaredTestCalls": 281
     },
     "backend": {
       "ordinaryFiles": 54,
