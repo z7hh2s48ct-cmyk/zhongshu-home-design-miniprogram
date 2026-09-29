@@ -17,7 +17,9 @@
 
 管理端锁定 axios 1.20.0、DOMPurify 3.4.15、设计器 3.5.0，锁文件中不再存在旧 wangEditor 引擎。设计器的 npm latest 标签并不代表 Vue 3 的兼容系列，因此没有盲目使用 latest。新的 Vite 构建报告 `dependency-reachability.json` 应同时满足 `legacyEditorModules=0`、`designerSource=true`、`safeEditorBridge=true`。
 
-后端以实际打包 JAR 的扫描为依据，固定 Tomcat 10.1.59、Jackson BOM 2.21.5、Log4j BOM 2.25.5、PostgreSQL JDBC 42.7.12、HttpClient 5.6.3、HttpCore 5.4.3、Commons Compress 1.28.0 和 Bouncy Castle 1.84。Tomcat 公告指出 10.1.58 候选未通过发布投票，因此选用正式发布的 10.1.59，而不是仅照抄扫描器给出的最早修复版本。[Tomcat 官方公告](https://tomcat.apache.org/security-10.html)
+后端以实际打包 JAR 的扫描为依据，固定 Tomcat 10.1.59、Jackson BOM 2.21.6、Log4j BOM 2.25.5、PostgreSQL JDBC 42.7.12、HttpClient 5.6.3、HttpCore 5.4.3、Commons Compress 1.28.0 和 Bouncy Castle 1.85。Tomcat 公告指出 10.1.58 候选未通过发布投票，因此选用正式发布的 10.1.59，而不是仅照抄扫描器给出的最早修复版本。[Tomcat 官方公告](https://tomcat.apache.org/security-10.html)
+
+后续复核（2026-09-28/29）扫描器公告库更新后出现新公告：Jackson 2.21.5 命中 `CVE-2026-68497`（高危）、`CVE-2026-19032`、`CVE-2026-83557`，按其修复版本提升到 2.21.6——同线最小修复，需注意 2.22.0 反而回退命中，该线须 2.22.2 以上；Bouncy Castle 由 1.84 提升到 1.85，消除 `CVE-2026-8763`、`CVE-2026-13506`。两次提升均以同一扫描器（Trivy 0.74.0，固定镜像摘要）在本地逐版本 A/B 复现后再定版。
 
 `CVE-2026-7045` 对应 dynamic-datasource 表达式处理器。当前业务源码没有动态 `@DS` 使用；新增静态处理器替换库默认 Bean，拒绝以请求、Header、Session 或 SpEL 表达式决定数据源，并使用该库真实自动配置类验证替换生效。扫描结果仍保留这条公告，后续需跟踪上游补丁；不能将缓解措施写成漏洞库清零。
 
