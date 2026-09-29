@@ -3,7 +3,8 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync, openSync, fsyncSync
 import { join, dirname, resolve as resolvePath, sep as pathSep } from 'node:path';
 export const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const MAX_IMAGE = 7 * 1024 * 1024;
+// 图片字节上限与后端隔离区 OUTPUT_POLICY（20MB）对齐；4K UHD PNG（渠道像素上限 8294400）可能达到十余 MB
+const MAX_IMAGE = 20 * 1024 * 1024;
 
 // dev 专用：后端 LocalObjectStorageAdapter 以 local://<objectKey> 签发内网对象地址。
 // local-fs 模式下引擎与后端共享同一资产根目录（ZS_AI_STORAGE_ROOT），直接读写文件；
