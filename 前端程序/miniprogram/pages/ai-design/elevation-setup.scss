@@ -1,27 +1,27 @@
 @import '../../styles/v12-theme.scss';
 
-.setup-page { padding: 26rpx 32rpx 38rpx; }
-.setup-page > v12-navbar { margin: -26rpx -32rpx 0; }
-.steps { height: 96rpx; display: flex; align-items: center; justify-content: center; gap: 14rpx; }
+.setup-page { padding: 28rpx 32rpx 40rpx; }
+.setup-page > v12-navbar { margin: -28rpx -32rpx 0; }
+.steps { height: 96rpx; display: flex; align-items: center; justify-content: center; gap: 16rpx; }
 .steps view { padding: 8rpx 16rpx; border-radius: $v12-radius-lg; color: $v12-white; background: $v12-text-3; font-size: $v12-font-body; }
 .steps view.active { background: linear-gradient(95deg,$v12-primary-deep,$v12-primary); }
 .steps text { color: $v12-text-3; font-size: $v12-font-lg; }
 .steps .active + text { color: $v12-primary-deep; font-weight: 500; }
 .steps i { width: 120rpx; border-top: 2rpx dashed $v12-text-3; }
-.selected-plan { padding: 22rpx 28rpx; }
+.selected-plan { padding: 24rpx 28rpx; }
 .selected-plan > text { font-size: $v12-font-lg; }
 .selected-plan > view { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr 1.55fr; gap: 16rpx; align-items: center; }
 .selected-plan image { width: 100%; height: 178rpx; }
 .selected-plan b { color: $v12-primary-deep; font-size: $v12-font-hero; font-weight: 500; }
 .selected-plan span { display: block; margin-top: 34rpx; color: $v12-primary-deep; font-size: $v12-font-body; }
-.option-card { margin-top: 14rpx; padding: 18rpx 24rpx; }
+.option-card { margin-top: 14rpx; padding: 20rpx 24rpx; }
 .option-card > text { font-size: $v12-font-lg; font-weight: 500; }
-.option-card > view { margin-top: 14rpx; display: flex; gap: 22rpx; }
-.option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 18rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: $v12-text-2; font-size: $v12-font-body; }
+.option-card > view { margin-top: 14rpx; display: flex; gap: 24rpx; }
+.option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: $v12-text-2; font-size: $v12-font-body; }
 .option-card > view > text.selected { border: 2rpx solid $v12-primary-deep; color: $v12-primary-deep; }
 .option-card i { position: absolute; right: -13rpx; top: -13rpx; width: 36rpx; height: 36rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; }
 .count-card > view > text { flex: 1; }
-.point-cost { margin-top: 14rpx; padding: 18rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 34rpx; align-items: center; }
+.point-cost { margin-top: 14rpx; padding: 20rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 36rpx; align-items: center; }
 .point-cost > i { height: 60rpx; background: $v12-divider; }
 .point-cost text, .point-cost b { display: block; }
 .point-cost text { color: $v12-secondary-text; font-size: $v12-font-body; }

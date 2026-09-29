@@ -7,14 +7,14 @@
 .dt-guide-copy { flex: 1; min-width: 0; }
 .dt-guide-title { display: block; font-size: $v12-font-md; line-height: 1.4; color: $v12-primary; }
 .dt-guide-sub { display: block; margin-top: 4rpx; font-size: $v12-font-sm; line-height: 1.4; color: $v12-text-3; }
-.dt-guide-action { flex-shrink: 0; margin-right: 8rpx; padding: 10rpx 24rpx; border-radius: $v12-radius-full; background: $v12-primary-deep; color: $v12-white; font-size: $v12-font-body; }
-.dt-guide-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10rpx; margin: -10rpx 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.dt-guide-action { flex-shrink: 0; margin-right: 8rpx; padding: 12rpx 24rpx; border-radius: $v12-radius-full; background: $v12-primary-deep; color: $v12-white; font-size: $v12-font-body; }
+.dt-guide-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 12rpx; margin: -12rpx 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
 
 .dt-mask { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .38); }
 .dt-sheet { width: 100%; padding: 32rpx 32rpx calc(26rpx + env(safe-area-inset-bottom)); border-radius: $v12-radius-lg $v12-radius-lg 0 0; background: $v12-surface; box-sizing: border-box; }
 .dt-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 28rpx; }
 .dt-sheet-title { font-size: $v12-font-xl; font-weight: 600; color: $v12-text-1; }
-.dt-sheet-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.dt-sheet-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 12rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
 .dt-note { display: block; margin-top: 16rpx; font-size: $v12-font-body; line-height: 1.55; color: $v12-gold-deep; }
 .dt-steps { margin-top: 20rpx; }
 .dt-step { display: flex; gap: 20rpx; padding: 20rpx 0; border-bottom: 1rpx solid $v12-divider; }
@@ -23,7 +23,7 @@
 .dt-step-copy { flex: 1; min-width: 0; }
 .dt-step-title { display: block; font-size: $v12-font-lg; line-height: 1.45; color: $v12-text-1; }
 .dt-step-detail { display: block; margin-top: 6rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-2; }
-.dt-sheet-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1.6fr 1fr; gap: 22rpx; }
+.dt-sheet-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1.6fr 1fr; gap: 24rpx; }
 // 与全局 .v12-primary-button / .v12-secondary-button 同规格（92rpx / 16rpx / 32rpx）
 .dt-sheet-actions button { margin: 0; height: $v12-control-lg; padding: 0; border: 0; border-radius: $v12-radius-md; font-size: $v12-font-xl; display: flex; align-items: center; justify-content: center; }
 .dt-sheet-actions button::after { border: 0; }

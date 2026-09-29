@@ -1,16 +1,16 @@
 @import '../../styles/v12-theme.scss';
 
 .profile-content { padding-top: 18rpx; }
-.user-card { padding: 26rpx 16rpx 38rpx; display: flex; align-items: center; }
+.user-card { padding: 28rpx 16rpx 40rpx; display: flex; align-items: center; }
 .user-card image, .guest-avatar { width: 112rpx; height: 112rpx; border-radius: 50%; flex-shrink: 0; }
 .guest-avatar { background: $v12-gold-bg; display: flex; align-items: center; justify-content: center; }
 .identity-copy { flex: 1; min-width: 0; margin: 0 24rpx; }
 .name { display: block; font-size: $v12-font-title; font-weight: 600; overflow-wrap: anywhere; }
 .identity-hint { display: block; margin-top: 12rpx; font-size: $v12-font-body; color: $v12-text-3; }
-.profile-section { padding: 26rpx 30rpx; margin-bottom: 24rpx; }
+.profile-section { padding: 28rpx 32rpx; margin-bottom: 24rpx; }
 .section-label { display: block; font-size: $v12-font-lg; font-weight: 600; color: $v12-text-1; }
 .creation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 26rpx; gap: 12rpx; }
-.creation-grid > view { min-height: 44px; display: flex; flex-direction: column; align-items: center; padding: 6rpx 0; font-size: $v12-font-md; }
+.creation-grid > view { min-height: 44px; display: flex; flex-direction: column; align-items: center; padding: 8rpx 0; font-size: $v12-font-md; }
 .creation-icon { width: 72rpx; height: 72rpx; background: $v12-surface-alt; border-radius: $v12-radius-lg; display: flex; align-items: center; justify-content: center; margin-bottom: 14rpx; }
 .creation-grid .creation-hint { font-size: $v12-font-sm; color: $v12-text-3; margin-top: 9rpx; text-align: center; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12rpx; }
@@ -20,10 +20,10 @@
 .balance-value { font-size: 46rpx; font-weight: 600; color: $v12-primary-deep; overflow-wrap: anywhere; }
 .balance-unit { margin-left: 12rpx; font-size: $v12-font-sm; font-weight: 400; color: $v12-text-3; }
 .balance-hint { display: block; margin-top: 8rpx; font-size: $v12-font-sm; color: $v12-text-3; }
-.recharge { min-height: 44px; min-width: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 12rpx 34rpx; border-radius: $v12-radius-full; color: $v12-white; background: $v12-primary; font-size: $v12-font-md; flex-shrink: 0; }
+.recharge { min-height: 44px; min-width: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 12rpx 36rpx; border-radius: $v12-radius-full; color: $v12-white; background: $v12-primary; font-size: $v12-font-md; flex-shrink: 0; }
 .service-section { padding-bottom: 4rpx; }
-.menu-card > view { min-height: 44px; padding: 20rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 22rpx; border-bottom: 1rpx solid $v12-divider; }
+.menu-card > view { min-height: 44px; padding: 20rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
 .menu-card > view:last-child { border: 0; }
 .menu-card text { flex: 1; font-size: $v12-font-lg; }
-.menu-card .message-count { flex: none; padding: 5rpx 12rpx; border-radius: $v12-radius-lg; background: $v12-error-bg; color: $v12-error; font-size: $v12-font-sm; }
-@media (max-width: 350px) { .profile-section { padding-left: 22rpx; padding-right: 22rpx; } .creation-grid { gap: 6rpx; } }
+.menu-card .message-count { flex: none; padding: 4rpx 12rpx; border-radius: $v12-radius-lg; background: $v12-error-bg; color: $v12-error; font-size: $v12-font-sm; }
+@media (max-width: 350px) { .profile-section { padding-left: 22rpx; padding-right: 22rpx; } .creation-grid { gap: 8rpx; } }

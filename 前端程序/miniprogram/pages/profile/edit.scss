@@ -1,12 +1,12 @@
 @import '../../styles/v12-theme.scss';
 .edit-content { padding-top: 32rpx; padding-bottom: calc(48rpx + env(safe-area-inset-bottom)); }
 .edit-card { padding: 32rpx; }
-.profile-edit .avatar-action { width: 100%; padding: 16rpx; margin: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 18rpx; color: $v12-primary-deep; font-size: $v12-font-lg; line-height: 1.5; }
+.profile-edit .avatar-action { width: 100%; padding: 16rpx; margin: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 20rpx; color: $v12-primary-deep; font-size: $v12-font-lg; line-height: 1.5; }
 .avatar-action::after, .save-profile::after { border: 0; }
 .avatar-action image, .avatar-placeholder { width: 136rpx; height: 136rpx; border-radius: 50%; }
 .avatar-placeholder { background: $v12-surface-alt; display: flex; align-items: center; justify-content: center; }
 .edit-note { display: block; color: $v12-text-3; text-align: center; font-size: $v12-font-sm; line-height: 1.6; padding: 16rpx 0; }
-.nickname-row { display: flex; align-items: center; gap: 26rpx; padding-top: 24rpx; margin-top: 20rpx; border-top: 1rpx solid $v12-divider; font-size: $v12-font-lg; }
+.nickname-row { display: flex; align-items: center; gap: 28rpx; padding-top: 24rpx; margin-top: 20rpx; border-top: 1rpx solid $v12-divider; font-size: $v12-font-lg; }
 .nickname-row input { flex: 1; min-width: 0; min-height: 44px; font-size: $v12-font-lg; }
 .profile-edit .save-profile { width: 100%; min-height: 48px; margin: 32rpx 0 0; border-radius: $v12-radius-md; background: $v12-primary; color: $v12-white; font-size: $v12-font-lg; }
 .profile-edit .save-profile[disabled] { background: $v12-text-3; }

@@ -5,20 +5,20 @@
 .mode-tabs { height: 70rpx; padding: 4rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; }
 .mode-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: $v12-radius-sm; color: $v12-text-3; font-size: $v12-font-lg; }
 .mode-tabs .active { color: $v12-white; background: linear-gradient(95deg,$v12-primary-deep,$v12-primary); }
-.step-intro { margin: 30rpx 18rpx 22rpx; display: flex; align-items: center; gap: 14rpx; white-space: nowrap; }
-.step-intro text { padding: 8rpx 18rpx; border-radius: $v12-radius-lg; color: $v12-white; background: $v12-primary-deep; font-size: $v12-font-md; }
+.step-intro { margin: 32rpx 20rpx 24rpx; display: flex; align-items: center; gap: 16rpx; white-space: nowrap; }
+.step-intro text { padding: 8rpx 20rpx; border-radius: $v12-radius-lg; color: $v12-white; background: $v12-primary-deep; font-size: $v12-font-md; }
 .step-intro b { font-size: $v12-font-xl; font-weight: 500; }
 .step-intro i { width: 1rpx; height: 30rpx; background: $v12-divider; }
 .step-intro span { color: $v12-secondary-text; font-size: $v12-font-body; }
-.reference-card { height: 168rpx; padding: 20rpx 26rpx; display: flex; align-items: center; }
+.reference-card { height: 168rpx; padding: 20rpx 28rpx; display: flex; align-items: center; }
 .reference-card image { width: 224rpx; height: 126rpx; border-radius: $v12-radius-md; }
 .reference-card > view:nth-child(2) { margin-left: 30rpx; }
 .reference-card text { display: block; font-size: $v12-font-xl; font-weight: 600; }
 .reference-card text + text { margin-top: 13rpx; color: $v12-secondary-text; font-size: $v12-font-md; font-weight: 400; }
-.change { margin-left: auto; padding: 14rpx 28rpx; border: 1rpx solid $v12-primary-deep; border-radius: $v12-radius-sm; color: $v12-primary-deep; font-size: $v12-font-md; }
+.change { margin-left: auto; padding: 16rpx 28rpx; border: 1rpx solid $v12-primary-deep; border-radius: $v12-radius-sm; color: $v12-primary-deep; font-size: $v12-font-md; }
 .form-card { margin-top: 22rpx; padding: 20rpx; }
 .form-title { display: block; font-size: $v12-font-lg; font-weight: 500; }
-.size-row { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 18rpx; }
+.size-row { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
 .size-row view { height: 66rpx; padding: 0 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; }
 .size-row text { color: $v12-secondary-text; font-size: $v12-font-body; }
 .size-row text + text { margin-left: auto; color: $v12-text-1; font-size: $v12-font-md; }
@@ -27,30 +27,30 @@
 .form-row { height: 68rpx; margin: 0 -20rpx; padding: 0 20rpx; display: flex; align-items: center; border-bottom: 1rpx solid $v12-divider; font-size: $v12-font-lg; }
 .size-row + .form-row { margin-top: 16rpx; border-top: 1rpx solid $v12-divider; }
 .form-row view { margin-left: auto; display: flex; align-items: center; gap: 12rpx; }
-.textarea-row { margin: 0 -20rpx; padding: 14rpx 20rpx; }
+.textarea-row { margin: 0 -20rpx; padding: 16rpx 20rpx; }
 .textarea-row > text { display: block; font-size: $v12-font-lg; }
-.textarea-row textarea, .prompt-box { box-sizing: border-box; width: 100%; height: 92rpx; margin-top: 10rpx; padding: 14rpx 18rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; font-size: $v12-font-body; line-height: 1.5; }
+.textarea-row textarea, .prompt-box { box-sizing: border-box; width: 100%; height: 92rpx; margin-top: 10rpx; padding: 16rpx 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; font-size: $v12-font-body; line-height: 1.5; }
 .textarea-row, .prompt-box { position: relative; }
 .textarea-row span, .prompt-box span { position: absolute; right: 40rpx; bottom: 25rpx; color: $v12-text-3; font-size: $v12-font-xs; }
 .prompt-box { height: 190rpx; }
 .prompt-box textarea { width: 100%; height: 134rpx; font-size: $v12-font-md; line-height: 1.55; }
 .prompt-box span { right: 18rpx; bottom: 15rpx; }
-.upload-row { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 26rpx; }
-.upload-row > view { height: 224rpx; border: 1rpx dashed $v12-disabled; border-radius: $v12-radius-sm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18rpx; }
+.upload-row { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
+.upload-row > view { height: 224rpx; border: 1rpx dashed $v12-disabled; border-radius: $v12-radius-sm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20rpx; }
 .upload-row text { font-size: $v12-font-body; }
 .upload-row span { color: $v12-text-3; font-size: $v12-font-xs; }
 .tag-title { margin-top: 28rpx; }
-.tag-row { margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 14rpx; }
-.tag-row text { padding: 10rpx 22rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-xs; font-size: $v12-font-sm; }
+.tag-row { margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 16rpx; }
+.tag-row text { padding: 12rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-xs; font-size: $v12-font-sm; }
 .count-block { margin: 12rpx -20rpx 0; padding: 12rpx 20rpx 0; border-top: 1rpx solid $v12-divider; }
 .count-tabs { height: 56rpx; margin-top: 10rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; overflow: hidden; }
 .count-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; font-size: $v12-font-md; }
 .count-tabs .active { color: $v12-white; background: $v12-primary-deep; }
-.points { min-height: 58rpx; margin-top: 12rpx; padding: 0 14rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-sm; background: $v12-surface-alt; display: flex; align-items: center; gap: 8rpx; font-size: $v12-font-xs; }
+.points { min-height: 58rpx; margin-top: 12rpx; padding: 0 16rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-sm; background: $v12-surface-alt; display: flex; align-items: center; gap: 8rpx; font-size: $v12-font-xs; }
 .points > text { white-space: nowrap; }
 .points > text:last-of-type { flex: 1; text-align: right; }
 .points .point-value, .points .point-total { color: $v12-primary-deep; font-size: $v12-font-md; font-weight: 600; }
-.points i { width: 1rpx; height: 38rpx; margin: 0 5rpx; background: $v12-divider; }
+.points i { width: 1rpx; height: 38rpx; margin: 0 4rpx; background: $v12-divider; }
 .form-card > .v12-primary-button { margin-top: 10rpx; }
 
 @media (max-width: 350px) {
@@ -68,6 +68,6 @@
   .points i { display: none; }
   .points > text:last-of-type { flex-basis: 100%; text-align: left; }
 }
-.sketch-preview { margin-top: 16rpx; padding: 16rpx; border: 1rpx dashed $v12-gold; border-radius: $v12-radius-sm; display: flex; align-items: center; gap: 18rpx; background: $v12-surface-alt; }
+.sketch-preview { margin-top: 16rpx; padding: 16rpx; border: 1rpx dashed $v12-gold; border-radius: $v12-radius-sm; display: flex; align-items: center; gap: 20rpx; background: $v12-surface-alt; }
 .sketch-preview image { width: 96rpx; height: 96rpx; border-radius: $v12-radius-xs; background: $v12-surface-alt; }
 .sketch-preview text { color: $v12-secondary-text; font-size: $v12-font-body; }

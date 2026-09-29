@@ -1,8 +1,8 @@
 @import './shared.scss';
 
-.parameters-card { margin-top: 26rpx; padding: 24rpx 32rpx 10rpx; }
+.parameters-card { margin-top: 26rpx; padding: 24rpx 32rpx 12rpx; }
 .parameters-head { min-height: 76rpx; padding-bottom: 18rpx; box-sizing: border-box; display: flex; align-items: center; border-bottom: 1rpx solid $v12-divider; }
-.parameter-row { min-height: 96rpx; display: flex; align-items: center; justify-content: space-between; gap: 18rpx; border-bottom: 1rpx solid $v12-divider; font-size: $v12-font-lg; }
+.parameter-row { min-height: 96rpx; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid $v12-divider; font-size: $v12-font-lg; }
 .parameter-row > text { flex-shrink: 0; }
 .last-row { border-bottom: 0; }
 .input-value { display: flex; align-items: center; justify-content: flex-end; gap: 20rpx; min-width: 0; }
@@ -13,7 +13,7 @@
 .parameters-page .round-icon { background: $v12-gold-bg; }
 .parameters-page .muted { font-size: $v12-font-body; line-height: 1.5; }
 .help-line { display: block; }
-.field-error { display: block; padding: 6rpx 0 12rpx; color: $v12-error; font-size: $v12-font-sm; }
+.field-error { display: block; padding: 8rpx 0 12rpx; color: $v12-error; font-size: $v12-font-sm; }
 @media (max-width: 350px) { .input-value input { width: 220rpx; } .input-value { gap: 12rpx; } }
 .prices-entry .region-name { color: $v12-text-2; font-size: $v12-font-body; }
 .same-roof { flex-shrink: 0; margin-left: 4rpx; font-size: $v12-font-sm; }

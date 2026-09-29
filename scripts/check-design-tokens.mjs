@@ -6,6 +6,7 @@
 //   R3 border-radius 只允许 $v12-radius-* token、0、50%
 //   R4 wxml 内联样式禁止 hex 颜色
 //   R5 t-icon size 只允许 16/20/24/32/64px；color 只允许规范色板
+//   R6 padding/margin/gap 的 rpx 值必须是 4 的倍数（间距网格；calc()/env() 豁免）
 // 豁免范围：styles/（token 源）、components/tdesign-miniprogram（三方库）、app.scss（icon 字库）
 
 import { readFileSync, globSync } from 'node:fs';
@@ -67,6 +68,14 @@ for (const f of scssFiles) {
         problems.push(`R3 圆角非规范 "${val}"  @ ${at}`);
       }
     }
+    // R6 间距网格：padding/margin/gap 声明段内 rpx 值必须为 4 的倍数
+    line.replace(/((?:padding|margin|row-gap|column-gap|gap)\s*:\s*)([^;]+)/g, (m, prop, vals) => {
+      if (/calc\(|env\(/.test(vals)) return m;
+      for (const v of vals.matchAll(/(-?\d+)rpx/g)) {
+        if (Number(v[1]) % 4 !== 0) problems.push(`R6 间距越格 ${v[1]}rpx  @ ${at}`);
+      }
+      return m;
+    });
   });
 }
 

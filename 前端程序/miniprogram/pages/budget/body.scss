@@ -1,10 +1,10 @@
 @import './shared.scss';
 
-.category-card { margin-top: 26rpx; padding: 24rpx 30rpx 8rpx; }
+.category-card { margin-top: 26rpx; padding: 24rpx 32rpx 8rpx; }
 .category-head { min-height: 70rpx; padding: 0 4rpx 16rpx; border-bottom: 1rpx solid $v12-divider; display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .completion-count { color: $v12-text-3; white-space: nowrap; font-size: $v12-font-body; }
 .completion-count > text { color: $v12-primary-deep; font-weight: 600; }
-.selection-row { min-height: 130rpx; padding: 18rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 26rpx; border-bottom: 1rpx solid $v12-divider; }
+.selection-row { min-height: 130rpx; padding: 20rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 28rpx; border-bottom: 1rpx solid $v12-divider; }
 .selection-row:last-child { border-bottom: 0; }
 .selection-copy { flex: 1; min-width: 130rpx; }
 .item-name { display: block; font-size: $v12-font-lg; line-height: 1.35; overflow-wrap: anywhere; }
@@ -15,12 +15,12 @@
 .picker-mask { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .38); }
 .picker-sheet { width: 100%; padding: 32rpx 32rpx calc(26rpx + env(safe-area-inset-bottom)); border-radius: $v12-radius-lg $v12-radius-lg 0 0; background: $v12-page; box-sizing: border-box; }
 .picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 28rpx; }
-.budget-page .close-picker { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10rpx; align-items: center; justify-content: center; box-sizing: border-box; }
+.budget-page .close-picker { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 12rpx; align-items: center; justify-content: center; box-sizing: border-box; }
 .picker-content { max-height: 52vh; margin: 16rpx 0 24rpx; }
 .group-row { padding: 24rpx 0; border-bottom: 1rpx solid $v12-divider; }
 .group-label { display: block; font-size: $v12-font-md; color: $v12-text-2; margin-bottom: 16rpx; }
-.direct-option { min-height: 44px; padding: 22rpx; margin-top: 12rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; background: $v12-white; display: flex; align-items: center; justify-content: space-between; gap: 18rpx; color: $v12-primary-deep; font-size: $v12-font-md; box-sizing: border-box; }
+.direct-option { min-height: 44px; padding: 24rpx; margin-top: 12rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; background: $v12-white; display: flex; align-items: center; justify-content: space-between; gap: 20rpx; color: $v12-primary-deep; font-size: $v12-font-md; box-sizing: border-box; }
 .direct-option > text { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
 .direct-option > t-icon { flex-shrink: 0; }
 .direct-option--selected { border-color: $v12-primary-deep; background: $v12-gold-bg; }
-@media (max-width: 350px) { .selection-row { gap: 14rpx; } .selection-value { max-width: 40%; font-size: $v12-font-body; } .item-hint { font-size: $v12-font-sm; } }
+@media (max-width: 350px) { .selection-row { gap: 16rpx; } .selection-value { max-width: 40%; font-size: $v12-font-body; } .item-hint { font-size: $v12-font-sm; } }

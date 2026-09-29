@@ -1,10 +1,10 @@
 @import './read.scss';
 .history-filters { display: flex; gap: 24rpx; margin: 20rpx 0; }
-.history-filters .text-action { margin: 0; padding: 14rpx 25rpx; border-radius: $v12-radius-sm; color: $v12-text-3; }
+.history-filters .text-action { margin: 0; padding: 16rpx 24rpx; border-radius: $v12-radius-sm; color: $v12-text-3; }
 .history-filters .selected { background: $v12-gold-bg; color: $v12-primary-deep; }
 .history-card { margin-bottom: 20rpx; padding: 28rpx; }
 .history-top, .history-meta { display: flex; justify-content: space-between; gap: 20rpx; }
 .history-top .section-title { min-width: 0; word-break: break-all; }
-.history-amount { margin: 26rpx 0; font-size: $v12-font-hero; color: $v12-primary-deep; }
+.history-amount { margin: 28rpx 0; font-size: $v12-font-hero; color: $v12-primary-deep; }
 .history-meta { color: $v12-text-3; font-size: $v12-font-sm; }
 .history-footer { text-align: center; padding: 20rpx; }

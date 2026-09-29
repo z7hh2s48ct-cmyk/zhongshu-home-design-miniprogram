@@ -1,27 +1,28 @@
 @import '../../styles/v12-theme.scss';
 
-.library-content { padding-top: 32rpx; }
+.library-content { padding-top: $v12-space-4; }
 .page-title { display: block; font-size: 48rpx; line-height: 1.2; font-weight: 600; }
-.page-subtitle { display: block; margin-top: 12rpx; color: $v12-secondary-text; font-size: $v12-font-md; }
-.search { height: 82rpx; margin-top: 30rpx; padding: 0 26rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; display: flex; align-items: center; gap: 15rpx; }
+.page-subtitle { display: block; margin-top: 12rpx; color: $v12-text-2; font-size: $v12-font-md; }
+.search { height: 84rpx; margin-top: $v12-space-4; padding: 0 28rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; display: flex; align-items: center; gap: $v12-space-2; }
 .search input { flex: 1; font-size: $v12-font-md; }
-.source-tabs { height: 76rpx; margin-top: 24rpx; padding: 5rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; display: flex; }
+.source-tabs { height: 80rpx; margin-top: $v12-space-3; padding: 4rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; display: flex; }
 .source-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: $v12-radius-sm; color: $v12-text-3; font-size: $v12-font-lg; }
-.source-tabs .active { background: linear-gradient(95deg,$v12-primary-deep,$v12-primary); color: $v12-white; }
-.filters { margin-top: 24rpx; padding: 25rpx; }
-.filters > view { display: flex; align-items: center; margin-top: 19rpx; }
+.source-tabs .active { background: linear-gradient(95deg, $v12-primary-deep, $v12-primary); color: $v12-white; font-weight: 500; }
+// 筛选卡：胶囊筛选，激活态与 source-tabs 用同一填充式语言，替代原描边式
+.filters { margin-top: $v12-space-3; padding: 28rpx; }
+.filters > view { display: flex; align-items: center; margin-top: $v12-space-3; }
 .filters > view:first-child { margin-top: 0; }
-.filters > view > text { width: 128rpx; font-size: $v12-font-body; color: $v12-secondary-text; }
-.filter-pills { flex: 1; display: flex; gap: 12rpx; }
-.filter-pills text { padding: 11rpx 15rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-xs; font-size: $v12-font-sm; white-space: nowrap; }
-.filter-pills .selected { border-color: $v12-primary-deep; color: $v12-primary-deep; background: $v12-surface-alt; }
-.sort-row { margin: 27rpx 3rpx 20rpx; display: flex; justify-content: space-between; color: $v12-secondary-text; font-size: $v12-font-body; }
+.filters > view > text { width: 128rpx; font-size: $v12-font-body; color: $v12-text-2; }
+.filter-pills { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; }
+.filter-pills text { padding: 12rpx 24rpx; border-radius: $v12-radius-full; background: $v12-surface-alt; color: $v12-text-2; font-size: $v12-font-sm; white-space: nowrap; }
+.filter-pills .selected { background: linear-gradient(95deg, $v12-primary-deep, $v12-primary); color: $v12-white; font-weight: 500; }
+.sort-row { margin: 28rpx 0 20rpx; display: flex; justify-content: space-between; color: $v12-text-2; font-size: $v12-font-body; }
 .sort-row view { display: flex; align-items: center; }
 .case-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
 .case-card { overflow: hidden; }
 .image-wrap { position: relative; }
 .image-wrap image { width: 100%; height: 220rpx; display: block; }
-.image-wrap text { position: absolute; left: 12rpx; top: 12rpx; padding: 6rpx 12rpx; border-radius: $v12-radius-xs; background: rgba(71,54,42,.78); color: $v12-white; font-size: $v12-font-xs; }
-.case-copy { padding: 18rpx; }
+.image-wrap text { position: absolute; left: 12rpx; top: 12rpx; padding: 8rpx 12rpx; border-radius: $v12-radius-xs; background: rgba(71, 54, 42, .78); color: $v12-white; font-size: $v12-font-xs; }
+.case-copy { padding: 20rpx; }
 .case-copy text { display: block; font-size: $v12-font-lg; font-weight: 600; }
-.case-copy text + text { margin-top: 8rpx; color: $v12-secondary-text; font-size: $v12-font-sm; font-weight: 400; }
+.case-copy text + text { margin-top: 8rpx; color: $v12-text-2; font-size: $v12-font-sm; font-weight: 400; }

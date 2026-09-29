@@ -3,24 +3,24 @@
 .home-content { padding-top: 30rpx; padding-left: 24rpx; padding-right: 24rpx; }
 .hero { position: relative; height: 548rpx; overflow: hidden; background: linear-gradient(120deg, $v12-surface 0%, $v12-surface-alt 48%, $v12-surface-alt 100%); }
 .hero-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.hero-copy { position: relative; z-index: 1; padding: 122rpx 44rpx 0; box-sizing: border-box; }
+.hero-copy { position: relative; z-index: 1; padding: 124rpx 44rpx 0; box-sizing: border-box; }
 .hero-title { display: block; white-space: pre-line; font-family: $v12-font-family-serif; font-size: $v12-font-hero; line-height: 1.35; font-weight: 600; }
 .hero-subtitle { display: block; margin-top: 12rpx; color: $v12-deep-coffee; font-size: $v12-font-xs; line-height: 1.45; white-space: nowrap; }
-.hero-actions { width: 214rpx; margin-top: 68rpx; display: grid; gap: 18rpx; }
+.hero-actions { width: 214rpx; margin-top: 68rpx; display: grid; gap: 20rpx; }
 .hero-actions > view { height: 64rpx; border-radius: $v12-radius-sm; font-size: $v12-font-md; }
 .shortcut-row, .featured-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
 .shortcut-row { margin-top: 26rpx; }
-.shortcut { min-height: 152rpx; padding: 24rpx 18rpx; display: flex; align-items: center; gap: 14rpx; }
+.shortcut { min-height: 152rpx; padding: 24rpx 20rpx; display: flex; align-items: center; gap: 16rpx; }
 .shortcut-icon { width: 58rpx; flex: 0 0 58rpx; }
 .shortcut > view:nth-child(2) { min-width: 0; flex: 1; }
 .shortcut-title, .shortcut-copy { display: block; }
 .shortcut-title { font-size: $v12-font-lg; font-weight: 600; }
 .shortcut-copy { margin-top: 8rpx; font-size: $v12-font-xs; color: $v12-secondary-text; white-space: nowrap; }
-.section-heading { margin: 38rpx 4rpx 22rpx; display: flex; justify-content: space-between; align-items: center; }
+.section-heading { margin: 40rpx 4rpx 24rpx; display: flex; justify-content: space-between; align-items: center; }
 .section-heading > view { display: flex; align-items: center; color: $v12-brand-brown; font-size: $v12-font-body; }
 .featured { overflow: hidden; }
 .featured image { width: 100%; height: 304rpx; display: block; }
-.featured > view { padding: 20rpx 24rpx 26rpx; display: flex; align-items: center; gap: 8rpx; }
+.featured > view { padding: 20rpx 24rpx 28rpx; display: flex; align-items: center; gap: 8rpx; }
 .featured-copy { min-width: 0; flex: 1; }
 .featured text { display: block; font-size: $v12-font-lg; font-weight: 600; }
 .featured text + text { margin-top: 9rpx; font-size: $v12-font-xs; font-weight: 400; color: $v12-secondary-text; white-space: nowrap; }

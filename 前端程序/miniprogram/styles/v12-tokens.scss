@@ -53,6 +53,14 @@ $v12-control-sm:    68rpx;
 $v12-control-md:    80rpx;
 $v12-control-lg:    92rpx;
 
+// —— 间距阶梯：一切 padding/margin/gap 取 4rpx 倍数（scripts/check-design-tokens.mjs R6 校验）——
+$v12-space-1:       8rpx;   // 元素内紧贴（图文并置）
+$v12-space-2:       16rpx;  // 组内间距（表单行、标签组）
+$v12-space-3:       24rpx;  // 卡片内边距 / 组间间距
+$v12-space-4:       32rpx;  // 区块间距 / 页面水平边距
+$v12-space-5:       40rpx;  // 大区块分隔
+$v12-space-6:       48rpx;  // 页面级留白
+
 // —— 阴影（卡面 / 主按钮，各一档）——
 $v12-shadow-card:    0 10rpx 30rpx rgba(72, 49, 32, 0.07);
 $v12-shadow-primary: 0 10rpx 24rpx rgba(106, 59, 27, 0.14);
