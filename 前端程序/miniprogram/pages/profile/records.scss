@@ -2,7 +2,7 @@
 .records-content { padding: 24rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); }
 .records-heading, .record-top, .record-bottom { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
 .records-heading { margin-bottom: 24rpx; font-size: $v12-font-body; color: $v12-text-3; }
-.record-card { padding: 28rpx; margin-bottom: 22rpx; }
+.record-card { padding: 28rpx; margin-bottom: 24rpx; }
 .record-title { font-size: $v12-font-lg; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .record-top t-icon { flex-shrink: 0; }
 .record-hint { display: block; color: $v12-text-3; font-size: $v12-font-body; margin: 20rpx 0; line-height: 1.6; overflow-wrap: anywhere; }

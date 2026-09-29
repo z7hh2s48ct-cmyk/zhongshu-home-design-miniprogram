@@ -5,7 +5,7 @@
 .balance-card { position: relative; margin-top: 20rpx; padding: 36rpx 40rpx; }
 .balance-card > text { display: block; color: $v12-secondary-text; font-size: $v12-font-lg; }
 .balance-card > b { display: block; margin-top: 8rpx; color: $v12-primary-deep; font-size: 66rpx; }
-.balance-card > span { display: inline-block; margin-top: 18rpx; padding: 8rpx 16rpx; border: 1rpx solid $v12-gold-deep; border-radius: $v12-radius-lg; color: $v12-gold-deep; font-size: $v12-font-sm; }
+.balance-card > span { display: inline-block; margin-top: 20rpx; padding: 8rpx 16rpx; border: 1rpx solid $v12-gold-deep; border-radius: $v12-radius-lg; color: $v12-gold-deep; font-size: $v12-font-sm; }
 .balance-card > view { position: absolute; right: 38rpx; top: 105rpx; color: $v12-text-2; font-size: $v12-font-body; display: flex; align-items: center; }
 .section-title { display: block; margin: 44rpx 4rpx 24rpx; font-size: $v12-font-title; font-weight: 500; }
 .package-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 20rpx; }
@@ -14,7 +14,7 @@
 .package > b { display: block; margin-bottom: 28rpx; text-align: center; color: $v12-primary-deep; font-size: 45rpx; }
 .package > view { min-height: 82rpx; padding: 16rpx 0; border-top: 1rpx dashed $v12-disabled; display: flex; flex-direction: column; justify-content: center; }
 .package > view text { color: $v12-text-2; font-size: $v12-font-sm; }
-.package > view span { margin-top: 5rpx; color: $v12-text-2; font-size: $v12-font-sm; white-space: nowrap; }
+.package > view span { margin-top: 4rpx; color: $v12-text-2; font-size: $v12-font-sm; white-space: nowrap; }
 .package > view.bonus text, .package > view.bonus span { color: $v12-gold-deep; }
 .recommend { position: absolute; right: -1rpx; top: -1rpx; padding: 8rpx 16rpx; border-radius: 0 $v12-radius-sm 0 $v12-radius-md; background: $v12-gold-deep; color: $v12-white; font-size: $v12-font-xs; }
 .package > i { position: absolute; left: 50%; bottom: 15rpx; transform: translateX(-50%); width: 36rpx; height: 36rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; }
@@ -23,7 +23,7 @@
 .wechat-icon { width: 55rpx; height: 55rpx; display: flex; align-items: center; justify-content: center; }
 .wechat i { width: 34rpx; height: 34rpx; margin-left: auto; border: 8rpx solid $v12-primary-deep; border-radius: 50%; box-sizing: border-box; }
 .pay-tips { margin: 40rpx 20rpx; color: $v12-text-2; font-size: $v12-font-body; }
-.pay-tips view { margin-top: 23rpx; display: flex; align-items: center; gap: 16rpx; }
+.pay-tips view { margin-top: 24rpx; display: flex; align-items: center; gap: 16rpx; }
 .pay-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; padding: 24rpx 48rpx calc(24rpx + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 280rpx; align-items: center; background: $v12-surface; box-shadow: 0 -10rpx 30rpx rgba(72,49,32,.06); }
 .pay-bar text { display: block; color: $v12-secondary-text; font-size: $v12-font-body; }
 .pay-bar text + text { margin-top: 12rpx; }

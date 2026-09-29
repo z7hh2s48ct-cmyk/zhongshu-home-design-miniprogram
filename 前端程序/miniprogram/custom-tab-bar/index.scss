@@ -29,7 +29,7 @@
 
 .tabbar-item--active { color: $v12-primary-deep; }
 .tabbar-icon { position: relative; height: 50rpx; display: flex; align-items: center; justify-content: center; }
-.tabbar-label { margin-top: 6rpx; font-size: $v12-font-body; line-height: 1; }
+.tabbar-label { margin-top: 8rpx; font-size: $v12-font-body; line-height: 1; }
 .tabbar-badge {
   position: absolute;
   left: calc(50% + 13rpx);

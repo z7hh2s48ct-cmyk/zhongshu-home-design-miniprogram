@@ -3,12 +3,12 @@
 .resubmit-note { box-sizing: border-box; width: 100%; min-height: 180rpx; margin: 20rpx 0; padding: 20rpx; background: $v12-surface-alt; border-radius: $v12-radius-sm; font-size: $v12-font-lg; }
 /* UX 整改：下一步引导 + 需求参数 + 候选图直出 */
 .record-cta { margin-bottom: 24rpx; }
-.record-fields.req { margin-top: 18rpx; }
+.record-fields.req { margin-top: 20rpx; }
 .record-fields.req > view { padding: 12rpx 0; border-bottom: 1rpx solid $v12-gold-bg; }
 .record-fields.req > view:last-child { border-bottom: 0; }
 .record-fields.req .label { display: block; color: $v12-text-3; font-size: $v12-font-sm; }
 .record-fields.req > view > text:last-child { display: block; margin-top: 4rpx; font-size: $v12-font-md; line-height: 1.55; overflow-wrap: anywhere; }
 .progress { height: 12rpx; margin-top: 16rpx; border-radius: $v12-radius-sm; background: $v12-surface-alt; overflow: hidden; }
 .progress i { display: block; height: 100%; border-radius: $v12-radius-sm; background: linear-gradient(90deg, $v12-primary-deep, $v12-gold-deep); transition: width .5s ease; }
-.candidate-grid { margin-top: 18rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
+.candidate-grid { margin-top: 20rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
 .candidate-img { width: 100%; height: 260rpx; border-radius: $v12-radius-sm; border: 1rpx solid $v12-divider; background: $v12-surface-alt; }

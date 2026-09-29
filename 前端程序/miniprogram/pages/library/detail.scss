@@ -4,13 +4,13 @@
 .detail-hero { width: calc(100% - 36rpx); height: 560rpx; margin: 0 20rpx; border-radius: $v12-radius-lg; display: block; }
 .detail-summary { padding: 32rpx 44rpx 28rpx; }
 .detail-title { display: block; font-size: $v12-font-hero; font-weight: 600; }
-.detail-source { display: block; width: fit-content; margin-top: 13rpx; padding: 8rpx 12rpx; border-radius: $v12-radius-xs; color: $v12-primary-deep; background: $v12-gold-bg; font-size: $v12-font-sm; }
+.detail-source { display: block; width: fit-content; margin-top: 12rpx; padding: 8rpx 12rpx; border-radius: $v12-radius-xs; color: $v12-primary-deep; background: $v12-gold-bg; font-size: $v12-font-sm; }
 .detail-meta { display: block; margin-top: 24rpx; font-size: $v12-font-md; }
 .detail-tabs { height: 92rpx; width: calc(100% - 44rpx); margin: 0 24rpx; white-space: nowrap; background: $v12-surface; border: 1rpx solid $v12-divider; border-radius: $v12-radius-lg; }
 .detail-tabs view { min-width: 180rpx; height: 90rpx; padding: 0 20rpx; display: inline-flex; align-items: center; justify-content: center; color: $v12-text-2; font-size: $v12-font-lg; position: relative; }
 .detail-tabs .active { color: $v12-primary-deep; font-weight: 600; }
 .detail-tabs .active::after { content: ''; position: absolute; bottom: 0; width: 68rpx; height: 5rpx; border-radius: $v12-radius-xs; background: $v12-primary-deep; }
-.plan-card { margin: 16rpx 24rpx 24rpx; min-height: 454rpx; padding: 20rpx 24rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-lg; background: $v12-surface; box-sizing: border-box; overflow: hidden; }
+.plan-card { margin: 16rpx 24rpx 24rpx; min-height: 454rpx; padding: 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-lg; background: $v12-surface; box-sizing: border-box; overflow: hidden; }
 .plan-card image { width: 100%; display: block; }
 .elevation-line { height: 330rpx; }
 .floor-plan { height: 420rpx; }

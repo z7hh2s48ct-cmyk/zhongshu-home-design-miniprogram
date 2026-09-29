@@ -5,7 +5,7 @@
 .publish-summary { margin-top: 20rpx; padding: 24rpx; display: grid; grid-template-columns: 230rpx 1fr; gap: 32rpx; align-items: center; }
 .publish-summary image { width: 230rpx; height: 170rpx; border-radius: $v12-radius-sm; }
 .publish-summary text { display: block; font-size: $v12-font-lg; }
-.publish-summary text + text { margin-top: 18rpx; color: $v12-secondary-text; font-size: $v12-font-body; }
+.publish-summary text + text { margin-top: 20rpx; color: $v12-secondary-text; font-size: $v12-font-body; }
 .audit-card { margin-top: 28rpx; overflow: hidden; }
 .audit-title { height: 88rpx; padding: 0 32rpx; display: flex; align-items: center; justify-content: space-between; }
 .audit-title text { font-size: $v12-font-xl; font-weight: 600; }

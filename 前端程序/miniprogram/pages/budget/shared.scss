@@ -13,8 +13,8 @@
 .text-action[disabled] { background: transparent; color: $v12-text-3; }
 .budget-page .text-action.source-tag { flex-shrink: 0; padding: 4rpx 12rpx; border: 1rpx solid $v12-gold; border-radius: $v12-radius-lg; font-size: $v12-font-sm; }
 .round-icon { width: 74rpx; height: 74rpx; flex-shrink: 0; border-radius: 50%; background: $v12-surface-alt; display: flex; align-items: center; justify-content: center; }
-.explanation { margin-top: 26rpx; padding: 32rpx 32rpx; display: flex; align-items: center; gap: 24rpx; }
-.muted { display: block; margin-top: 10rpx; color: $v12-text-3; font-size: $v12-font-body; line-height: 1.65; }
+.explanation { margin-top: 28rpx; padding: 32rpx 32rpx; display: flex; align-items: center; gap: 24rpx; }
+.muted { display: block; margin-top: 12rpx; color: $v12-text-3; font-size: $v12-font-body; line-height: 1.65; }
 .budget-footer { position: fixed; left: 40rpx; right: 40rpx; bottom: calc(22rpx + env(safe-area-inset-bottom)); z-index: 80; }
 .footer-actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24rpx; }
 // budget 按钮与全局 .v12-primary-button / .v12-secondary-button 同规格；
@@ -23,9 +23,9 @@
 .budget-page .budget-secondary { width: 100%; height: $v12-control-lg; margin: 0; padding: 0; border: 2rpx solid $v12-brand; border-radius: $v12-radius-md; background: $v12-surface; color: $v12-brand; font-size: $v12-font-xl; font-weight: 500; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
 .budget-secondary[disabled] { color: $v12-text-3; background: $v12-surface-alt; }
 .budget-primary[disabled] { color: $v12-white; background: $v12-disabled; }
-.footer-hint { display: block; margin-bottom: 10rpx; color: $v12-text-3; font-size: $v12-font-sm; text-align: center; background: $v12-page; }
+.footer-hint { display: block; margin-bottom: 12rpx; color: $v12-text-3; font-size: $v12-font-sm; text-align: center; background: $v12-page; }
 /* 只保留卡片外框的留白；态内部（文字层级、重试按钮）由 v12-state 组件自带，
    组件有样式隔离，页面选择器穿不进去，留着也是死规则。 */
 .state-card { margin-top: 28rpx; padding: 36rpx; }
-.inline-warning { margin-top: 18rpx; padding: 20rpx 24rpx; background: $v12-warning-bg; border-radius: $v12-radius-md; color: $v12-gold-deep; font-size: $v12-font-sm; line-height: 1.5; }
+.inline-warning { margin-top: 20rpx; padding: 20rpx 24rpx; background: $v12-warning-bg; border-radius: $v12-radius-md; color: $v12-gold-deep; font-size: $v12-font-sm; line-height: 1.5; }
 .inline-warning .text-action { margin-left: 12rpx; }

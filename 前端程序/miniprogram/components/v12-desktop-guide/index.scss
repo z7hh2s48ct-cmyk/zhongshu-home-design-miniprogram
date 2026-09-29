@@ -22,7 +22,7 @@
 .dt-step-no { flex-shrink: 0; width: 44rpx; height: 44rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-size: $v12-font-body; display: flex; align-items: center; justify-content: center; }
 .dt-step-copy { flex: 1; min-width: 0; }
 .dt-step-title { display: block; font-size: $v12-font-lg; line-height: 1.45; color: $v12-text-1; }
-.dt-step-detail { display: block; margin-top: 6rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-2; }
+.dt-step-detail { display: block; margin-top: 8rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-2; }
 .dt-sheet-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1.6fr 1fr; gap: 24rpx; }
 // 与全局 .v12-primary-button / .v12-secondary-button 同规格（92rpx / 16rpx / 32rpx）
 .dt-sheet-actions button { margin: 0; height: $v12-control-lg; padding: 0; border: 0; border-radius: $v12-radius-md; font-size: $v12-font-xl; display: flex; align-items: center; justify-content: center; }

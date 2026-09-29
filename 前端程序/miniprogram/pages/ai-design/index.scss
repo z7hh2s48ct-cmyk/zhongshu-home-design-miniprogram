@@ -10,13 +10,13 @@
 .step-intro b { font-size: $v12-font-xl; font-weight: 500; }
 .step-intro i { width: 1rpx; height: 30rpx; background: $v12-divider; }
 .step-intro span { color: $v12-secondary-text; font-size: $v12-font-body; }
-.reference-card { height: 168rpx; padding: 20rpx 28rpx; display: flex; align-items: center; }
+.reference-card { height: 168rpx; padding: 24rpx 28rpx; display: flex; align-items: center; }
 .reference-card image { width: 224rpx; height: 126rpx; border-radius: $v12-radius-md; }
-.reference-card > view:nth-child(2) { margin-left: 30rpx; }
+.reference-card > view:nth-child(2) { margin-left: 32rpx; }
 .reference-card text { display: block; font-size: $v12-font-xl; font-weight: 600; }
-.reference-card text + text { margin-top: 13rpx; color: $v12-secondary-text; font-size: $v12-font-md; font-weight: 400; }
+.reference-card text + text { margin-top: 12rpx; color: $v12-secondary-text; font-size: $v12-font-md; font-weight: 400; }
 .change { margin-left: auto; padding: 16rpx 28rpx; border: 1rpx solid $v12-primary-deep; border-radius: $v12-radius-sm; color: $v12-primary-deep; font-size: $v12-font-md; }
-.form-card { margin-top: 22rpx; padding: 20rpx; }
+.form-card { margin-top: 24rpx; padding: 24rpx; }
 .form-title { display: block; font-size: $v12-font-lg; font-weight: 500; }
 .size-row { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx; }
 .size-row view { height: 66rpx; padding: 0 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; }
@@ -29,7 +29,7 @@
 .form-row view { margin-left: auto; display: flex; align-items: center; gap: 12rpx; }
 .textarea-row { margin: 0 -20rpx; padding: 16rpx 20rpx; }
 .textarea-row > text { display: block; font-size: $v12-font-lg; }
-.textarea-row textarea, .prompt-box { box-sizing: border-box; width: 100%; height: 92rpx; margin-top: 10rpx; padding: 16rpx 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; font-size: $v12-font-body; line-height: 1.5; }
+.textarea-row textarea, .prompt-box { box-sizing: border-box; width: 100%; height: 92rpx; margin-top: 12rpx; padding: 16rpx 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; font-size: $v12-font-body; line-height: 1.5; }
 .textarea-row, .prompt-box { position: relative; }
 .textarea-row span, .prompt-box span { position: absolute; right: 40rpx; bottom: 25rpx; color: $v12-text-3; font-size: $v12-font-xs; }
 .prompt-box { height: 190rpx; }
@@ -43,7 +43,7 @@
 .tag-row { margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 16rpx; }
 .tag-row text { padding: 12rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-xs; font-size: $v12-font-sm; }
 .count-block { margin: 12rpx -20rpx 0; padding: 12rpx 20rpx 0; border-top: 1rpx solid $v12-divider; }
-.count-tabs { height: 56rpx; margin-top: 10rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; overflow: hidden; }
+.count-tabs { height: 56rpx; margin-top: 12rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; overflow: hidden; }
 .count-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; font-size: $v12-font-md; }
 .count-tabs .active { color: $v12-white; background: $v12-primary-deep; }
 .points { min-height: 58rpx; margin-top: 12rpx; padding: 0 16rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-sm; background: $v12-surface-alt; display: flex; align-items: center; gap: 8rpx; font-size: $v12-font-xs; }
@@ -51,7 +51,7 @@
 .points > text:last-of-type { flex: 1; text-align: right; }
 .points .point-value, .points .point-total { color: $v12-primary-deep; font-size: $v12-font-md; font-weight: 600; }
 .points i { width: 1rpx; height: 38rpx; margin: 0 4rpx; background: $v12-divider; }
-.form-card > .v12-primary-button { margin-top: 10rpx; }
+.form-card > .v12-primary-button { margin-top: 12rpx; }
 
 @media (max-width: 350px) {
   .step-intro { flex-wrap: wrap; row-gap: 8rpx; white-space: normal; }

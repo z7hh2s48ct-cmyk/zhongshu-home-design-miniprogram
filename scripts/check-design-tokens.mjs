@@ -68,8 +68,8 @@ for (const f of scssFiles) {
         problems.push(`R3 圆角非规范 "${val}"  @ ${at}`);
       }
     }
-    // R6 间距网格：padding/margin/gap 声明段内 rpx 值必须为 4 的倍数
-    line.replace(/((?:padding|margin|row-gap|column-gap|gap)\s*:\s*)([^;]+)/g, (m, prop, vals) => {
+    // R6 间距网格：padding/margin（含分写）/gap 声明段内 rpx 值必须为 4 的倍数
+    line.replace(/((?:(?:padding|margin)(?:-(?:top|bottom|left|right))?|row-gap|column-gap|gap)\s*:\s*)([^;]+)/g, (m, prop, vals) => {
       if (/calc\(|env\(/.test(vals)) return m;
       for (const v of vals.matchAll(/(-?\d+)rpx/g)) {
         if (Number(v[1]) % 4 !== 0) problems.push(`R6 间距越格 ${v[1]}rpx  @ ${at}`);

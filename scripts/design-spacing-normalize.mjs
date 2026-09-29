@@ -31,8 +31,9 @@ for (const f of files) {
   let count = 0;
   const out = src.split(/(?=\r?\n)/).map((line) => {
     if (line.trim().startsWith('//')) return line;
-    // 只在目标属性的声明段（prop: value 到分号）内替换，绝不动同行其他属性
-    return line.replace(/((?:padding|margin|row-gap|column-gap|gap)\s*:\s*)([^;]+)/g, (m, prop, vals) => {
+    // 只在目标属性的声明段（prop: value 到分号）内替换，绝不动同行其他属性；
+    // 覆盖简写与分写（margin-top / padding-left 等长属性同样归并）
+    return line.replace(/((?:(?:padding|margin)(?:-(?:top|bottom|left|right))?|row-gap|column-gap|gap)\s*:\s*)([^;]+)/g, (m, prop, vals) => {
       if (/calc\(|env\(/.test(vals)) return m;
       const next = vals.replace(/(-?\d+)rpx/g, (mm, num) => {
         const n = Number(num);

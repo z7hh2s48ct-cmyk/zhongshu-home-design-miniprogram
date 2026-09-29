@@ -1,6 +1,6 @@
 @import './shared.scss';
 
-.category-card { margin-top: 26rpx; padding: 24rpx 32rpx 8rpx; }
+.category-card { margin-top: 28rpx; padding: 24rpx 32rpx 8rpx; }
 .category-head { min-height: 70rpx; padding: 0 4rpx 16rpx; border-bottom: 1rpx solid $v12-divider; display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .completion-count { color: $v12-text-3; white-space: nowrap; font-size: $v12-font-body; }
 .completion-count > text { color: $v12-primary-deep; font-weight: 600; }
@@ -8,9 +8,9 @@
 .selection-row:last-child { border-bottom: 0; }
 .selection-copy { flex: 1; min-width: 130rpx; }
 .item-name { display: block; font-size: $v12-font-lg; line-height: 1.35; overflow-wrap: anywhere; }
-.item-hint { display: block; margin-top: 6rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-3; }
+.item-hint { display: block; margin-top: 8rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-3; }
 .selection-value { max-width: 42%; text-align: right; color: $v12-primary-deep; font-size: $v12-font-md; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
-.selection-warning { display: block; margin-top: 6rpx; color: $v12-gold-deep; font-size: $v12-font-sm; font-weight: 400; }
+.selection-warning { display: block; margin-top: 8rpx; color: $v12-gold-deep; font-size: $v12-font-sm; font-weight: 400; }
 .category-page .explanation .muted { font-size: $v12-font-sm; }
 .picker-mask { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .38); }
 .picker-sheet { width: 100%; padding: 32rpx 32rpx calc(26rpx + env(safe-area-inset-bottom)); border-radius: $v12-radius-lg $v12-radius-lg 0 0; background: $v12-page; box-sizing: border-box; }

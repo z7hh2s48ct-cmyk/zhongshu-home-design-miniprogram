@@ -1,18 +1,18 @@
 @import './shared.scss';
 
-.summary-card { margin-top: 26rpx; padding: 24rpx 24rpx 16rpx; }
+.summary-card { margin-top: 28rpx; padding: 24rpx 24rpx 16rpx; }
 .section-head { min-height: 76rpx; margin: 0 4rpx 16rpx; padding: 0 8rpx 20rpx; border-bottom: 1rpx solid $v12-divider; display: flex; align-items: center; justify-content: space-between; }
 .modify { display: flex; align-items: center; gap: 8rpx; }
 .parameter-grid { display: flex; flex-wrap: wrap; }
 .parameter-cell { width: 50%; min-height: 122rpx; padding: 12rpx 24rpx 20rpx; box-sizing: border-box; }
 .parameter-cell:nth-child(odd) { border-right: 1rpx solid $v12-divider; }
 .parameter-cell:nth-child(-n+2) { border-bottom: 1rpx solid $v12-divider; }
-.parameter-cell:nth-child(n+3) { padding-top: 26rpx; }
+.parameter-cell:nth-child(n+3) { padding-top: 28rpx; }
 .parameter-label, .parameter-value { display: block; }
 .parameter-label { color: $v12-text-2; font-size: $v12-font-body; }
 .parameter-value { margin-top: 12rpx; font-size: $v12-font-xl; line-height: 1.35; word-break: break-all; }
 .region-value { font-size: $v12-font-lg; }
-.config-card { margin-top: 26rpx; padding: 36rpx 32rpx 12rpx; }
+.config-card { margin-top: 28rpx; padding: 36rpx 32rpx 12rpx; }
 .config-row { min-height: 128rpx; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
 .config-row:last-child { border-bottom: 0; }
 .config-copy { flex: 1; min-width: 0; }
@@ -21,10 +21,10 @@
 .config-status { font-size: $v12-font-body; color: $v12-text-3; flex-shrink: 0; }
 .config-status.config-complete { color: $v12-success; }
 .budget-history-links { display: flex; flex-wrap: wrap; gap: 24rpx; }
-.state-actions { margin-top: 18rpx; display: flex; flex-direction: column; gap: 8rpx; align-items: flex-start; }
+.state-actions { margin-top: 20rpx; display: flex; flex-direction: column; gap: 8rpx; align-items: flex-start; }
 .state-actions .text-action { padding: 8rpx 0; font-size: $v12-font-md; }
 .context-note { margin: 20rpx 12rpx; color: $v12-text-3; font-size: $v12-font-xs; word-break: break-all; }
 .context-note > text { display: block; }
 .budget-page .legacy-link { margin-top: 8rpx; font-size: $v12-font-sm; }
-.footer-error { display: block; margin-bottom: 10rpx; padding: 12rpx 20rpx; border-radius: $v12-radius-sm; background: $v12-error-bg; color: $v12-error; font-size: $v12-font-sm; line-height: 1.5; text-align: center; }
+.footer-error { display: block; margin-bottom: 12rpx; padding: 12rpx 20rpx; border-radius: $v12-radius-sm; background: $v12-error-bg; color: $v12-error; font-size: $v12-font-sm; line-height: 1.5; text-align: center; }
 @media (max-width: 350px) { .config-row { gap: 16rpx; } .config-status { font-size: $v12-font-sm; } }

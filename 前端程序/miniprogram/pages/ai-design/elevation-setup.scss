@@ -13,18 +13,18 @@
 .selected-plan > view { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr 1.55fr; gap: 16rpx; align-items: center; }
 .selected-plan image { width: 100%; height: 178rpx; }
 .selected-plan b { color: $v12-primary-deep; font-size: $v12-font-hero; font-weight: 500; }
-.selected-plan span { display: block; margin-top: 34rpx; color: $v12-primary-deep; font-size: $v12-font-body; }
-.option-card { margin-top: 14rpx; padding: 20rpx 24rpx; }
+.selected-plan span { display: block; margin-top: 36rpx; color: $v12-primary-deep; font-size: $v12-font-body; }
+.option-card { margin-top: 16rpx; padding: 24rpx; }
 .option-card > text { font-size: $v12-font-lg; font-weight: 500; }
-.option-card > view { margin-top: 14rpx; display: flex; gap: 24rpx; }
+.option-card > view { margin-top: 16rpx; display: flex; gap: 24rpx; }
 .option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: $v12-text-2; font-size: $v12-font-body; }
 .option-card > view > text.selected { border: 2rpx solid $v12-primary-deep; color: $v12-primary-deep; }
 .option-card i { position: absolute; right: -13rpx; top: -13rpx; width: 36rpx; height: 36rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; }
 .count-card > view > text { flex: 1; }
-.point-cost { margin-top: 14rpx; padding: 20rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 36rpx; align-items: center; }
+.point-cost { margin-top: 16rpx; padding: 24rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 36rpx; align-items: center; }
 .point-cost > i { height: 60rpx; background: $v12-divider; }
 .point-cost text, .point-cost b { display: block; }
 .point-cost text { color: $v12-secondary-text; font-size: $v12-font-body; }
-.point-cost b { margin-top: 5rpx; color: $v12-primary-deep; font-size: $v12-font-title; }
+.point-cost b { margin-top: 4rpx; color: $v12-primary-deep; font-size: $v12-font-title; }
 .point-cost span { font-size: $v12-font-body; font-weight: 400; }
-.point-cost + .v12-primary-button { margin-top: 14rpx; }
+.point-cost + .v12-primary-button { margin-top: 16rpx; }

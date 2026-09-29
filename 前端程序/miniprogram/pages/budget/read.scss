@@ -15,22 +15,22 @@
 .summary-row:last-child, .detail-group:last-child .detail-group-row { border-bottom: 0; }
 .summary-copy { flex: 1; min-width: 0; font-size: $v12-font-lg; line-height: 1.4; }
 .summary-copy > text { display: block; }
-.row-description { display: block; margin-top: 5rpx; color: $v12-text-3; font-size: $v12-font-sm; line-height: 1.5; word-break: break-all; }
+.row-description { display: block; margin-top: 4rpx; color: $v12-text-3; font-size: $v12-font-sm; line-height: 1.5; word-break: break-all; }
 .row-price { max-width: 220rpx; flex-shrink: 0; text-align: right; font-size: $v12-font-lg; word-break: break-all; }
 .row-price .row-description { font-size: $v12-font-xs; }
-.result-grid { display: flex; flex-wrap: wrap; margin-top: 26rpx; }
+.result-grid { display: flex; flex-wrap: wrap; margin-top: 28rpx; }
 .result-cell { width: 50%; min-height: 125rpx; padding: 16rpx 16rpx; box-sizing: border-box; }
 .result-cell:nth-child(odd) { border-right: 1rpx solid $v12-divider; }
 .result-cell:nth-child(-n+2) { border-bottom: 1rpx solid $v12-divider; }
 .result-cell > text { display: block; color: $v12-text-2; font-size: $v12-font-body; }
-.result-cell > text + text { margin-top: 14rpx; font-size: $v12-font-lg; color: $v12-text-1; word-break: break-all; }
+.result-cell > text + text { margin-top: 16rpx; font-size: $v12-font-lg; color: $v12-text-1; word-break: break-all; }
 .result-note { margin-top: 24rpx; line-height: 1.55; }
 .result-actions { margin: 40rpx 12rpx 0; text-align: center; }
 .result-actions > .text-action { display: block; margin: 24rpx auto 0; }
-.result-actions > .history-link { margin-top: 10rpx; font-size: $v12-font-sm; }
+.result-actions > .history-link { margin-top: 12rpx; font-size: $v12-font-sm; }
 .save-error { display: block; padding-bottom: 16rpx; font-size: $v12-font-body; color: $v12-error; }
 .missing-name { display: block; margin-top: 8rpx; }
-.custom-tag { display: inline-block; margin-left: 10rpx; border: 1rpx solid $v12-gold; border-radius: $v12-radius-xs; padding: 0 8rpx; font-size: $v12-font-xs; color: $v12-primary-deep; vertical-align: middle; }
+.custom-tag { display: inline-block; margin-left: 12rpx; border: 1rpx solid $v12-gold; border-radius: $v12-radius-xs; padding: 0 8rpx; font-size: $v12-font-xs; color: $v12-primary-deep; vertical-align: middle; }
 .line-details { padding: 16rpx 0 20rpx 96rpx; border-bottom: 1rpx solid $v12-divider; }
 .line-detail { display: flex; justify-content: space-between; gap: 20rpx; padding: 8rpx 0; font-size: $v12-font-sm; color: $v12-text-2; }
 .line-quantity { color: $v12-text-3; font-size: $v12-font-xs; }

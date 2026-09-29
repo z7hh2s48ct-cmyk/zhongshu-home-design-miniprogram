@@ -6,7 +6,7 @@
 .auth-subtitle { display: block; margin-top: 20rpx; font-size: $v12-font-body; line-height: 1.6; color: $v12-text-3; }
 .auth-card { margin-top: 36rpx; padding: 36rpx 32rpx; text-align: left; }
 .field-title { font-size: $v12-font-xl; font-weight: 600; color: $v12-text-1; }
-.code-field { height: 104rpx; margin-top: 30rpx; padding: 0 28rpx; border: 2rpx solid $v12-text-4; border-radius: $v12-radius-sm; display: flex; align-items: center; }
+.code-field { height: 104rpx; margin-top: 32rpx; padding: 0 28rpx; border: 2rpx solid $v12-text-4; border-radius: $v12-radius-sm; display: flex; align-items: center; }
 .code-field input { flex: 1; min-width: 0; font-size: $v12-font-md; }
 .field-help { display: block; margin: 32rpx 0 48rpx; font-size: $v12-font-md; color: $v12-text-3; }
 .browse-link { min-height: 88rpx; display: flex; align-items: center; justify-content: center; color: $v12-primary-deep; font-size: $v12-font-md; }
