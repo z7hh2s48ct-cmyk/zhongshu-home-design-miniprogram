@@ -25,6 +25,9 @@
 |ZS_AI_MODEL|提示词模型，沿用既定 gpt-5.6-sol。|
 |ZS_AI_TEMPERATURE|默认 0.7，范围 0–2。|
 |ZS_AI_IMAGE_MODEL|必填，无默认值；必须先确认购买渠道实际支持的图片模型与同步返回协议。|
+|ZS_AI_IMAGE_SIZE_FLAT|平面方案出图尺寸，默认 `1024x1536`（竖幅适配多视图+信息栏排版），格式 `宽x高`。|
+|ZS_AI_IMAGE_SIZE_ELEVATION|立面效果出图尺寸，默认 `1536x1024`（横幅）。|
+|ZS_AI_IMAGE_QUALITY|可选；`low/medium/high/auto`，留空不发送该参数。`high` 提升清晰度但单张费用更高。|
 |ZS_AI_STORAGE_ORIGINS|逗号分隔的 HTTPS 私有 COS/CDN origin 白名单；必须包含签名读写 URL 的实际 origin。|
 |ZS_AI_IMAGE_URL_ORIGINS|可选；图片回包为 URL 模式（如 gpt-image-2 经 apilio 代理返回 `webstatic.aiproxy.vip`）时允许下载的 HTTPS origin 白名单，逗号分隔。默认仅允许与 AI base 同源；渠道 CDN 不同源时必须显式配置。|
 |ZS_AI_STORAGE_MODE|可选，默认 `https`。`local-fs` 为开发模式：后端 LocalObjectStorageAdapter 签发 `local://` 内网地址，引擎直接读写与后端共享的资产根目录（见下节）；绝不用于生产。|

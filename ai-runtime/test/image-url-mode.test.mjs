@@ -7,7 +7,9 @@ const PNG = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffe
 function settings(overrides = {}) {
   return {
     base: 'https://api.apilio.ai/v1', key: 'k', imageModel: 'gpt-image-2',
-    imageUrlOrigins: ['https://cdn.example.com'], ...overrides,
+    imageUrlOrigins: ['https://cdn.example.com'],
+    imageSizeFlat: '1024x1536', imageSizeElevation: '1536x1024', imageQuality: 'high',
+    ...overrides,
   };
 }
 const journal = { once: async (_key, op) => op() };
@@ -16,6 +18,19 @@ const job = { jobId: '9007199254740993', phase: 'FLAT', payload: { requestedCoun
 function jsonResponse(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 }
+
+test('按阶段选择比例并携带 quality 参数', async () => {
+  const bodies = [];
+  const provider = new Provider(settings(), journal, async (input, init) => {
+    bodies.push(init?.body ? JSON.parse(init.body) : null);
+    return jsonResponse({ data: [{ b64_json: PNG.toString('base64') }] });
+  });
+  await provider.generate({ ...job, phase: 'FLAT' }, 1, 'p', [], new AbortController().signal);
+  await provider.generate({ ...job, phase: 'ELEVATION' }, 1, 'p', [], new AbortController().signal);
+  assert.equal(bodies[0].size, '1024x1536');
+  assert.equal(bodies[0].quality, 'high');
+  assert.equal(bodies[1].size, '1536x1024');
+});
 
 test('URL 回包模式：白名单内下载图片、重算魔数与摘要', async () => {
   const calls = [];

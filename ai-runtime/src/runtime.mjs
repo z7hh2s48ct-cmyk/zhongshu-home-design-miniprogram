@@ -77,12 +77,21 @@ export function config(env = process.env) {
   const temperature = Number(env.ZS_AI_TEMPERATURE || '0.7');
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw Error('INVALID_TEMPERATURE');
   const aiBase = origin('AI_BASE_URL', env.ZS_AI_BASE_URL || 'https://api.apilio.ai/v1');
+  const imageSize = (name, value) => {
+    if (!/^\d{3,4}x\d{3,4}$/.test(value)) throw Error(`INVALID_${name}`);
+    return value;
+  };
+  const rawQuality = env.ZS_AI_IMAGE_QUALITY?.trim();
+  if (rawQuality && !['low', 'medium', 'high', 'auto'].includes(rawQuality)) throw Error('INVALID_IMAGE_QUALITY');
   return {
     core: origin('CORE_URL', required('ZS_AI_CORE_URL'), true),
     secret: required('ZS_INTERNAL_SECRET'), key: required('ZS_AI_API_KEY'),
     base: aiBase,
     model: env.ZS_AI_MODEL || 'gpt-5.6-sol', imageModel: required('ZS_AI_IMAGE_MODEL'),
     temperature, storageMode, storageRoot, storageOrigins, dailyLimit: limit,
+    imageSizeFlat: imageSize('IMAGE_SIZE_FLAT', env.ZS_AI_IMAGE_SIZE_FLAT || '1024x1536'),
+    imageSizeElevation: imageSize('IMAGE_SIZE_ELEVATION', env.ZS_AI_IMAGE_SIZE_ELEVATION || '1536x1024'),
+    imageQuality: rawQuality || '',
     // 图片回包为 URL 模式时，仅允许下载白名单 origin（默认与供应商 API 同源）；渠道 CDN 不同源时显式配置
     imageUrlOrigins: env.ZS_AI_IMAGE_URL_ORIGINS?.trim()
       ? env.ZS_AI_IMAGE_URL_ORIGINS.split(',').map(x => origin('IMAGE_URL_ORIGIN', x.trim()))
@@ -190,12 +199,20 @@ export class Provider {
   async generate(job, slot, prompt, images, signal) {
     return this.journal.once(`image-${job.jobId}-${slot}`, async () => {
       const text = `${prompt}\n独立候选 ${slot}/${job.payload.requestedCount}，阶段 ${job.phase}。`;
+      // 比例随阶段适配：平面方案为竖版排版（多视图+信息栏）用竖幅，立面为横幅，避免正方形压小内容
+      const size = job.phase === 'ELEVATION' ? this.settings.imageSizeElevation : this.settings.imageSizeFlat;
       let value;
       if (images.length) {
         const body = new FormData(); body.set('model', this.settings.imageModel); body.set('prompt', text); body.set('n', '1');
+        body.set('size', size);
+        if (this.settings.imageQuality) body.set('quality', this.settings.imageQuality);
         images.forEach((image, i) => body.append('image[]', new Blob([image.bytes], { type: image.mimeType }), `reference-${i}.${image.mimeType === 'image/png' ? 'png' : 'jpg'}`));
         value = await this.request('/images/edits', body, false, signal);
-      } else value = await this.request('/images/generations', { model: this.settings.imageModel, prompt: text, n: 1, size: '1024x1024' }, true, signal);
+      } else {
+        const payload = { model: this.settings.imageModel, prompt: text, n: 1, size };
+        if (this.settings.imageQuality) payload.quality = this.settings.imageQuality;
+        value = await this.request('/images/generations', payload, true, signal);
+      }
       const payload = value.data?.[0] ?? {};
       let bytes;
       if (typeof payload.b64_json === 'string' && payload.b64_json.length <= Math.ceil(MAX_IMAGE / 3) * 4
