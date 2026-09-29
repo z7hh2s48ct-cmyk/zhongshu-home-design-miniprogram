@@ -2,13 +2,20 @@
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const http = require('../../utils/request');
+const assets = require('../../utils/assets');
 const STATUS_TEXT = { QUEUED: '排队等待中', RUNNING: 'AI 正在绘制方案', VALIDATING: '正在校验生成结果', CANCEL_REQUESTED: '正在取消任务', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案已生成', FAILED: '生成失败', CANCELLED: '任务已取消' };
 const STEP_ORDER = ['QUEUED', 'RUNNING', 'VALIDATING'];
+const NEXT = {
+  plane: { label: '下一步：配置立面生成', url: '/pages/ai-design/elevation-setup' },
+  elevation: { label: '查看最终方案', url: '/pages/ai-design/result' }
+};
 
 protectedPage({
   data: { stage: 'plane', count: 2, progress: 0, status: 'QUEUED',
           statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '',
-          stepIndex: 0, elapsedText: '00:00' },
+          stepIndex: 0, elapsedText: '00:00',
+          candidates: [], pendingSlots: 0,
+          selectedId: '', selectDone: false, selecting: false, nextLabel: '' },
   onLoad(query) {
     this._token = http.getToken();
     this._jobId = getApp().globalData.jobId;
@@ -40,11 +47,11 @@ protectedPage({
     return mm + ':' + ss;
   },
   // 平滑进度：后端仅在单张图完成时回报一次进度，直接展示会长期停在 0%。
-  // 参照主流生图产品，前端按阶段推进平滑进度（渐近上限），后端回报值只用来抬高、不用来回落。
+  // 前端按阶段推进平滑进度（渐近上限），后端回报值只用来抬高、不用来回落。
   computeProgress() {
     const self = this;
     const status = this.data.status;
-    if (['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(status)) return 100;
+    if (this.data.finished) return 100;
     if (status === 'FAILED' || status === 'CANCELLED') return this.data.progress;
     const now = Date.now();
     const since = function (key) { return (now - (self._statusAt[key] || self._pageStart)) / 1000; };
@@ -67,25 +74,26 @@ protectedPage({
       if (!self._statusAt[job.status]) self._statusAt[job.status] = Date.now();
       self._serverProgress = Number(job.progress) || 0;
       self._projectId = job.projectId;
-      const stepIndex = Math.max(0, STEP_ORDER.indexOf(job.status));
       const finished = ['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(job.status);
+      const stepIndex = finished ? 3 : Math.max(0, STEP_ORDER.indexOf(job.status));
       self.setData({ status: job.status,
         stage: job.phase === 'ELEVATION' ? 'elevation' : 'plane', count: job.requestedCount,
         acceptedCount: job.acceptedCount || 0, statusText: STATUS_TEXT[job.status] || '状态待确认',
         canCancel: (job.allowedActions || []).includes('CANCEL'),
-        stepIndex: finished ? 3 : stepIndex,
+        stepIndex: stepIndex,
         finished: finished, pollError: '' });
-      if (job.status === 'SUCCEEDED' || job.status === 'PARTIALLY_SUCCEEDED') {
-        // 先让进度走满、再进选择页，避免 100% 一闪而过
-        if (!self._redirecting) {
-          self._redirecting = true;
-          self.setData({ progress: 100 });
-          setTimeout(function () { self.toCandidatePage(); }, 600);
-        }
+      // 候选是拉式晋升的：有新通过校验的方案，或任务刚到终态，都拉一次候选并内联呈现
+      if ((job.acceptedCount || 0) > (self._acceptedSeen || 0) || finished) {
+        self._acceptedSeen = job.acceptedCount || 0;
+        self.refreshCandidates();
+      }
+      if (finished) {
+        // 改版：完成不再跳转选择页，候选已内联呈现，用户在本页点「选它」
+        self.setData({ progress: 100 });
       } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
         wx.showToast({ title: job.status === 'CANCELLED' ? '任务已取消' : '生成失败，点数将退回', icon: 'none' });
-        if (!self._redirecting) {
-          self._redirecting = true;
+        if (!self._leaving) {
+          self._leaving = true;
           self._timer = setTimeout(function () { wx.navigateBack(); }, 2000);
         }
       } else {
@@ -97,13 +105,75 @@ protectedPage({
       self._timer = setTimeout(function () { self.poll(); }, 3000);
     });
   },
-  toCandidatePage() {
-    const projectId = this._projectId;
-    if (!projectId || !http.isSameSession(this._token)) return;
-    const target = this.data.stage === 'plane'
-      ? '/pages/ai-design/plane-select?projectId=' + projectId
-      : '/pages/ai-design/elevation-select?projectId=' + projectId;
-    wx.redirectTo({ url: target });
+  // 拉取本任务候选（后端先晋升再下发），差量合并进候选区；未完成槽位渲染灰占位
+  refreshCandidates() {
+    const self = this;
+    if (!this._projectId || !this._jobId) return;
+    api.getProject(this._projectId, this._jobId).then(function (project) {
+      if (self._stopped || !self.current(self._token)) return;
+      const list = (project.candidates || [])
+        .filter(function (c) { return String(c.jobId) === String(self._jobId); });
+      const merged = self.data.candidates.slice();
+      let added = false;
+      list.forEach(function (c) {
+        if (merged.some(function (item) { return String(item.candidateId) === String(c.candidateId); })) return;
+        merged.push({ candidateId: String(c.candidateId), assetId: c.assetId,
+          slot: c.slotNo || (merged.length + 1), name: '方案 ' + String.fromCharCode(65 + merged.length), url: '' });
+        added = true;
+      });
+      const pendingSlots = self.data.finished ? 0 : Math.max(0, (self.data.count || 0) - merged.length);
+      self.setData({ candidates: merged, pendingSlots: pendingSlots });
+      if (!added) return;
+      merged.forEach(function (item, index) {
+        if (item.url || !item.assetId) return;
+        assets.fetchAssetDataUrl(item.assetId).then(function (url) {
+          if (self._stopped) return;
+          const target = self.data.candidates[index];
+          if (target && target.assetId === item.assetId && !target.url) {
+            self.setData({ ['candidates[' + index + '].url']: url });
+          }
+        }).catch(function () { /* 单图加载失败保留占位 */ });
+      });
+    }).catch(function () { /* 候选拉取失败不打断进度轮询，下轮重试 */ });
+  },
+  current(token) { return http.isSameSession ? http.isSameSession(token) : token === http.getToken(); },
+  // 页内选择：与 plane-select / elevation-select 完全同一接口与全局副作用，仅不再跳转
+  selectCandidate(event) {
+    if (!this.data.finished || this.data.selectDone || this.data.selecting) return;
+    const candidateId = event.currentTarget.dataset.id;
+    const cand = this.data.candidates.find(function (item) { return String(item.candidateId) === String(candidateId); });
+    if (!cand) return;
+    const self = this;
+    this.setData({ selecting: true });
+    const global = getApp().globalData;
+    const request = this.data.stage === 'plane'
+      ? api.selectFlat(this._projectId, this._jobId, cand.candidateId).then(function () {
+          global.selectedCandidateId = cand.candidateId;
+          global.selectedFlatAssetId = cand.assetId;
+          global.flatLabel = cand.name;
+          return null;
+        })
+      : api.selectElevation(this._projectId, this._jobId, cand.candidateId).then(function (vo) {
+          global.selectedElevationId = cand.candidateId;
+          global.selectedElevationAssetId = cand.assetId;
+          global.elevationLabel = cand.name;
+          global.resultVersionId = (vo && vo.resultVersionId) ? vo.resultVersionId : null;
+          return null;
+        });
+    return request.then(function () {
+      if (self._stopped || !self.current(self._token)) return;
+      const next = NEXT[self.data.stage];
+      self.setData({ selectedId: cand.candidateId, selectDone: true, selecting: false, nextLabel: next.label });
+      wx.showToast({ title: '已选定 ' + cand.name, icon: 'success' });
+    }).catch(function (err) {
+      if (self._stopped || !self.current(self._token)) return;
+      self.setData({ selecting: false });
+      wx.showToast({ title: (err && err.msg) || '选定失败，请重试', icon: 'none' });
+    });
+  },
+  nextStep() {
+    if (!this.data.selectDone || !this.current(this._token)) return;
+    wx.redirectTo({ url: NEXT[this.data.stage].url, fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) });
   },
   cancel() {
     if (this._cancelling) return;
@@ -113,11 +183,11 @@ protectedPage({
     this.setData({ cancelling: true });
     const self = this;
     return api.cancelJob(jobId).then(function () {
-      if (self._stopped || !http.isSameSession(self._token)) return;
+      if (self._stopped || !self.current(self._token)) return;
       wx.showToast({ title: '取消请求已提交', icon: 'none' });
     }).catch(function (err) {
       self._cancelling = false;
-      if (self._stopped || !http.isSameSession(self._token)) return;
+      if (self._stopped || !self.current(self._token)) return;
       self.setData({ cancelling: false });
       wx.showToast({ title: (err && err.msg) || '取消失败', icon: 'none' });
     }).then(function () { /* 保留 _cancelling：取消请求已受理，无需重复提交 */ });
@@ -125,12 +195,5 @@ protectedPage({
   continueLater() {
     wx.showToast({ title: '任务将在后台继续生成', icon: 'none' });
     setTimeout(function () { wx.switchTab({ url: '/pages/home/index' }); }, 600);
-  },
-  previewResult() {
-    if (this.data.status === 'SUCCEEDED' || this.data.status === 'PARTIALLY_SUCCEEDED') {
-      this.toCandidatePage();
-      return;
-    }
-    wx.showToast({ title: '生成完成后即可预览', icon: 'none' });
   }
 });

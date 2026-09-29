@@ -40,3 +40,21 @@
 .stage-tip text { color: #8a6a45; font-size: 22rpx; }
 .generate-actions { margin-top: 28rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 26rpx; }
 .preview-link { margin-top: 20rpx; text-align: center; color: $v12-secondary-text; font-size: 21rpx; }
+/* 候选内联呈现与页内选择（UX 整改） */
+.sec-title { font-size: 15px; font-weight: 600; color: #3c2f22; }
+.sec-sub { display: block; margin-top: 6px; font-size: 12px; color: #a09384; line-height: 1.6; }
+.cand-card { margin-top: 14px; }
+.cand-grid { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cand { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid #eee5d8; background: #f3eee7; animation: cand-rise .5s ease both; }
+@keyframes cand-rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }
+.cand-img { width: 100%; height: 150px; object-fit: cover; object-position: top; display: block; }
+.cand-loading { display: flex; align-items: center; justify-content: center; text-align: center; color: #9a8f80; font-size: 12px; line-height: 1.7; background: #f0ebe3; }
+.slot { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(60, 47, 34, .72); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+.cand .pick { display: block; margin: 8px 10px 10px; text-align: center; padding: 7px 0; border-radius: 9px; border: 1.5px solid #c9a36b; color: #8a4a1a; font-size: 13px; background: #fff; }
+.cand .pick.passed { color: #6f8f5c; border-color: #cfe0c4; background: #f6faf3; }
+.cand .pick.picked { background: linear-gradient(100deg, #8b4818, #a86a35); color: #fff; border: 0; font-weight: 600; }
+.cand .pick.busy { opacity: .6; }
+.cand.selected { border-color: #8b4818; box-shadow: 0 0 0 3px rgba(139, 72, 24, .15); }
+.cand.pending .cand-loading { height: 196px; }
+.btn-next { min-height: 48px; margin-top: 16px; border-radius: 14rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: #fff; background: linear-gradient(100deg, #8b4818, #a86a35); box-shadow: 0 6px 18px rgba(139, 72, 24, .25); }
+.poll-error { margin-top: 14px; text-align: center; color: #b0621c; font-size: 22rpx; }

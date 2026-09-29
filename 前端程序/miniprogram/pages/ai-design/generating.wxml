@@ -1,9 +1,12 @@
 <view class="v12-page generating-page" wx:if="{{accessReady}}">
   <v12-navbar title="{{stage === 'plane' ? '平面方案生成' : '立面方案生成'}}" show-back show-brand="{{false}}" />
   <view class="v12-card hero-card">
-    <view class="orb"><view class="orb-ring"></view><view class="orb-core">AI</view></view>
+    <view class="orb">
+      <view wx:if="{{!finished}}" class="orb-ring"></view>
+      <view class="orb-core {{finished ? 'done' : ''}}">{{finished ? '✓' : 'AI'}}</view>
+    </view>
     <text class="hero-title">{{statusText}}</text>
-    <text class="hero-sub">为您生成 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案 · 预计 1~2 分钟</text>
+    <text class="hero-sub">为您生成 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案 · {{finished ? '点选一个方案继续' : '预计 1~2 分钟'}}</text>
     <view class="progress"><i class="shine" style="width: {{progress}}%;"></i></view>
     <view class="meter"><text class="percent">{{progress}}%</text><text class="elapsed">已用时 {{elapsedText}}</text></view>
   </view>
@@ -18,12 +21,35 @@
       <em class="line {{stepIndex >= 3 ? 'on' : ''}}"></em>
       <view class="fstep {{stepIndex >= 3 ? 'on' : ''}}"><i>4</i><text>完成</text></view>
     </view>
-    <text wx:if="{{acceptedCount > 0}}" class="accepted">已通过审核 {{acceptedCount}} 个方案</text>
-    <text wx:elif="{{pollError}}" class="accepted warn">{{pollError}}</text>
+  </view>
+
+  <view class="v12-card cand-card" wx:if="{{candidates.length || pendingSlots}}">
+    <text class="sec-title">{{finished ? '选择' + (stage === 'plane' ? '平面' : '立面') + '方案' : '已生成候选（' + candidates.length + '/' + count + '）'}}</text>
+    <text class="sec-sub">{{finished ? '点「选它」完成选择，选定后可继续下一步' : '每张方案一通过校验就会出现在这里，无需等待全部完成'}}</text>
+    <view class="cand-grid">
+      <view wx:for="{{candidates}}" wx:key="candidateId"
+        class="cand {{selectedId === item.candidateId ? 'selected' : ''}}">
+        <span class="slot">候选 {{item.slot}}</span>
+        <image wx:if="{{item.url}}" class="cand-img" src="{{item.url}}" mode="aspectFill" lazy-load aria-label="{{item.name}}" />
+        <view wx:else class="cand-img cand-loading"><text>校验通过<br/>成图加载中</text></view>
+        <view class="pick {{selectedId === item.candidateId ? 'picked' : ''}}{{selecting ? ' busy' : ''}}"
+          wx:if="{{finished}}" bindtap="selectCandidate" data-id="{{item.candidateId}}"
+          aria-label="{{item.name}}，{{selectedId === item.candidateId ? '已选定' : '点选此方案'}}">
+          {{selectedId === item.candidateId ? '✓ 已选定' : (selecting ? '提交中…' : '选它')}}
+        </view>
+        <view wx:else class="pick passed">已通过</view>
+      </view>
+      <view wx:for="{{pendingSlots}}" wx:key="*this" wx:for-index="pi" class="cand pending">
+        <span class="slot">候选 {{candidates.length + pi + 1}}</span>
+        <view class="cand-img cand-loading"><text>AI 绘制中…</text></view>
+        <view class="pick passed">—</view>
+      </view>
+    </view>
   </view>
 
   <view class="stage-tip"><t-icon name="info-circle" size="26px" color="#c78217" /><text>生成失败或数量不足时按有效方案结算，退点自动到账</text></view>
 
-  <view class="generate-actions"><view class="v12-primary-button" bindtap="continueLater">后台继续</view><view wx:if="{{canCancel}}" class="v12-secondary-button" bindtap="cancel">{{cancelling ? '取消处理中' : '取消生成'}}</view></view>
-  <view wx:if="{{finished}}" class="preview-link" bindtap="previewResult">查看已生成方案</view>
+  <view class="actions" wx:if="{{!finished}}"><view class="v12-primary-button" bindtap="continueLater">后台继续</view><view wx:if="{{canCancel}}" class="v12-secondary-button" bindtap="cancel">{{cancelling ? '取消处理中' : '取消生成'}}</view></view>
+  <view wx:if="{{selectDone}}" class="btn-next" bindtap="nextStep">{{nextLabel}}</view>
+  <view wx:if="{{pollError}}" class="poll-error">{{pollError}}</view>
 </view>

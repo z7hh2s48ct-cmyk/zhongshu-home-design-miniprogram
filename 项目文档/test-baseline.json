@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "asOf": "2026-09-29",
-  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。同日追加 CDN 迁移前置门禁（scripts/verify-cdn.js）与暂存副本删除守卫（scripts/prune-cdn-staging.js）及其用例，mini 29 文件/281 调用。2026-09-29 修 PointsP4AContractTest 并发守恒断言时补了 1 条确定性用例，backend 口径 +1 方法（ordinary 574 / contract 343）。2026-09-29 T15 设计需求输入联动：mini +design-inputs 用例、backend +T15 契约用例、e2e +输入快照检查点。同日 UX 整改（我的方案列表/方案记录详情）：mini +行状态映射用例（30 文件/287 调用）、backend T15 契约 +2 用例（ordinary 55/582、contract 37/351）、e2e 59。",
+  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。同日追加 CDN 迁移前置门禁（scripts/verify-cdn.js）与暂存副本删除守卫（scripts/prune-cdn-staging.js）及其用例，mini 29 文件/281 调用。2026-09-29 修 PointsP4AContractTest 并发守恒断言时补了 1 条确定性用例，backend 口径 +1 方法（ordinary 574 / contract 343）。2026-09-29 T15 设计需求输入联动：mini +design-inputs 用例、backend +T15 契约用例、e2e +输入快照检查点。同日 UX 整改（我的方案列表/方案记录详情 + 生成页候选内联呈现与页内选择）：mini 30 文件/290 调用、backend 55/582、contract 37/351、e2e 59。",
   "inventory": {
     "mini": {
       "executableFiles": 30,
-      "declaredTestCalls": 287
+      "declaredTestCalls": 290
     },
     "backend": {
       "ordinaryFiles": 55,
