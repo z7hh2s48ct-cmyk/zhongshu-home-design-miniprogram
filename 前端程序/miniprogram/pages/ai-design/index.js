@@ -4,6 +4,7 @@ const api = require('../../utils/api');
 const http = require('../../utils/request');
 const config = require('../../utils/config');
 const sha256 = require('../../utils/sha256');
+const designInputs = require('../../utils/design-inputs');
 
 const SKETCH_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -16,16 +17,35 @@ function mimeFromPath(path) {
 
 protectedPage({
   data: {
-    mode: 0, count: 2, floor: '两层', family: '5室3厅2卫',
+    mode: 0, count: 2,
+    faceWidth: '', depth: '',
+    floorLabels: designInputs.floorLabels(),
+    familyLabels: designInputs.familyLabels(),
+    floorIndex: designInputs.indexOfFloor('两层'),
+    familyIndex: designInputs.indexOfFamily('5室3厅2卫'),
     points: '—', creating: false,
-    refCase: null, note: '', prompt: '',
+    refCase: null, refCaseText: '', note: '', prompt: '',
     sketchAssetId: null, sketchImage: ''
   },
   onLoad(options) {
     if (options && options.caseId) return; // 由 onShow 统一读全局参考案例
   },
   onShow() {
-    this.setData({ refCase: getApp().globalData.refCase });
+    const refCase = getApp().globalData.refCase;
+    const patch = { refCase: refCase };
+    if (refCase) {
+      const parts = [];
+      if (refCase.buildingArea) parts.push(refCase.buildingArea + '㎡');
+      if (refCase.floorCount) parts.push(refCase.floorCount + '层');
+      patch.refCaseText = parts.join(' · ');
+      // T15：案例尺寸预填输入框，用户仍可修改；换案例时强制刷新（避免残留上一案例值被当作用户输入）
+      patch.faceWidth = refCase.faceWidth != null && refCase.faceWidth !== '' ? String(refCase.faceWidth) : '';
+      patch.depth = refCase.depth != null && refCase.depth !== '' ? String(refCase.depth) : '';
+      const floorCount = Number(refCase.floorCount);
+      const floorIndex = designInputs.FLOOR_OPTIONS.findIndex(function (o) { return o.count === floorCount; });
+      if (floorIndex >= 0) patch.floorIndex = floorIndex;
+    }
+    this.setData(patch);
     this.refreshPoints();
     require('../../utils/generation-price').refresh(this, 'FLAT');
   },
@@ -38,9 +58,13 @@ protectedPage({
   selectMode(e) { this.setData({ mode: Number(e.currentTarget.dataset.index) }); },
   selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'FLAT'); },
   chooseReference() { wx.switchTab({ url: '/pages/library/index' }); },
-  clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null }); },
+  clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null, refCaseText: '' }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
   onPromptInput(e) { this.setData({ prompt: e.detail.value }); },
+  onFaceWidthInput(e) { this.setData({ faceWidth: e.detail.value }); },
+  onDepthInput(e) { this.setData({ depth: e.detail.value }); },
+  onFloorChange(e) { this.setData({ floorIndex: Number(e.detail.value) }); },
+  onFamilyChange(e) { this.setData({ familyIndex: Number(e.detail.value) }); },
 
   // ---- 草图上传：选图 → 摘要 → 上传票据 → 直传 → 完成校验 ----
   chooseImage() {
@@ -122,15 +146,19 @@ protectedPage({
     self.setData({ creating: true });
     const idemKey = 'proj-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     const refCase = this.data.refCase;
+    // T15：两种模式都全量上送需求输入（面宽/进深/层数/家庭需求/补充需求等），后端冻结进需求快照供 AI 提示词使用
+    const built = designInputs.buildRequirementInputs(this.data.mode, this.data);
+    if (built.error) {
+      wx.showToast({ title: built.error, icon: 'none' });
+      self.setData({ creating: false });
+      return;
+    }
     const body = refCase && refCase.caseId
-      ? { sourceType: 'CASE_REFERENCE', refCaseId: String(refCase.caseId) }
+      ? { sourceType: 'CASE_REFERENCE', refCaseId: String(refCase.caseId), requirementInputs: built.inputs }
       : {
           sourceType: 'SELF_UPLOAD',
           sketchAssetId: this.data.sketchAssetId || undefined,
-          requirementInputs: {
-            floor: this.data.floor, family: this.data.family,
-            prompt: this.data.prompt, note: this.data.note
-          }
+          requirementInputs: built.inputs
         };
     let confirmedPrice;
     require('../../utils/generation-price').confirm('FLAT', count).then(function (price) {

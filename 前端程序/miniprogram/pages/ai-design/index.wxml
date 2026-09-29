@@ -6,15 +6,22 @@
     <view class="step-intro"><text>步骤1</text><b>生成平面方案</b><i></i><span>先生成并选择平面，再继续设计立面</span></view>
     <view wx:if="{{mode === 0}}" class="v12-card reference-card">
       <image src="/assets/v12/villa-classic.jpg" mode="aspectFill" />
-      <view><text>{{refCase ? refCase.title : '云栖雅院'}}</text><text>{{refCase ? '将参考该方案生成' : '168㎡ · 2层'}}</text></view>
+      <view><text>{{refCase ? refCase.title : '云栖雅院'}}</text><text>{{refCase ? refCaseText : '168㎡ · 2层'}}</text></view>
       <view class="change" bindtap="chooseReference">更换</view>
     </view>
     <view class="v12-card form-card">
       <block wx:if="{{mode === 0}}">
         <text class="form-title">宅基地尺寸</text>
-        <view class="size-row"><view><text>面宽</text><text>12.6m</text></view><view><text>进深</text><text>13.8m</text></view></view>
-        <view class="form-row"><text>层数</text><view>{{floor}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
-        <view class="form-row"><text>家庭需求</text><view>{{family}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
+        <view class="size-row">
+          <view><text>面宽</text><input type="digit" value="{{faceWidth}}" bindinput="onFaceWidthInput" placeholder="如 12.6" /><text>m</text></view>
+          <view><text>进深</text><input type="digit" value="{{depth}}" bindinput="onDepthInput" placeholder="如 13.8" /><text>m</text></view>
+        </view>
+        <picker mode="selector" range="{{floorLabels}}" value="{{floorIndex}}" bindchange="onFloorChange">
+          <view class="form-row"><text>层数</text><view>{{floorLabels[floorIndex]}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
+        </picker>
+        <picker mode="selector" range="{{familyLabels}}" value="{{familyIndex}}" bindchange="onFamilyChange">
+          <view class="form-row"><text>家庭需求</text><view>{{familyLabels[familyIndex]}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
+        </picker>
         <view class="textarea-row"><text>补充需求</text><textarea maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" /><span>{{note.length}}/200</span></view>
       </block>
       <block wx:else>

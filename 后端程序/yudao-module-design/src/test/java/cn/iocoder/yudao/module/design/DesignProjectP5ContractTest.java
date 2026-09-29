@@ -258,7 +258,7 @@ class DesignProjectP5ContractTest {
                 "k-seed-a", null, null);
 
         long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null,
-                Map.of("layout", "三室两厅", "floors", 2));
+                Map.of("family", "三室两厅", "floorCount", 2));
         var created = projects.createFlatJob(USER_A, projectId, 2, "flat-key-1", confirmed("FLAT"));
         assertThat(available(USER_A)).as("创建任务扣 2×10 点").isEqualTo(80);
 

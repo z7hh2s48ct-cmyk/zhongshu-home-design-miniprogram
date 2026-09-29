@@ -42,6 +42,11 @@ protectedPage({
             + (parameters.faceWidth || '—') + 'm / 进深' + (parameters.depth || '—') + 'm',
           canDesign: (detail.allowedActions || []).includes('DESIGN_WITH'),
           designUnavailableReason: detail.designUnavailableReason || '该案例暂无有效的设计参考授权',
+          // T15：尺寸随 refCase 带给 AI 设计页预填（字符串原样，AI 页负责数值化）
+          faceWidth: parameters.faceWidth,
+          depth: parameters.depth,
+          floorCount: parameters.floorCount,
+          buildingArea: parameters.buildingArea,
           coverAssetId: detail.coverAssetId,
           floorPlanAssetIds: detail.floorPlanAssetIds || [],
           elevationAssetId: detail.elevationAssetId
@@ -126,8 +131,15 @@ protectedPage({
     const detail = this.data.caseDetail;
     if (!this.current() || !detail) return;
     if (!detail.canDesign) { wx.showToast({ title: detail.designUnavailableReason, icon: 'none' }); return; }
-    // switchTab 无法携带 query，经全局数据把参考案例带给 AI 设计页
-    getApp().globalData.refCase = { caseId: detail.id, title: detail.title };
+    // switchTab 无法携带 query，经全局数据把参考案例带给 AI 设计页（T15：附带尺寸供预填与案例元数据兜底）
+    getApp().globalData.refCase = {
+      caseId: detail.id,
+      title: detail.title,
+      faceWidth: detail.faceWidth,
+      depth: detail.depth,
+      floorCount: detail.floorCount,
+      buildingArea: detail.buildingArea
+    };
     wx.switchTab({ url: '/pages/ai-design/index' });
   }
 });

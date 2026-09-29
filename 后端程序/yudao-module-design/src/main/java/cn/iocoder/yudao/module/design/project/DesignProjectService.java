@@ -71,13 +71,13 @@ public class DesignProjectService {
         this.quarantineObjectPort = quarantineObjectPort;
     }
 
-    /** 创建项目：CASE_REFERENCE 仅可引用已发布案例并冻结版本；SELF_UPLOAD 需草图资产 */
+    /** 创建项目：CASE_REFERENCE 仅可引用已发布案例并冻结版本；SELF_UPLOAD 需草图资产。两种来源都冻结需求快照。 */
     public long createProject(long userId, String sourceType, Long refCaseId, Long sketchAssetId,
                               Map<String, Object> requirementInputs) {
-        Map<String, Object> validatedInputs = BudgetInputs.validateRequirementInputs(requirementInputs);
         return txTemplate.execute(status -> {
             if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
             Long refVersionId = null;
+            Map<String, Object> inputs = requirementInputs;
             if ("CASE_REFERENCE".equals(sourceType)) {
                 if (refCaseId == null) {
                     throw exception(GENERATION_REFERENCE_NOT_AUTHORIZED);
@@ -90,9 +90,11 @@ public class DesignProjectService {
                     throw exception(RESOURCE_FORBIDDEN);
                 }
                 refVersionId = versions.get(0);
+                inputs = withCaseDefaults(inputs, refVersionId);
             } else if (!"SELF_UPLOAD".equals(sourceType)) {
                 throw exception(RESOURCE_FORBIDDEN);
             }
+            Map<String, Object> validatedInputs = BudgetInputs.validateRequirementInputs(inputs);
             long projectId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO design_project (id, user_id, source_type, ref_case_id, ref_version_id, stage) "
@@ -109,6 +111,41 @@ public class DesignProjectService {
                     projectId, userId, sourceType, refCaseId);
             return projectId;
         });
+    }
+
+    /**
+     * T15：参考案例模式下用户未显式给出的尺寸/层数，用案例版本值兜底——
+     * 保证 runtime 提示词始终携带真实尺度；用户显式输入永远优先于案例默认。
+     */
+    private Map<String, Object> withCaseDefaults(Map<String, Object> inputs, long refVersionId) {
+        var merged = new java.util.LinkedHashMap<String, Object>();
+        if (inputs != null) merged.putAll(inputs);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT floor_count, style_code, face_width, depth FROM design_case_version "
+                        + "WHERE id = ? AND deleted = FALSE", refVersionId);
+        if (rows.isEmpty()) return merged;
+        Map<String, Object> row = rows.get(0);
+        putCaseDefault(merged, "floorCount", row.get("floor_count"));
+        if (row.get("face_width") != null) putCaseDefault(merged, "faceWidthM", String.valueOf(row.get("face_width")));
+        if (row.get("depth") != null) putCaseDefault(merged, "depthM", String.valueOf(row.get("depth")));
+        putCaseDefault(merged, "styleCode", row.get("style_code"));
+        return merged;
+    }
+
+    /**
+     * 案例元数据属管理员数据但历史无范围约束：单键试放，越界值跳过兜底而非让建项目整体失败。
+     */
+    private void putCaseDefault(Map<String, Object> merged, String key, Object value) {
+        if (value == null || merged.containsKey(key)) return;
+        var probe = new java.util.LinkedHashMap<String, Object>();
+        probe.put(key, value);
+        try {
+            BudgetInputs.validateRequirementInputs(probe);
+        } catch (ServiceException ex) {
+            log.warn("[withCaseDefaults][忽略越界案例默认值 key={} value={}]", key, value);
+            return;
+        }
+        merged.put(key, value);
     }
 
     public Optional<ProjectSnapshot> getProject(long projectId, long userId) {

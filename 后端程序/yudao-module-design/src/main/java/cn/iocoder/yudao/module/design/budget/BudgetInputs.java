@@ -7,9 +7,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.BUDGET_INPUT_INVALID;
+import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.DESIGN_REQUIREMENT_INPUT_INVALID;
 
 /** T10-03: only input normalization/derivation; not a pricing engine or another persistence service. */
 public final class BudgetInputs {
@@ -30,6 +32,20 @@ public final class BudgetInputs {
     private static final Set<String> COUNTS = Set.of("DOOR_HOUSEHOLDS", "LIGHTING_WALL_LAMP_COUNT");
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
 
+    // T15 设计生成输入：白名单收敛 runtime 提示词面；取值上限与小程序控件一致。
+    // roofType/material/color/count 为立面任务配置键（elevationConfig 同经本白名单）。
+    private static final Set<String> DESIGN_LENGTHS = Set.of("faceWidthM", "depthM");
+    private static final Set<String> DESIGN_TEXTS = Set.of("floor", "family", "prompt", "note");
+    private static final Set<String> DESIGN_ROOMS = Set.of("bedroom", "living", "bath", "kitchen");
+    private static final Set<String> DESIGN_CODES = Set.of("styleCode", "roofType", "material", "color");
+    private static final Set<String> DESIGN_KEYS = Set.of("faceWidthM", "depthM", "floor", "floorCount",
+            "family", "rooms", "prompt", "note", "styleCode", "roofType", "material", "color", "count");
+    private static final int DESIGN_TEXT_MAX = 200;
+    private static final int DESIGN_FLOOR_MAX = 4;
+    private static final BigDecimal MIN_DESIGN_LENGTH = new BigDecimal("3");
+    private static final BigDecimal MAX_DESIGN_LENGTH = new BigDecimal("40");
+    private static final Pattern CONTROL_CHARS = Pattern.compile("\\p{Cntrl}");
+
     private BudgetInputs() { }
 
     public record Resolved(Map<String, Object> values, Map<String, String> sources,
@@ -38,12 +54,81 @@ public final class BudgetInputs {
         public Map<String, String> publicSources() { return publicFields(sources); }
     }
 
-    /** Validate the new nested contract without changing or reinterpreting unrelated legacy design inputs. */
+    /**
+     * T15: 设计生成输入在 budgetInputs 之外新增受控键——未知键直接拒绝，保持 runtime 提示词面封闭；
+     * budgetInputs 仍按 T10 契约归一化。两个命名空间互不透传。
+     */
     public static Map<String, Object> validateRequirementInputs(Map<String, Object> inputs) {
-        if (inputs == null || !inputs.containsKey("budgetInputs")) return inputs;
-        var copy = new LinkedHashMap<>(inputs);
-        copy.put("budgetInputs", normalize(asMap(inputs.get("budgetInputs")), true));
+        if (inputs == null) return null;
+        var copy = new LinkedHashMap<String, Object>();
+        for (var entry : asMap(inputs).entrySet()) {
+            if (!"budgetInputs".equals(entry.getKey()) && !DESIGN_KEYS.contains(entry.getKey())) {
+                throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+            }
+            copy.put(entry.getKey(), entry.getValue());
+        }
+        if (copy.containsKey("budgetInputs")) {
+            copy.put("budgetInputs", normalize(asMap(copy.get("budgetInputs")), true));
+        }
+        normalizeDesignInputs(copy);
+        if (JsonUtils.toJsonString(copy).getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 4096) {
+            throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+        }
         return copy;
+    }
+
+    private static void normalizeDesignInputs(LinkedHashMap<String, Object> inputs) {
+        for (var entry : inputs.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value == null) continue;
+            try {
+                if (DESIGN_LENGTHS.contains(key)) {
+                    BigDecimal length = decimal(value, MAX_DESIGN_LENGTH, false);
+                    if (length.compareTo(MIN_DESIGN_LENGTH) < 0) throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+                    entry.setValue(plain(length));
+                } else if ("floorCount".equals(key) || "count".equals(key)) {
+                    entry.setValue(decimal(value, BigDecimal.valueOf(DESIGN_FLOOR_MAX), true).intValueExact());
+                } else if (DESIGN_TEXTS.contains(key)) {
+                    entry.setValue(designText(value));
+                } else if (DESIGN_CODES.contains(key)) {
+                    entry.setValue(designCode(value));
+                } else if ("rooms".equals(key)) {
+                    entry.setValue(normalizeRooms(value));
+                }
+            } catch (ServiceException ex) {
+                throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+            }
+        }
+    }
+
+    private static String designText(Object input) {
+        if (!(input instanceof String text)) throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+        // wxml textarea 允许换行等控制字符：按方案"剔除"而非整单拒绝，剔除后再校验长度
+        String cleaned = text.trim();
+        if (!cleaned.isEmpty()) {
+            cleaned = CONTROL_CHARS.matcher(cleaned).replaceAll("").trim();
+            if (cleaned.length() > DESIGN_TEXT_MAX) throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+        }
+        return cleaned;
+    }
+
+    private static String designCode(Object input) {
+        if (!(input instanceof String text) || !text.matches("[A-Za-z0-9_]{1,32}")) {
+            throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+        }
+        return text;
+    }
+
+    private static Map<String, Integer> normalizeRooms(Object input) {
+        Map<String, Object> rooms = asMap(input);
+        if (!DESIGN_ROOMS.containsAll(rooms.keySet())) throw exception(DESIGN_REQUIREMENT_INPUT_INVALID);
+        var result = new LinkedHashMap<String, Integer>();
+        for (var entry : rooms.entrySet()) {
+            if (entry.getValue() == null) continue;
+            result.put(entry.getKey(), decimal(entry.getValue(), new BigDecimal(20), true).intValueExact());
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     public static Map<String, Object> readJson(String json) {
