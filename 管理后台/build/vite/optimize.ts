@@ -103,7 +103,17 @@ const include = [
   'element-plus/es/components/footer/style/css',
   'element-plus/es/components/empty/style/css',
   'element-plus/es/components/mention/style/css',
-  'element-plus/es/components/progress/style/css'
+  'element-plus/es/components/progress/style/css',
+  // @form-create/designer 以源码形态被 dev 直接请求，其对 codemirror（误发布的
+  // 6.65.7 实为 CM5.65.7，纯 CJS）的深路径引用无法被依赖扫描器发现，必须显式
+  // 预打包才能在 dev 下获得 default 导出互操作。
+  'codemirror/lib/codemirror',
+  'codemirror/mode/javascript/javascript',
+  'codemirror/addon/hint/show-hint',
+  'codemirror/addon/hint/javascript-hint',
+  'codemirror/addon/hint/anyword-hint',
+  'codemirror/addon/display/placeholder',
+  'js-beautify'
 ]
 
 const exclude: string[] = []

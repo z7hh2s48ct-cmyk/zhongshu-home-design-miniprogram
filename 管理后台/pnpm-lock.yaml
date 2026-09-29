@@ -243,6 +243,9 @@ importers:
       bpmn-js-properties-panel:
         specifier: 5.54.0
         version: 5.54.0(@bpmn-io/properties-panel@3.54.0)(bpmn-js@18.28.0)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.28.0)(camunda-bpmn-moddle@7.0.2)(zeebe-bpmn-moddle@2.0.0(moddle@8.2.1)))(diagram-js@15.26.0)
+      codemirror:
+        specifier: 6.65.7
+        version: 6.65.7
       consola:
         specifier: ^3.4.2
         version: 3.4.2
@@ -252,6 +255,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^10.9.1
         version: 10.11.0(@typescript-eslint/parser@8.69.0(eslint@10.10.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.10.0(jiti@2.7.0)(supports-color@10.2.2))(vue-eslint-parser@10.4.1(eslint@10.10.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))
+      js-beautify:
+        specifier: 1.15.4
+        version: 1.15.4
       jsdom:
         specifier: 30.0.1
         version: 30.0.1
