@@ -5,8 +5,7 @@
     <text class="muted">请从已有设计项目进入预算，无需重新生成AI方案。</text>
     <button class="text-action" bindtap="selectProject">前往设计项目</button>
   </view>
-  <view wx:elif="{{loading}}" class="budget-card state-card"><text>正在导入项目参数…</text></view>
-  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="load">重新加载</button></view>
+  <view wx:elif="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在导入项目参数…' : error}}" action-text="{{loading ? '' : '重新加载'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{draft}}">
     <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>已从设计项目带入已保存参数</text><text class="source-tag">{{draft.resultVersionId ? '方案参数' : '项目参数'}}</text></view>
     <view class="budget-card summary-card">

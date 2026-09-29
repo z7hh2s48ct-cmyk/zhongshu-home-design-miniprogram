@@ -1,7 +1,6 @@
 <view class="v12-page budget-page parameters-page" wx:if="{{accessReady}}">
   <v12-navbar title="基础参数" show-back show-brand="{{false}}" />
-  <view wx:if="{{loading}}" class="budget-card state-card">正在导入基础参数…</view>
-  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="load">重试</button></view>
+  <view wx:if="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在导入基础参数…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{draft}}">
     <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>基础参数已从{{draft.resultVersionId ? '方案' : '项目'}}带入</text><button class="text-action source-tag" bindtap="restore">恢复导入值</button></view>
     <view class="budget-card parameters-card">

@@ -1,7 +1,6 @@
 <view class="v12-page budget-page budget-read-page" wx:if="{{accessReady}}">
   <v12-navbar title="参考预算" show-back show-brand="{{false}}" />
-  <view class="budget-card state-card" wx:if="{{loading}}"><text>正在读取预算…</text></view>
-  <view class="budget-card state-card" wx:elif="{{error}}"><text>{{error}}</text><button class="text-action" bindtap="load">重试</button></view>
+  <view class="budget-card state-card" wx:if="{{loading || error}}"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在读取预算…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{estimate}}">
     <view class="result-hero">
       <image class="budget-sketch" src="/assets/v12/budget-sketch.png" mode="aspectFit" />
