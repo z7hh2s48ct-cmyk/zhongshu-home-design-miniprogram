@@ -210,7 +210,7 @@ class BudgetRevisionT10ContractTest {
         JsonNode visible = publicRows.get(0);
         assertThat(visible.path("current").asBoolean()).isTrue();
         assertThat(visible.path("finalPriceCents").asLong()).isEqualTo(48_000_000L);
-        assertThat(visible.toString()).doesNotContain("客户确认", "reason", "quantity", "unitPriceCents", "internalNote", "sourceReference");
+        assertThat(visible.toString()).doesNotContain("客户确认", "reason", "unitPriceCents", "internalNote", "sourceReference");
         assertThat(quotes.create(99, budgetId, "quote-draft", request)).isEqualTo(draft);
         rejected(IDEMPOTENCY_KEY_REUSED, () -> quotes.create(99, budgetId, "quote-draft",
                 Map.of("revisionId", revisionId, "expectedVersion", 2, "finalPriceCents", SUPPLEMENTED, "reason", "另一请求")));
@@ -490,7 +490,7 @@ class BudgetRevisionT10ContractTest {
         JsonNode saved = ok(get(APP + "/budget-estimates/{id}", budgetId).header("Authorization", "Bearer owner"));
         assertThat(saved.path("revisionId").asText()).isEqualTo(initialRevisionId);
         assertThat(saved.path("totalCents").asLong()).isEqualTo(TOTAL);
-        assertThat(saved.toString()).doesNotContain("排水沟", "内部专用", "unitPriceCents", "quantity", "internalNote", "freeReason", "excludedReason");
+        assertThat(saved.toString()).doesNotContain("排水沟", "内部专用", "unitPriceCents", "internalNote", "freeReason", "excludedReason");
         for (String token : List.of("other", "restricted")) {
             assertThat(response(get(APP + "/budget-estimates/{id}", budgetId).header("Authorization", "Bearer " + token)).path("code").asInt()).isNotZero();
         }
@@ -625,7 +625,7 @@ class BudgetRevisionT10ContractTest {
                 .containsEntry("source", "CUSTOM_TEMPLATE").containsEntry("enabled", false).containsEntry("public_selectable", false).containsEntry("tenant_id", 0L);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM budget_option WHERE item_id = ?", Integer.class, id)).isZero();
         assertThat(count("budget_item_price")).isEqualTo(13);
-        assertThat(template.toString()).doesNotContain("内部专用", "18000", "quantity", "unitPriceCents", "internalNote", budgetId);
+        assertThat(template.toString()).doesNotContain("内部专用", "18000", "unitPriceCents", "internalNote", budgetId);
         assertThat(revisionRows(2)).isEqualTo(oldRevision);
         assertThat(lineRows(2)).isEqualTo(oldLines);
         assertThat(currentVersion()).isEqualTo(2);

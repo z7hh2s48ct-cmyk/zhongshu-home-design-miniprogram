@@ -159,6 +159,8 @@ function categoryPage(category) {
         if (!result || !this.acceptResponse(scope, requestId)) return;
         this._catalog = result.items;
         const draft = result.regionMissing ? result.draft : reconcile(result.draft, result.items);
+        // 页面级撤销快照：进入本页（或会话重建）时的草稿状态，撤销=整体写回
+        this._snapshot = JSON.parse(JSON.stringify(draft));
         this.setData({ loading: false, regionMissing: result.regionMissing });
         this.persist(draft);
       }).catch(error => {
@@ -192,6 +194,12 @@ function categoryPage(category) {
     keepSheet() {},
     parameters() {
       if (this.currentSession() && this.data.draft) wx.navigateTo({ url: '/pages/budget/parameters' + draftStore.query(this.data.draft) });
+    },
+    // 撤销本次修改：写回进入本页时的快照（选择即时落草稿，这是唯一的整页回滚手段）
+    revert() {
+      if (!this.currentSession() || !this._snapshot) return;
+      this.persist(JSON.parse(JSON.stringify(this._snapshot)));
+      wx.showToast({ title: '已恢复进入本页时的选择', icon: 'none' });
     },
     save() {
       if (!this.currentSession() || !this.data.draft || this.data.loading) return;

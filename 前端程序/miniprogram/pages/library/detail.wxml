@@ -17,8 +17,8 @@
   </view>
   <view wx:if="{{!caseDetail.canDesign}}" class="design-unavailable">{{caseDetail.designUnavailableReason}}</view>
   <view class="detail-action">
-    <view class="favorite" bindtap="toggleFavorite" role="button"><t-icon name="{{favorite ? 'star-filled' : 'star'}}" size="23px" color="#7b5532" /><text>{{favoriteSaving ? '保存中…' : favoriteLoading ? '确认中…' : favoriteError ? '重试收藏' : favorite ? '已收藏' : '收藏'}}</text></view>
-    <button class="v12-primary-button" disabled="{{!caseDetail.canDesign}}" bindtap="useHouse">{{caseDetail.canDesign ? '用此户型设计' : '暂不可用于设计'}}</button>
+    <view class="favorite" bindtap="toggleFavorite" role="button"><t-icon name="{{favorite ? 'star-filled' : 'star'}}" size="24px" color="#7b5532" /><text>{{favoriteSaving ? '保存中…' : favoriteLoading ? '确认中…' : favoriteError ? '重试收藏' : favorite ? '已收藏' : '收藏'}}</text></view>
+    <button class="v12-primary-button v12-primary-button--md" disabled="{{!caseDetail.canDesign}}" bindtap="useHouse">{{caseDetail.canDesign ? '用此户型设计' : '暂不可用于设计'}}</button>
   </view>
   </block>
   <view wx:else class="image-state">案例加载中…</view>

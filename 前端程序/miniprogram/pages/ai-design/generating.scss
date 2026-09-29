@@ -1,62 +1,63 @@
 @import '../../styles/v12-theme.scss';
 
-.generating-page { padding: 30rpx 30rpx 42rpx; }
+.generating-page { padding: 30rpx 32rpx 42rpx; }
 .generating-page > v12-navbar { margin: -30rpx -30rpx 0; }
 
 /* Hero：脉冲圆环 + 阶段标题 + 平滑进度 */
 .hero-card { padding: 46rpx 32rpx 38rpx; display: flex; flex-direction: column; align-items: center; }
 .orb { position: relative; width: 148rpx; height: 148rpx; display: flex; align-items: center; justify-content: center; }
-.orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 4rpx solid #d9b98f; animation: orb-pulse 1.8s ease-out infinite; }
-.orb-ring::after { content: ''; position: absolute; inset: -10rpx; border-radius: 50%; border: 2rpx solid #ecd9bf; animation: orb-pulse 1.8s ease-out .6s infinite; }
-.orb-core { width: 104rpx; height: 104rpx; border-radius: 50%; background: linear-gradient(135deg, #8b4818, #a86a35); color: #fff; font-size: 30rpx; font-weight: 600; letter-spacing: 2rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(139, 72, 24, .28); }
+.orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 4rpx solid $v12-gold; animation: orb-pulse 1.8s ease-out infinite; }
+.orb-ring::after { content: ''; position: absolute; inset: -10rpx; border-radius: 50%; border: 2rpx solid $v12-gold-bg; animation: orb-pulse 1.8s ease-out .6s infinite; }
+.orb-core { width: 104rpx; height: 104rpx; border-radius: 50%; background: linear-gradient(135deg, $v12-primary-deep, $v12-gold-deep); color: $v12-white; font-size: $v12-font-lg; font-weight: 600; letter-spacing: 2rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 8rpx 24rpx rgba(139, 72, 24, .28); }
 @keyframes orb-pulse { 0% { transform: scale(.82); opacity: 1; } 100% { transform: scale(1.12); opacity: 0; } }
-.hero-title { margin-top: 26rpx; font-size: 34rpx; font-weight: 600; color: #3c2f22; }
-.hero-sub { margin-top: 12rpx; color: $v12-secondary-text; font-size: 24rpx; }
-.progress { width: 100%; height: 14rpx; margin-top: 34rpx; border-radius: 10rpx; background: #eee9e2; overflow: hidden; }
-.progress i { display: block; height: 100%; border-radius: 10rpx; background: linear-gradient(90deg, #8b4818, #a86a35); transition: width .5s ease; }
+.hero-title { margin-top: 26rpx; font-size: $v12-font-title; font-weight: 600; color: $v12-text-1; }
+.hero-sub { margin-top: 12rpx; color: $v12-secondary-text; font-size: $v12-font-body; }
+.progress { width: 100%; height: 14rpx; margin-top: 34rpx; border-radius: $v12-radius-sm; background: $v12-surface-alt; overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: $v12-radius-sm; background: linear-gradient(90deg, $v12-primary-deep, $v12-gold-deep); transition: width .5s ease; }
 .progress i.shine { position: relative; overflow: hidden; }
 .progress i.shine::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, .5) 50%, transparent 80%); animation: shine 1.6s linear infinite; }
 @keyframes shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 .meter { width: 100%; margin-top: 16rpx; display: flex; align-items: baseline; justify-content: space-between; }
-.percent { color: #8a4a1a; font-size: 34rpx; font-weight: 600; }
-.elapsed { color: #9a938c; font-size: 22rpx; }
+.percent { color: $v12-primary-deep; font-size: $v12-font-title; font-weight: 600; }
+.elapsed { color: $v12-text-3; font-size: $v12-font-sm; }
 
 /* 四步流程条 */
 .step-card { margin-top: 24rpx; padding: 30rpx 24rpx 24rpx; }
 .flow { display: flex; align-items: flex-start; }
 .fstep { width: 110rpx; display: flex; flex-direction: column; align-items: center; gap: 10rpx; }
-.fstep i { width: 46rpx; height: 46rpx; border-radius: 50%; border: 2rpx solid #d5cec5; color: #a09a92; background: #fff; font-style: normal; font-size: 23rpx; display: flex; align-items: center; justify-content: center; transition: all .3s; }
-.fstep text { font-size: 22rpx; color: #a09a92; }
-.fstep.on i { border-color: #8b4818; background: #8b4818; color: #fff; }
-.fstep.on text { color: #7b3f17; font-weight: 500; }
-.fstep.done i { background: #f3e7d7; border-color: #d9b98f; color: #8a4a1a; }
-.line { flex: 1; margin-top: 22rpx; border-top: 2rpx dashed #ddd6cc; }
-.line.on { border-color: #c89a63; }
-.accepted { display: block; margin-top: 24rpx; text-align: center; color: #7b3f17; font-size: 24rpx; }
-.accepted.warn { color: #b0621c; }
+.fstep i { width: 46rpx; height: 46rpx; border-radius: 50%; border: 2rpx solid $v12-disabled; color: $v12-text-3; background: $v12-white; font-style: normal; font-size: $v12-font-body; display: flex; align-items: center; justify-content: center; transition: all .3s; }
+.fstep text { font-size: $v12-font-sm; color: $v12-text-3; }
+.fstep.on i { border-color: $v12-primary-deep; background: $v12-primary-deep; color: $v12-white; }
+.fstep.on text { color: $v12-primary-deep; font-weight: 500; }
+.fstep.done i { background: $v12-gold-bg; border-color: $v12-gold; color: $v12-primary-deep; }
+.line { flex: 1; margin-top: 22rpx; border-top: 2rpx dashed $v12-divider; }
+.line.on { border-color: $v12-gold; }
+.accepted { display: block; margin-top: 24rpx; text-align: center; color: $v12-primary-deep; font-size: $v12-font-body; }
+.accepted.warn { color: $v12-gold-deep; }
 
 /* 提示与动作 */
-.stage-tip { margin-top: 24rpx; padding: 20rpx 24rpx; border: 1rpx solid #ecd1ac; border-radius: 16rpx; background: #fff8ef; display: flex; align-items: center; gap: 14rpx; }
-.stage-tip text { color: #8a6a45; font-size: 22rpx; }
+.stage-tip { margin-top: 24rpx; padding: 20rpx 24rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-md; background: $v12-surface-alt; display: flex; align-items: center; gap: 14rpx; }
+.stage-tip text { color: $v12-gold; font-size: $v12-font-sm; }
 .generate-actions { margin-top: 28rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 26rpx; }
-.preview-link { margin-top: 20rpx; text-align: center; color: $v12-secondary-text; font-size: 21rpx; }
+.preview-link { margin-top: 20rpx; text-align: center; color: $v12-secondary-text; font-size: $v12-font-sm; }
 /* 候选内联呈现与页内选择（UX 整改） */
-.sec-title { font-size: 30rpx; font-weight: 600; color: #3c2f22; }
-.sec-sub { display: block; margin-top: 12rpx; font-size: 24rpx; color: #a09384; line-height: 1.6; }
+.sec-title { font-size: $v12-font-lg; font-weight: 600; color: $v12-text-1; }
+.sec-sub { display: block; margin-top: 12rpx; font-size: $v12-font-body; color: $v12-text-3; line-height: 1.6; }
 .cand-card { margin-top: 28rpx; }
 .cand-grid { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 24rpx; }
-.cand { position: relative; border-radius: 24rpx; overflow: hidden; border: 3rpx solid #eee5d8; background: #f3eee7; animation: cand-rise .5s ease both; }
+.cand { position: relative; border-radius: $v12-radius-lg; overflow: hidden; border: 3rpx solid $v12-gold-bg; background: $v12-surface-alt; animation: cand-rise .5s ease both; }
 @keyframes cand-rise { 0% { opacity: 0; transform: translateY(28rpx); } 100% { opacity: 1; transform: none; } }
 .cand-img { width: 100%; height: 300rpx; object-fit: cover; object-position: top; display: block; }
-.cand-loading { display: flex; align-items: center; justify-content: center; text-align: center; color: #9a8f80; font-size: 24rpx; line-height: 1.7; background: #f0ebe3; }
-.slot { position: absolute; top: 16rpx; left: 16rpx; z-index: 2; background: rgba(60, 47, 34, .72); color: #fff; font-size: 22rpx; padding: 4rpx 16rpx; border-radius: 20rpx; }
-.cand .pick { display: block; margin: 16rpx 20rpx 20rpx; text-align: center; padding: 14rpx 0; border-radius: 18rpx; border: 2rpx solid #c9a36b; color: #8a4a1a; font-size: 26rpx; background: #fff; }
-.cand .pick.passed { color: #6f8f5c; border-color: #cfe0c4; background: #f6faf3; }
-.cand .pick.picked { background: linear-gradient(100deg, #8b4818, #a86a35); color: #fff; border: 0; font-weight: 600; }
+.cand-loading { display: flex; align-items: center; justify-content: center; text-align: center; color: $v12-text-3; font-size: $v12-font-body; line-height: 1.7; background: $v12-surface-alt; }
+.slot { position: absolute; top: 16rpx; left: 16rpx; z-index: 2; background: rgba(60, 47, 34, .72); color: $v12-white; font-size: $v12-font-sm; padding: 4rpx 16rpx; border-radius: $v12-radius-lg; }
+.cand .pick { display: block; margin: 16rpx 20rpx 20rpx; text-align: center; padding: 14rpx 0; border-radius: $v12-radius-md; border: 2rpx solid $v12-gold; color: $v12-primary-deep; font-size: $v12-font-md; background: $v12-white; }
+.cand .pick.passed { color: $v12-success; border-color: $v12-success-bg; background: $v12-success-bg; }
+.cand .pick.picked { background: linear-gradient(100deg, $v12-primary-deep, $v12-gold-deep); color: $v12-white; border: 0; font-weight: 600; }
 .cand .pick.busy { opacity: .6; }
-.cand.selected { border-color: #8b4818; box-shadow: 0 0 0 5rpx rgba(139, 72, 24, .15); }
+.cand.selected { border-color: $v12-primary-deep; box-shadow: 0 0 0 5rpx rgba(139, 72, 24, .15); }
 .cand.pending .cand-loading { height: 392rpx; }
-.btn-next { min-height: 96rpx; margin-top: 32rpx; border-radius: 14rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 600; color: #fff; background: linear-gradient(100deg, #8b4818, #a86a35); box-shadow: 0 6px 18px rgba(139, 72, 24, .25); }
-.poll-error { margin-top: 28rpx; text-align: center; color: #b0621c; font-size: 22rpx; }
+.btn-next { min-height: $v12-control-lg; margin-top: 32rpx; border-radius: $v12-radius-md; display: flex; align-items: center; justify-content: center; font-size: $v12-font-xl; font-weight: 500; color: $v12-white; background: linear-gradient(100deg, $v12-primary-deep, $v12-primary); box-shadow: $v12-shadow-primary; }
+.poll-error { margin-top: 28rpx; text-align: center; color: $v12-gold-deep; font-size: $v12-font-sm; }
 .empty-actions { margin-top: 24rpx; display: flex; gap: 24rpx; }
 .empty-actions .v12-primary-button, .empty-actions .v12-secondary-button { flex: 1; }
+.regen-row { margin-top: 24rpx; min-height: 84rpx; padding: 0 24rpx; border-radius: $v12-radius-md; background: $v12-surface-alt; display: flex; align-items: center; justify-content: center; gap: 12rpx; color: $v12-primary-deep; font-size: $v12-font-md; }

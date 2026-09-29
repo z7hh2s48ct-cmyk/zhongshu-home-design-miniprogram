@@ -3,7 +3,7 @@
     <view class="navbar-main" style="height: {{menuHeight}}px;">
       <view class="navbar-left">
         <view wx:if="{{showBack}}" class="back-button" bindtap="goBack" aria-label="返回">
-          <t-icon name="chevron-left" size="25px" color="#161616" />
+          <t-icon name="chevron-left" size="24px" color="#2f2925" />
         </view>
         <image wx:elif="{{showBrand}}" class="brand-logo" src="/assets/v12/brand-logo.png" mode="widthFix" />
       </view>

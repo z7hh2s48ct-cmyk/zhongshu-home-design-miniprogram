@@ -3,6 +3,8 @@ const api = require('./api');
 const draftStore = require('./budget-draft');
 const format = require('./format');
 const CATEGORY_NAMES = { BODY: '主体类', EXTERIOR: '外装类' };
+// 行级数量对用户公开（源自用户自己的参数，2026-09-29 决策 B）；单位口径与「我的当地单价」页一致
+const UNIT_LABELS = { SQM: 'm²', METER: '米', PIECE: '个', SET: '套', HOUSEHOLD: '户', ITEM: '项' };
 const ICONS = { FOUNDATION: 'view-module', STRUCTURE: 'home', ROOF: 'home', DECORATION: 'component-layout', DOORS_WINDOWS: 'archway', WALL_PAINT: 'brush', CULTURE_STONE: 'view-module', LIGHTING: 'lightbulb', WATERPROOF_LIGHTNING: 'secured', INSURANCE: 'secured' };
 const STATUS = { PRICED: '已计价', MISSING_PRICE: '待补价', MISSING_QUANTITY: '待补量', MISSING_BOTH: '待补配置/量价', EXCLUDED: '本次未包含' };
 const EXPLANATIONS = { FOUNDATION: '包含所选基础施工及材料', STRUCTURE: '包含所选主体结构施工', ROOF: '包含所选屋面做法' };
@@ -42,7 +44,10 @@ function publicBudget(value) {
       completeness: item.completeness, pricedSubtotalCents: item.pricedSubtotalCents, amountCents: item.amountCents,
       lines: item.lines.map(line => {
         if (!Object.prototype.hasOwnProperty.call(STATUS, line.status) || (line.amountCents !== null && !cents(line.amountCents))) throw Error('预算子项数据不完整');
-        return { lineId: text(line.lineId), optionLabel: text(line.optionLabel), status: line.status, amountCents: line.amountCents };
+        if (line.quantity != null && typeof line.quantity !== 'string') throw Error('预算子项数量不正确');
+        if (line.unit != null && typeof line.unit !== 'string') throw Error('预算子项单位不正确');
+        return { lineId: text(line.lineId), optionLabel: text(line.optionLabel), status: line.status, amountCents: line.amountCents,
+          quantity: text(line.quantity), unit: text(line.unit) };
       }) };
   });
   return { budgetId: value.budgetId, revisionId: value.revisionId, model: value.model, projectId: value.projectId, projectName: text(value.projectName),
@@ -87,13 +92,15 @@ function viewModel(estimate, category, exact) {
     exactText: yuan(estimate.totalMinCents) + '–' + yuan(estimate.totalMaxCents) + '元', groups: [], categoryRows: [],
     basis: [{ label: '建筑面积', value: estimate.inputSummary.buildingArea ? estimate.inputSummary.buildingArea + ' m²' : '未记录' },
       { label: '结构形式', value: format.structureLabel(estimate.inputSummary.structureType) || '未记录' }, { label: '材料等级', value: estimate.inputSummary.materialGrade || '未记录' }],
-    warningText: '旧版区间预算仅供历史查询，不回填分项或推算中值。' };
+    warningText: '区间测算记录仅供历史查询，不回填分项或推算中值。' };
   const groups = estimate.items.filter(item => !category || item.category === category).map(item => ({
     ...item, icon: ICONS[item.itemCode] || 'file', custom: item.source !== 'STANDARD',
     amountText: item.amountCents == null ? (item.completeness === 'INCOMPLETE' ? '待补齐' : '未计入') : amount(item.amountCents, exact),
     description: item.lines.map(line => line.optionLabel || STATUS[line.status]).join(' + '),
     explanation: EXPLANATIONS[item.itemCode] || '按本次所选配置计入，具体范围以正式报价为准', subtotalText: amount(item.pricedSubtotalCents, true),
-    lines: item.lines.map(line => ({ ...line, statusLabel: STATUS[line.status], amountText: line.amountCents == null ? STATUS[line.status] : amount(line.amountCents, true) }))
+    lines: item.lines.map(line => ({ ...line, statusLabel: STATUS[line.status],
+      amountText: line.amountCents == null ? STATUS[line.status] : amount(line.amountCents, true),
+      quantityText: line.quantity ? line.quantity + (UNIT_LABELS[line.unit] || line.unit || '') : '' }))
   }));
   const complete = estimate.completeness === 'COMPLETE';
   const shownAmount = category ? estimate.categoryTotals[category] : complete ? estimate.totalCents : estimate.pricedSubtotalCents;

@@ -4,7 +4,7 @@
     <view wx:if="{{loading}}" class="record-empty"><v12-state status="loading" text="正在读取…" card="{{false}}" /></view>
     <view wx:elif="{{error}}" class="v12-card record-empty"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="load" card="{{false}}" /></view>
     <block wx:elif="{{loaded}}">
-      <button wx:if="{{canResume}}" class="record-button next-button" bindtap="resumeDesign">{{nextLabel || '继续设计'}}</button>
+      <view wx:if="{{canResume}}" class="v12-primary-button record-cta" bindtap="resumeDesign" role="button">{{nextLabel || '继续设计'}}</view>
       <view wx:if="{{requirementRows.length}}" class="v12-card record-card">
         <text class="record-title">设计需求</text>
         <view class="record-fields req"><view wx:for="{{requirementRows}}" wx:key="label"><text class="label">{{item.label}}</text><text>{{item.value}}</text></view></view>
@@ -30,7 +30,7 @@
         <text wx:if="{{submitError}}" class="record-hint">{{submitError}}</text>
         <button class="record-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="resubmit">重新提交审核</button>
       </view>
-      <view wx:for="{{versions}}" wx:key="id" class="v12-card record-card" data-id="{{item.id}}" bindtap="openVersion" role="button" aria-label="{{'查看' + item.title}}"><view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="18px" color="#8d8178" /></view><text class="record-hint">{{item.hint}}</text><text class="record-hint">{{item.time}}</text></view>
+      <view wx:for="{{versions}}" wx:key="id" class="v12-card record-card" data-id="{{item.id}}" bindtap="openVersion" role="button" aria-label="{{'查看' + item.title}}"><view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="20px" color="#a89a8c" /></view><text class="record-hint">{{item.hint}}</text><text class="record-hint">{{item.time}}</text></view>
       <view wx:if="{{!versions.length && !versionId}}" class="v12-card record-empty"><v12-state status="empty" text="尚未形成最终方案版本；完成立面选择后可在这里回看。" card="{{false}}" /></view>
       <view class="record-actions"><button wx:if="{{versionId}}" class="record-button" bindtap="openVersion">查看投稿方案</button><button class="record-button" bindtap="budgetHistory">查看已保存预算</button><button class="record-button" bindtap="load">刷新状态</button></view>
     </block>

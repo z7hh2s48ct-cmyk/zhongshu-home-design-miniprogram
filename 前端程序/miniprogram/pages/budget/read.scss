@@ -1,43 +1,44 @@
 @import './shared.scss';
 .budget-read-page { padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); }
-.result-hero { position: relative; margin-top: 20rpx; min-height: 265rpx; padding: 32rpx; overflow: hidden; border-radius: 20rpx; background: #fdf4e8; box-sizing: border-box; }
+.result-hero { position: relative; margin-top: 20rpx; min-height: 265rpx; padding: 32rpx; overflow: hidden; border-radius: $v12-radius-lg; background: $v12-warning-bg; box-sizing: border-box; }
 .budget-sketch { position: absolute; right: 0; bottom: 5rpx; width: 305rpx; height: 225rpx; }
 .amount-label, .scheme-name, .hero-amount { position: relative; z-index: 1; }
-.amount-label { display: block; color: #7c3f16; font-size: 29rpx; }
-.hero-amount { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14rpx; margin: 17rpx 0; color: #603009; }
+.amount-label { display: block; color: $v12-primary-deep; font-size: $v12-font-lg; }
+.hero-amount { display: flex; align-items: baseline; flex-wrap: wrap; gap: 14rpx; margin: 17rpx 0; color: $v12-primary-deep; }
 .amount-number { font-size: 82rpx; line-height: 1.1; font-weight: 600; word-break: break-all; }
 .amount-number.exact-number { font-size: 52rpx; }
-.amount-unit { font-size: 26rpx; }
-.scheme-name { display: block; max-width: 62%; font-size: 25rpx; line-height: 1.4; word-break: break-all; }
-.budget-page .precision-action { display: block; width: 100%; padding: 10rpx 4rpx; font-size: 20rpx; text-align: right; color: #786858; }
+.amount-unit { font-size: $v12-font-md; }
+.scheme-name { display: block; max-width: 62%; font-size: $v12-font-md; line-height: 1.4; word-break: break-all; }
+.budget-page .precision-action { display: block; width: 100%; padding: 10rpx 4rpx; font-size: $v12-font-xs; text-align: right; color: $v12-text-2; }
 .result-section { margin-top: 20rpx; padding: 30rpx; }
-.summary-row, .detail-group-row { display: flex; align-items: center; gap: 22rpx; min-height: 130rpx; border-bottom: 1rpx solid #e6e7e9; }
+.summary-row, .detail-group-row { display: flex; align-items: center; gap: 22rpx; min-height: 130rpx; border-bottom: 1rpx solid $v12-divider; }
 .summary-row:last-child, .detail-group:last-child .detail-group-row { border-bottom: 0; }
-.summary-copy { flex: 1; min-width: 0; font-size: 29rpx; line-height: 1.4; }
+.summary-copy { flex: 1; min-width: 0; font-size: $v12-font-lg; line-height: 1.4; }
 .summary-copy > text { display: block; }
-.row-description { display: block; margin-top: 5rpx; color: #777a82; font-size: 22rpx; line-height: 1.5; word-break: break-all; }
-.row-price { max-width: 220rpx; flex-shrink: 0; text-align: right; font-size: 29rpx; word-break: break-all; }
-.row-price .row-description { font-size: 20rpx; }
+.row-description { display: block; margin-top: 5rpx; color: $v12-text-3; font-size: $v12-font-sm; line-height: 1.5; word-break: break-all; }
+.row-price { max-width: 220rpx; flex-shrink: 0; text-align: right; font-size: $v12-font-lg; word-break: break-all; }
+.row-price .row-description { font-size: $v12-font-xs; }
 .result-grid { display: flex; flex-wrap: wrap; margin-top: 26rpx; }
 .result-cell { width: 50%; min-height: 125rpx; padding: 15rpx 16rpx; box-sizing: border-box; }
-.result-cell:nth-child(odd) { border-right: 1rpx solid #e6e7e9; }
-.result-cell:nth-child(-n+2) { border-bottom: 1rpx solid #e6e7e9; }
-.result-cell > text { display: block; color: #52565f; font-size: 24rpx; }
-.result-cell > text + text { margin-top: 14rpx; font-size: 29rpx; color: #121314; word-break: break-all; }
+.result-cell:nth-child(odd) { border-right: 1rpx solid $v12-divider; }
+.result-cell:nth-child(-n+2) { border-bottom: 1rpx solid $v12-divider; }
+.result-cell > text { display: block; color: $v12-text-2; font-size: $v12-font-body; }
+.result-cell > text + text { margin-top: 14rpx; font-size: $v12-font-lg; color: $v12-text-1; word-break: break-all; }
 .result-note { margin-top: 24rpx; line-height: 1.55; }
 .result-actions { margin: 38rpx 10rpx 0; text-align: center; }
 .result-actions > .text-action { display: block; margin: 22rpx auto 0; }
-.result-actions > .history-link { margin-top: 10rpx; font-size: 22rpx; }
-.save-error { display: block; padding-bottom: 16rpx; font-size: 23rpx; color: #a33b21; }
+.result-actions > .history-link { margin-top: 10rpx; font-size: $v12-font-sm; }
+.save-error { display: block; padding-bottom: 16rpx; font-size: $v12-font-body; color: $v12-error; }
 .missing-name { display: block; margin-top: 8rpx; }
-.custom-tag { display: inline-block; margin-left: 10rpx; border: 1rpx solid #dcc8b3; border-radius: 5rpx; padding: 0 7rpx; font-size: 18rpx; color: #884312; vertical-align: middle; }
-.line-details { padding: 14rpx 0 20rpx 96rpx; border-bottom: 1rpx solid #e6e7e9; }
-.line-detail { display: flex; justify-content: space-between; gap: 18rpx; padding: 8rpx 0; font-size: 22rpx; color: #52565f; }
+.custom-tag { display: inline-block; margin-left: 10rpx; border: 1rpx solid $v12-gold; border-radius: $v12-radius-xs; padding: 0 7rpx; font-size: $v12-font-xs; color: $v12-primary-deep; vertical-align: middle; }
+.line-details { padding: 14rpx 0 20rpx 96rpx; border-bottom: 1rpx solid $v12-divider; }
+.line-detail { display: flex; justify-content: space-between; gap: 18rpx; padding: 8rpx 0; font-size: $v12-font-sm; color: $v12-text-2; }
+.line-quantity { color: $v12-text-3; font-size: $v12-font-xs; }
 .line-detail > text:first-child { flex: 1; min-width: 0; word-break: break-all; }
 .line-detail > text:last-child { text-align: right; flex-shrink: 0; }
 .exterior-read .detail-group-row { min-height: 112rpx; }
-.explanation-row { display: flex; justify-content: space-between; gap: 20rpx; padding: 24rpx 0; border-bottom: 1rpx solid #e6e7e9; font-size: 24rpx; line-height: 1.5; color: #52565f; }
+.explanation-row { display: flex; justify-content: space-between; gap: 20rpx; padding: 24rpx 0; border-bottom: 1rpx solid $v12-divider; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-2; }
 .explanation-row:last-child { border-bottom: 0; }
 .explanation-row > text:first-child { flex-shrink: 0; }
 .explanation-row > text:last-child { text-align: right; }
-@media (max-width: 350px) { .summary-row, .detail-group-row { gap: 12rpx; } .summary-copy { font-size: 27rpx; } .row-price { font-size: 25rpx; max-width: 180rpx; } .amount-number { font-size: 70rpx; } }
+@media (max-width: 350px) { .summary-row, .detail-group-row { gap: 12rpx; } .summary-copy { font-size: $v12-font-lg; } .row-price { font-size: $v12-font-md; max-width: 180rpx; } .amount-number { font-size: 70rpx; } }

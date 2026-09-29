@@ -17,24 +17,24 @@
           <view><text>进深</text><input type="digit" value="{{depth}}" bindinput="onDepthInput" placeholder="如 13.8" /><text>m</text></view>
         </view>
         <picker mode="selector" range="{{floorLabels}}" value="{{floorIndex}}" bindchange="onFloorChange">
-          <view class="form-row"><text>层数</text><view>{{floorLabels[floorIndex]}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
+          <view class="form-row"><text>层数</text><view>{{floorLabels[floorIndex]}} <t-icon name="chevron-right" size="16px" color="#2f2925" /></view></view>
         </picker>
         <picker mode="selector" range="{{familyLabels}}" value="{{familyIndex}}" bindchange="onFamilyChange">
-          <view class="form-row"><text>家庭需求</text><view>{{familyLabels[familyIndex]}} <t-icon name="chevron-right" size="15px" color="#2f2925" /></view></view>
+          <view class="form-row"><text>家庭需求</text><view>{{familyLabels[familyIndex]}} <t-icon name="chevron-right" size="16px" color="#2f2925" /></view></view>
         </picker>
         <view class="textarea-row"><text>补充需求</text><textarea maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" /><span>{{note.length}}/200</span></view>
       </block>
       <block wx:else>
         <text class="form-title">提示词</text>
         <view class="prompt-box"><textarea maxlength="200" value="{{prompt}}" bindinput="onPromptInput" placeholder="宅基地面宽12米、进深14米，二层五居，新中式，一楼老人房和南向客厅" /><span>{{prompt.length}}/200</span></view>
-        <view class="upload-row"><view bindtap="chooseImage" data-kind="sketch"><text>上传手绘草图（选填）</text><t-icon name="image-add" size="46px" color="#aaa19a" /><span>支持JPG/PNG，大小≤10MB</span></view></view>
+        <view class="upload-row"><view bindtap="chooseImage" data-kind="sketch"><text>上传手绘草图（选填）</text><t-icon name="image-add" size="46px" color="#a89a8c" /><span>支持JPG/PNG，大小≤10MB</span></view></view>
         <view wx:if="{{sketchImage}}" class="sketch-preview"><image src="{{sketchImage}}" mode="aspectFit" lazy-load /><text>草图已上传，将随任务提交</text></view>
         <text class="form-title tag-title">需求标签</text>
         <view class="tag-row"><text>二层</text><text>5室</text><text>老人房</text><text>南向客厅</text><text>新中式</text><text>带露台</text></view>
       </block>
       <view class="count-block"><text class="form-title">生成数量</text><view class="count-tabs"><view wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'active' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}}个</view></view></view>
-      <view class="points"><t-icon name="money" size="25px" color="#d39b39" /><text>{{mode === 0 ? '余额' : '当前余额'}} <text class="point-value">{{points}}</text> 设计点</text><i></i><text>{{priceText || "正在获取报价…"}}</text></view>
-      <view class="v12-primary-button" bindtap="generate">生成平面方案</view>
+      <view class="points"><t-icon name="money" size="24px" color="#b9690b" /><text>{{mode === 0 ? '余额' : '当前余额'}} <text class="point-value">{{points}}</text> 设计点</text><i></i><text>{{priceText || "正在获取报价…"}}</text></view>
+      <view class="v12-primary-button v12-primary-button--sm" bindtap="generate">生成平面方案</view>
     </view>
   </view>
 </view>

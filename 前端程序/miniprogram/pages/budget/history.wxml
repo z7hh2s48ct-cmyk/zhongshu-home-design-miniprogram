@@ -2,8 +2,8 @@
   <v12-navbar title="项目预算历史" show-back show-brand="{{false}}" />
   <view class="history-filters"><button class="text-action {{savedOnly ? 'selected' : ''}}" data-saved="true" bindtap="filter">已保存</button><button class="text-action {{!savedOnly ? 'selected' : ''}}" data-saved="false" bindtap="filter">全部记录</button></view>
   <view class="budget-card history-card" wx:for="{{rows}}" wx:key="budgetId" data-id="{{item.budgetId}}" bindtap="open" role="button" aria-label="打开预算记录">
-    <view class="history-top"><text class="section-title">{{item.name}}</text><t-icon name="chevron-right" size="18px" color="#888b91" /></view>
-    <view class="history-amount"><text>{{item.amountText}}</text><text class="row-description">{{item.legacy ? '旧版区间' : item.incomplete ? '已计价小计 · 待补齐' : '参考预算'}}</text></view>
+    <view class="history-top"><text class="section-title">{{item.name}}</text><t-icon name="chevron-right" size="20px" color="#a89a8c" /></view>
+    <view class="history-amount"><text>{{item.amountText}}</text><text class="row-description">{{item.legacy ? '历史区间测算' : item.incomplete ? '已计价小计 · 待补齐' : '参考预算'}}</text></view>
     <view class="history-meta"><text>{{item.time}}</text><text>{{item.legacy ? '历史记录' : item.saved ? '已保存' : '未保存'}}</text></view>
   </view>
   <view class="budget-card state-card" wx:if="{{error}}"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="retry" card="{{false}}" /></view>

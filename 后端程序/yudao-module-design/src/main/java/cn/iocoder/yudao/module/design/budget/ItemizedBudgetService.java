@@ -225,7 +225,8 @@ public class ItemizedBudgetService {
         Map<String, Object> header = projectHeader(projectId, request.resultVersionId());
         List<AppItemizedBudgetRespVO.Item> publicItems = calculated.items().stream().map(item -> new AppItemizedBudgetRespVO.Item(
                 item.itemId(), item.itemCode(), item.category(), item.publicName(), item.source(), item.completeness(), item.pricedSubtotalCents(), item.amountCents(),
-                item.lines().stream().map(line -> new AppItemizedBudgetRespVO.Line(line.input().lineId(), line.input().optionLabel(), line.status(), line.amountCents())).toList())).toList();
+                item.lines().stream().map(line -> new AppItemizedBudgetRespVO.Line(line.input().lineId(), line.input().optionLabel(),
+                        line.status(), line.amountCents(), line.input().quantity(), line.input().unit())).toList())).toList();
         LinkedHashSet<String> missing = new LinkedHashSet<>();
         calculated.items().stream().filter(item -> "INCOMPLETE".equals(item.completeness())).forEach(item -> missing.add(item.publicName()));
         Map<String, String> inputNames = Map.of("regionCode", "所在地区", "footprintArea", "占地面积", "buildingArea", "建筑面积", "floorCount", "建筑层数", "roofArea", "屋顶面积");

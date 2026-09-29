@@ -304,7 +304,7 @@ test('切换会话后的旧响应不写草稿、不覆盖新请求状态，旧�
   assert.equal(env.calls.filter(call => call[0] === 'navigateBack').length, 0);
 });
 
-test('两页不显示内部工程量或默认金额，生成绑定真实动作，旧版保留字符串ID', async () => {
+test('两页不显示内部工程量或默认金额，生成绑定真实动作；界面不再出现旧版测算入口与字样', async () => {
   const input = fs.readFileSync(path.join(root, 'pages/budget/input.wxml'), 'utf8');
   const params = fs.readFileSync(path.join(root, 'pages/budget/parameters.wxml'), 'utf8');
   // T14 豁免：parameters 页的“我的当地单价”入口是用户自己的调价功能导航，不是内部计价数据；
@@ -314,21 +314,9 @@ test('两页不显示内部工程量或默认金额，生成绑定真实动作�
   assert.match(input, /bindtap="generate"[^>]*disabled="{{!canGenerate/);
   assert.match(input, /待补充预算，不视为完整总价/);
   assert.match(params, /本机草稿/);
-  const legacy = fs.readFileSync(path.join(root, 'pages/budget/legacy.js'), 'utf8');
-  assert.doesNotMatch(legacy, /Number\(versionId\)|Math\.round\(area\)/);
-  const requests = [];
-  let resolveEstimate;
-  const env = runtime({ createBudgetEstimate(project, body) {
-    requests.push([project, body]); return new Promise(resolve => { resolveEstimate = resolve; });
-  } });
-  const page = env.page('legacy', { projectId, resultVersionId });
-  await flush();
-  page.generate();
-  page.generate();
-  assert.equal(requests.length, 1);
-  assert.equal(requests[0][0], projectId);
-  assert.equal(requests[0][1].resultVersionId, resultVersionId);
-  resolveEstimate({ model: 'LEGACY_RANGE', projectId, estimateId: '9007199254740999' });
-  await flush();
-  assert.match(env.calls.at(-1)[1].url, /^\/pages\/budget\/result/);
+  // 2026-09-29 决策 4：入口下线、页面删除，历史记录仅以“区间测算”中性称呼展示
+  assert.doesNotMatch(input, /旧版/);
+  assert.ok(!fs.existsSync(path.join(root, 'pages/budget/legacy.js')), 'legacy 页面应已删除');
+  const history = fs.readFileSync(path.join(root, 'pages/budget/history.wxml'), 'utf8');
+  assert.doesNotMatch(history, /旧版/);
 });

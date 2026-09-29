@@ -15,7 +15,7 @@ protectedPage({
           statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '',
           stepIndex: 0, elapsedText: '00:00',
           candidates: [], pendingSlots: 0, candidatesError: '',
-          selectedId: '', selectDone: false, selecting: false, nextLabel: '' },
+          selectedId: '', selectDone: false, selecting: false, nextLabel: '', regenerating: false },
   onLoad(query) {
     this._token = http.getToken();
     this._jobId = getApp().globalData.jobId;
@@ -141,7 +141,7 @@ protectedPage({
     });
   },
   current(token) { return http.isSameSession ? http.isSameSession(token) : token === http.getToken(); },
-  // 页内选择：与 plane-select / elevation-select 完全同一接口与全局副作用，仅不再跳转
+  // 页内选择：与主/恢复两路径共用（选择页已收敛到本页内联候选）
   selectCandidate(event) {
     if (!this.data.finished || this.data.selectDone || this.data.selecting) return;
     const candidateId = event.currentTarget.dataset.id;
@@ -191,6 +191,36 @@ protectedPage({
   },
   leavePage() {
     wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/ai-design/index' }) });
+  },
+  // 选择页收敛后重生成入口移到这里：不满意候选可直接再生成（扣点确认在前），逻辑与原两页一致
+  regenerate() {
+    if (!this.data.finished || this.data.selectDone || this._regenerating) return;
+    const projectId = this._projectId;
+    if (!projectId) { wx.showToast({ title: '项目信息未就绪，请重新进入', icon: 'none' }); return; }
+    const stage = this.data.stage;
+    if (stage === 'elevation' && !getApp().globalData.elevationConfig) {
+      // 无可复用的立面配置：先去配置页（与原选择页行为一致）
+      wx.navigateTo({ url: '/pages/ai-design/elevation-setup', fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) });
+      return;
+    }
+    this._regenerating = true;
+    const self = this;
+    const count = this.data.count || 2;
+    const idemKey = stage + '-regen-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    this.setData({ regenerating: true });
+    require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count).then(function (price) {
+      if (stage === 'plane') return api.createFlatJob(projectId, count, idemKey, price);
+      const config = Object.assign({}, getApp().globalData.elevationConfig, { count: count, priceConfirmation: price });
+      return api.createElevationJob(projectId, config, idemKey);
+    }).then(function (job) {
+      if (self._stopped) return;
+      getApp().globalData.jobId = job.jobId;
+      wx.redirectTo({ url: '/pages/ai-design/generating?stage=' + stage + '&count=' + count });
+    }).catch(function (err) {
+      if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '重新生成失败', icon: 'none' });
+      self._regenerating = false;
+      self.setData({ regenerating: false });
+    });
   },
   cancel() {
     if (this._cancelling) return;

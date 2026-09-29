@@ -3,28 +3,28 @@
 .setup-page { padding: 26rpx 32rpx 38rpx; }
 .setup-page > v12-navbar { margin: -26rpx -32rpx 0; }
 .steps { height: 96rpx; display: flex; align-items: center; justify-content: center; gap: 14rpx; }
-.steps view { padding: 8rpx 16rpx; border-radius: 25rpx; color: #fff; background: #aaa; font-size: 23rpx; }
-.steps view.active { background: linear-gradient(95deg,#8b4818,#7b5532); }
-.steps text { color: #868686; font-size: 27rpx; }
-.steps .active + text { color: #7b3f17; font-weight: 500; }
-.steps i { width: 120rpx; border-top: 2rpx dashed #999; }
+.steps view { padding: 8rpx 16rpx; border-radius: $v12-radius-lg; color: $v12-white; background: $v12-text-3; font-size: $v12-font-body; }
+.steps view.active { background: linear-gradient(95deg,$v12-primary-deep,$v12-primary); }
+.steps text { color: $v12-text-3; font-size: $v12-font-lg; }
+.steps .active + text { color: $v12-primary-deep; font-weight: 500; }
+.steps i { width: 120rpx; border-top: 2rpx dashed $v12-text-3; }
 .selected-plan { padding: 22rpx 28rpx; }
-.selected-plan > text { font-size: 28rpx; }
+.selected-plan > text { font-size: $v12-font-lg; }
 .selected-plan > view { margin-top: 16rpx; display: grid; grid-template-columns: 1fr 1fr 1.55fr; gap: 16rpx; align-items: center; }
 .selected-plan image { width: 100%; height: 178rpx; }
-.selected-plan b { color: #8a4a1a; font-size: 38rpx; font-weight: 500; }
-.selected-plan span { display: block; margin-top: 34rpx; color: #8a3517; font-size: 24rpx; }
+.selected-plan b { color: $v12-primary-deep; font-size: $v12-font-hero; font-weight: 500; }
+.selected-plan span { display: block; margin-top: 34rpx; color: $v12-primary-deep; font-size: $v12-font-body; }
 .option-card { margin-top: 14rpx; padding: 18rpx 24rpx; }
-.option-card > text { font-size: 29rpx; font-weight: 500; }
+.option-card > text { font-size: $v12-font-lg; font-weight: 500; }
 .option-card > view { margin-top: 14rpx; display: flex; gap: 22rpx; }
-.option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 18rpx; border: 1rpx solid $v12-divider; border-radius: 10rpx; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: #696969; font-size: 23rpx; }
-.option-card > view > text.selected { border: 2rpx solid #8a4a1a; color: #8a3517; }
-.option-card i { position: absolute; right: -11rpx; top: -11rpx; width: 30rpx; height: 30rpx; border-radius: 50%; background: #8a4a1a; color: #fff; font-style: normal; display: flex; align-items: center; justify-content: center; font-size: 18rpx; }
+.option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 18rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: $v12-text-2; font-size: $v12-font-body; }
+.option-card > view > text.selected { border: 2rpx solid $v12-primary-deep; color: $v12-primary-deep; }
+.option-card i { position: absolute; right: -11rpx; top: -11rpx; width: 30rpx; height: 30rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; font-size: $v12-font-xs; }
 .count-card > view > text { flex: 1; }
 .point-cost { margin-top: 14rpx; padding: 18rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 34rpx; align-items: center; }
 .point-cost > i { height: 60rpx; background: $v12-divider; }
 .point-cost text, .point-cost b { display: block; }
-.point-cost text { color: $v12-secondary-text; font-size: 23rpx; }
-.point-cost b { margin-top: 5rpx; color: #7b3f17; font-size: 36rpx; }
-.point-cost span { font-size: 23rpx; font-weight: 400; }
-.point-cost + .v12-primary-button { height: 80rpx; margin-top: 14rpx; }
+.point-cost text { color: $v12-secondary-text; font-size: $v12-font-body; }
+.point-cost b { margin-top: 5rpx; color: $v12-primary-deep; font-size: $v12-font-title; }
+.point-cost span { font-size: $v12-font-body; font-weight: 400; }
+.point-cost + .v12-primary-button { margin-top: 14rpx; }

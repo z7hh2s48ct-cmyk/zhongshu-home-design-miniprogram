@@ -6,7 +6,7 @@
       <view class="v12-card edit-card">
         <button class="avatar-action" open-type="chooseAvatar" bindchooseavatar="chooseAvatar" disabled="{{saving}}" aria-label="更换头像">
           <image wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" lazy-load />
-          <view wx:else class="avatar-placeholder"><t-icon name="user" size="36px" color="#9a6d39" /></view>
+          <view wx:else class="avatar-placeholder"><t-icon name="user" size="32px" color="#786858" /></view>
           <text>更换头像</text>
         </button>
         <text class="edit-note">支持 JPG、PNG，大小不超过 2MB</text>

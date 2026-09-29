@@ -194,7 +194,10 @@ public class BudgetQuoteService {
             Long amount = nullableNumber(line, "amount_cents");
             if (amount != null) item.priced += amount;
             if (!Set.of("PRICED", "EXCLUDED").contains(status)) item.complete = false;
-            item.lines.add(new AppItemizedBudgetRespVO.Line(String.valueOf(number(line, "id")), (String) line.get("option_label"), status, amount));
+            Object quantity = line.get("quantity");
+            item.lines.add(new AppItemizedBudgetRespVO.Line(String.valueOf(number(line, "id")), (String) line.get("option_label"), status, amount,
+                    quantity == null ? null : new java.math.BigDecimal(quantity.toString()).stripTrailingZeros().toPlainString(),
+                    (String) line.get("unit")));
         }
         List<AppItemizedBudgetRespVO.Item> items = groups.values().stream().map(item -> new AppItemizedBudgetRespVO.Item(item.itemId, item.code, item.category,
                 item.name, item.source, item.complete ? "COMPLETE" : "INCOMPLETE", item.priced, item.complete ? item.priced : null, List.copyOf(item.lines))).toList();

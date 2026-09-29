@@ -37,11 +37,13 @@ test('数量快速改变时旧报价不能覆盖新报价', async () => {
   assert.match(page.data.priceText, /28/);
 });
 
-test('恢复按服务端动作定位生成、平面选择、立面设置与历史版本', () => {
+test('恢复按服务端动作定位：选择态收敛到生成页内联，配置/结果各归其位', () => {
   const resume = load('utils/project-resume.js', { './api': {}, './record-view': view });
   const project = { projectId: '2100000000000000001', jobId: '2100000000000000003', stage: 'FLAT', requestedCount: 4 };
   assert.match(resume.target({ ...project, resumeAction: 'POLL_JOB' }), /stage=plane&count=4$/);
-  assert.match(resume.target({ ...project, resumeAction: 'SELECT_FLAT' }), /2100000000000000001$/);
+  // 2026-09-29 决策 2：SELECT_FLAT/SELECT_ELEVATION 与主路径同体验，收敛到 generating 内联候选
+  assert.match(resume.target({ ...project, resumeAction: 'SELECT_FLAT' }), /ai-design\/generating\?stage=plane&count=4$/);
+  assert.match(resume.target({ ...project, stage: 'ELEVATION', resumeAction: 'SELECT_ELEVATION' }), /ai-design\/generating\?stage=elevation&count=4$/);
   assert.match(resume.target({ ...project, resumeAction: 'CREATE_ELEVATION_JOB' }), /elevation-setup$/);
   assert.match(resume.target({ ...project, resumeAction: 'VIEW_RESULT', resultVersionId: '2100000000000000005' }), /resultVersionId=2100000000000000005$/);
   assert.throws(() => resume.target({ projectId: 2100000000000000001 }));

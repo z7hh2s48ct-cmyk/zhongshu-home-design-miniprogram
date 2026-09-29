@@ -187,9 +187,6 @@ module.exports = {
   resetMyPrice: function (optionId, regionCode) {
     return http.del(BASE + '/budget/my-prices/' + encodeURIComponent(optionId) + '?regionCode=' + encodeURIComponent(regionCode));
   },
-  createBudgetEstimate: function (projectId, input) {
-    return http.post(BASE + '/design-projects/' + projectId + '/budget-estimates', input);
-  },
   createItemizedBudget: function (projectId, input, idemKey) {
     return http.post(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates/itemized',
       input, { 'Idempotency-Key': idemKey });

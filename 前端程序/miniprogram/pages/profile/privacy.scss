@@ -1,4 +1,6 @@
+@import '../../styles/v12-theme.scss';
+
 .privacy-card { padding: 32rpx; margin-bottom: 24rpx; display: flex; flex-direction: column; gap: 20rpx; }
 .privacy-card text { line-height: 1.6; word-break: break-all; }
 .privacy-card button { width: 100%; }
-.privacy-error { color: #a52a2a; margin: 24rpx 0; }
+.privacy-error { color: $v12-error; margin: 24rpx 0; }

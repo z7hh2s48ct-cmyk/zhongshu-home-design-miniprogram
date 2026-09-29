@@ -256,8 +256,5 @@ protectedPage({
       this.setData({ creating: false, generateError: (error && (error.msg || error.message)) || '预算生成失败，请重试',
         importConflict: !!error && String(error.code) === '1099000001' });
     });
-  },
-  legacy() {
-    if (this.currentSession() && this.data.draft && !this.data.creating && !this.data.reimporting && !this._confirmingImport) wx.navigateTo({ url: '/pages/budget/legacy' + draftStore.query(this.data.draft) });
-  },
+  }
 });

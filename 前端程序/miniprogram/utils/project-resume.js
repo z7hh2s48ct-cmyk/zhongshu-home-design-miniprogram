@@ -10,8 +10,10 @@ function target(project) {
     case 'POLL_JOB':
       if (!view.id(project.jobId)) throw { msg: '任务编号无效' };
       return '/pages/ai-design/generating?stage=' + stage + '&count=' + (project.requestedCount || 2);
-    case 'SELECT_FLAT': return '/pages/ai-design/plane-select?projectId=' + id;
-    case 'SELECT_ELEVATION': return '/pages/ai-design/elevation-select?projectId=' + id;
+    case 'SELECT_FLAT':
+    case 'SELECT_ELEVATION':
+      // 选择动作已收敛到生成页内联候选：恢复态与主路径同一体验（jobId 已随 globalData 重建）
+      return '/pages/ai-design/generating?stage=' + stage + '&count=' + (project.requestedCount || 2);
     case 'CREATE_ELEVATION_JOB': return '/pages/ai-design/elevation-setup';
     case 'CREATE_FLAT_JOB': return '/pages/ai-design/generating?stage=plane&count=' + (project.requestedCount || 2);
     case 'VIEW_RESULT':

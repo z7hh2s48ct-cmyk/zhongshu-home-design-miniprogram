@@ -22,20 +22,25 @@
     <view class="budget-card result-section" wx:if="{{!legacy}}">
       <text class="section-title">预算构成</text>
       <view class="summary-row" wx:for="{{categoryRows}}" wx:key="code" data-category="{{item.code}}" bindtap="detail" role="button" aria-label="查看{{item.name}}明细">
-        <view class="round-icon"><t-icon name="{{item.icon}}" size="27px" color="#82470f" /></view>
+        <view class="round-icon"><t-icon name="{{item.icon}}" size="24px" color="#7b5532" /></view>
         <view class="summary-copy"><text>{{item.name}}</text><text class="row-description">{{item.description}}</text></view>
         <view class="row-price"><text>{{item.amountText}}</text><text class="row-description" wx:if="{{item.incomplete}}">已计价</text></view>
-        <t-icon name="chevron-right" size="17px" color="#888b91" />
+        <t-icon name="chevron-right" size="16px" color="#a89a8c" />
       </view>
     </view>
     <view class="budget-card result-section"><text class="section-title">{{legacy ? '历史测算依据' : '方案概况'}}</text><view class="result-grid"><view wx:for="{{basis}}" wx:key="label" class="result-cell"><text>{{item.label}}</text><text>{{item.value}}</text></view></view></view>
     <view class="inline-warning" wx:if="{{warningText}}"><text>{{warningText}}</text><text class="missing-name" wx:for="{{estimate.missingItems}}" wx:key="*this">{{item}}</text><text class="missing-name" wx:if="{{estimate.warnings.length}}">部分参数需要复核，请联系预算管理员核定。</text></view>
-    <view class="auto-note result-note"><t-icon name="info-circle-filled" size="18px" color="#b35c07" /><text>{{estimate.disclaimer || '本预算为前期参考，最终金额以正式报价单为准'}}</text></view>
+    <view class="auto-note result-note"><t-icon name="info-circle-filled" size="20px" color="#b9690b" /><text>{{estimate.disclaimer || '本预算为前期参考，最终金额以正式报价单为准'}}</text></view>
     <view class="result-actions">
       <text class="save-error" wx:if="{{saveError}}">{{saveError}}</text>
-      <button class="budget-primary" wx:if="{{!legacy}}" loading="{{saving}}" disabled="{{saving || estimate.saved}}" bindtap="save">{{estimate.saved ? '已保存到项目预算' : '保存预算单'}}</button>
-      <text class="row-description" wx:else>旧区间记录已可在项目历史中查询，不支持保存为分项预算。</text>
+      <view wx:if="{{!legacy}}" class="action-grid">
+        <button class="budget-primary" loading="{{saving}}" disabled="{{saving || estimate.saved}}" bindtap="save">{{estimate.saved ? '已保存到项目预算' : '保存预算单'}}</button>
+        <button wx:if="{{estimate.completeness === 'COMPLETE'}}" class="budget-secondary share-export" loading="{{exporting}}" disabled="{{exporting}}" bindtap="exportImage">保存预算图</button>
+      </view>
+      <text class="row-description" wx:else>区间测算记录可在项目历史中查询，不支持保存为分项预算。</text>
+      <text class="row-description" wx:if="{{!legacy && estimate.completeness !== 'COMPLETE'}}">预算补齐后可保存预算图，分享给家人或施工方。</text>
       <button class="text-action" bindtap="adjust">重新测算当前方案</button><text class="row-description">沿用本机当前草稿，不修改这份历史预算。</text><button class="text-action history-link" bindtap="history">查看项目预算历史</button>
     </view>
+    <canvas type="2d" id="budgetCanvas" class="share-canvas"></canvas>
   </block>
 </view>

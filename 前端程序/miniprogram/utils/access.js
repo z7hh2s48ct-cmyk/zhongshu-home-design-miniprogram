@@ -10,10 +10,9 @@ const BUSINESS_PAGES = [
   '/pages/profile/records', '/pages/profile/record',
   '/pages/profile/edit',
   '/pages/library/index', '/pages/library/detail', '/pages/ai-design/index',
-  '/pages/ai-design/generating', '/pages/ai-design/plane-select',
-  '/pages/ai-design/elevation-setup', '/pages/ai-design/elevation-select',
+  '/pages/ai-design/generating', '/pages/ai-design/elevation-setup',
   '/pages/ai-design/result', '/pages/ai-design/publish',
-  '/pages/budget/input', '/pages/budget/parameters', '/pages/budget/legacy',
+  '/pages/budget/input', '/pages/budget/parameters',
   '/pages/budget/body', '/pages/budget/exterior', '/pages/budget/history',
   '/pages/budget/result', '/pages/budget/body-detail', '/pages/budget/exterior-detail', '/pages/budget/prices', '/pages/wallet/recharge',
   '/pages/payment/success', '/pages/messagecenter/messagecenter'

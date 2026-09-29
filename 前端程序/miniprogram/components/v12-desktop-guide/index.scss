@@ -1,28 +1,31 @@
-// 「添加到桌面/我的小程序」引导组件样式。组件样式隔离：色板与 budget/ai-design 两段的
-// v12 体系一致（#fdf5e9 提示底 / #884312 主色），不依赖页面级 class。
-.dt-guide-bar { margin-top: 24rpx; padding: 16rpx 20rpx; border-radius: 18rpx; background: #fdf5e9; display: flex; align-items: center; gap: 16rpx; }
-.dt-guide-icon { flex-shrink: 0; width: 64rpx; height: 64rpx; border-radius: 50%; background: #f4e8d9; display: flex; align-items: center; justify-content: center; }
+// 「添加到桌面/我的小程序」引导组件样式。组件样式隔离，不依赖页面级 class；
+// 全部取值引用 v12-tokens，与全局 v12 体系同一套规范。
+@import '../../styles/v12-tokens.scss';
+
+.dt-guide-bar { margin-top: 24rpx; padding: 16rpx 20rpx; border-radius: $v12-radius-md; background: $v12-warning-bg; display: flex; align-items: center; gap: 16rpx; }
+.dt-guide-icon { flex-shrink: 0; width: 64rpx; height: 64rpx; border-radius: 50%; background: $v12-gold-bg; display: flex; align-items: center; justify-content: center; }
 .dt-guide-copy { flex: 1; min-width: 0; }
-.dt-guide-title { display: block; font-size: 26rpx; line-height: 1.4; color: #7c5a2e; }
-.dt-guide-sub { display: block; margin-top: 4rpx; font-size: 21rpx; line-height: 1.4; color: #a08760; }
-.dt-guide-action { flex-shrink: 0; margin-right: 8rpx; padding: 10rpx 24rpx; border-radius: 999rpx; background: #884312; color: #fff; font-size: 23rpx; }
+.dt-guide-title { display: block; font-size: $v12-font-md; line-height: 1.4; color: $v12-primary; }
+.dt-guide-sub { display: block; margin-top: 4rpx; font-size: $v12-font-sm; line-height: 1.4; color: $v12-text-3; }
+.dt-guide-action { flex-shrink: 0; margin-right: 8rpx; padding: 10rpx 24rpx; border-radius: $v12-radius-full; background: $v12-primary-deep; color: $v12-white; font-size: $v12-font-body; }
 .dt-guide-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10rpx; margin: -10rpx 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
 
 .dt-mask { position: fixed; inset: 0; z-index: 200; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .38); }
-.dt-sheet { width: 100%; padding: 32rpx 32rpx calc(26rpx + env(safe-area-inset-bottom)); border-radius: 24rpx 24rpx 0 0; background: #faf9f7; box-sizing: border-box; }
+.dt-sheet { width: 100%; padding: 32rpx 32rpx calc(26rpx + env(safe-area-inset-bottom)); border-radius: $v12-radius-lg $v12-radius-lg 0 0; background: $v12-surface; box-sizing: border-box; }
 .dt-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 28rpx; }
-.dt-sheet-title { font-size: 31rpx; font-weight: 600; color: #121314; }
+.dt-sheet-title { font-size: $v12-font-xl; font-weight: 600; color: $v12-text-1; }
 .dt-sheet-close { flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 10rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
-.dt-note { display: block; margin-top: 16rpx; font-size: 23rpx; line-height: 1.55; color: #9a570e; }
+.dt-note { display: block; margin-top: 16rpx; font-size: $v12-font-body; line-height: 1.55; color: $v12-gold-deep; }
 .dt-steps { margin-top: 20rpx; }
-.dt-step { display: flex; gap: 20rpx; padding: 20rpx 0; border-bottom: 1rpx solid #e6e7e9; }
+.dt-step { display: flex; gap: 20rpx; padding: 20rpx 0; border-bottom: 1rpx solid $v12-divider; }
 .dt-step:last-child { border-bottom: 0; }
-.dt-step-no { flex-shrink: 0; width: 44rpx; height: 44rpx; border-radius: 50%; background: #884312; color: #fff; font-size: 23rpx; display: flex; align-items: center; justify-content: center; }
+.dt-step-no { flex-shrink: 0; width: 44rpx; height: 44rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-size: $v12-font-body; display: flex; align-items: center; justify-content: center; }
 .dt-step-copy { flex: 1; min-width: 0; }
-.dt-step-title { display: block; font-size: 27rpx; line-height: 1.45; color: #121314; }
-.dt-step-detail { display: block; margin-top: 6rpx; font-size: 23rpx; line-height: 1.5; color: #777a82; }
+.dt-step-title { display: block; font-size: $v12-font-lg; line-height: 1.45; color: $v12-text-1; }
+.dt-step-detail { display: block; margin-top: 6rpx; font-size: $v12-font-body; line-height: 1.5; color: $v12-text-2; }
 .dt-sheet-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1.6fr 1fr; gap: 22rpx; }
-.dt-sheet-actions button { margin: 0; height: 92rpx; padding: 0; border: 0; border-radius: 15rpx; font-size: 29rpx; display: flex; align-items: center; justify-content: center; }
+// 与全局 .v12-primary-button / .v12-secondary-button 同规格（92rpx / 16rpx / 32rpx）
+.dt-sheet-actions button { margin: 0; height: $v12-control-lg; padding: 0; border: 0; border-radius: $v12-radius-md; font-size: $v12-font-xl; display: flex; align-items: center; justify-content: center; }
 .dt-sheet-actions button::after { border: 0; }
-.dt-btn-primary { background: #7c3f16; color: #fff; font-weight: 500; }
-.dt-btn-plain { background: #fff; color: #777a82; border: 1rpx solid #e6e7e9; }
+.dt-btn-primary { background: linear-gradient(100deg, $v12-primary-deep, $v12-primary); color: $v12-white; font-weight: 500; box-shadow: $v12-shadow-primary; }
+.dt-btn-plain { background: $v12-surface; color: $v12-brand; border: 2rpx solid $v12-brand; }

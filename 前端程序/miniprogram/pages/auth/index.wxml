@@ -8,7 +8,7 @@
       <text class="field-title">授权码</text>
       <view class="code-field">
         <input value="{{code}}" placeholder="请输入授权码，如 ZSZJ-XXXX-XXXX" bindinput="onInput" />
-        <t-icon name="scan" size="25px" color="#2f2925" />
+        <t-icon name="scan" size="24px" color="#2f2925" />
       </view>
       <text class="field-help">验证通过后将绑定当前微信账号</text>
       <view class="v12-primary-button {{loading ? 'is-loading' : ''}}" bindtap="verify">{{loading ? '激活中…' : '激活并继续'}}</view>
@@ -16,10 +16,10 @@
     <view class="browse-link" bindtap="continueBrowsing">暂不激活，继续浏览</view>
     <view class="v12-card auth-notes">
       <view><view class="note-icon">1</view><text>一码一账号</text></view>
-      <view><view class="note-icon"><t-icon name="user-filled" size="20px" color="#7b3f17" /></view><text>授权状态可在「我的」中查看</text></view>
-      <view><view class="note-icon"><t-icon name="service" size="20px" color="#7b3f17" /></view><text>授权码失效请联系管理员</text></view>
+      <view><view class="note-icon"><t-icon name="user-filled" size="20px" color="#7b5532" /></view><text>授权状态可在「我的」中查看</text></view>
+      <view><view class="note-icon"><t-icon name="service" size="20px" color="#7b5532" /></view><text>授权码失效请联系管理员</text></view>
     </view>
-    <view class="contact" bindtap="contact">联系管理员 <t-icon name="chevron-right" size="16px" color="#7b3f17" /></view>
+    <view class="contact" bindtap="contact">联系管理员 <t-icon name="chevron-right" size="16px" color="#7b5532" /></view>
     <view class="contact" bindtap="openPrivacy">隐私申请与账号关闭</view>
   </view>
 </view>

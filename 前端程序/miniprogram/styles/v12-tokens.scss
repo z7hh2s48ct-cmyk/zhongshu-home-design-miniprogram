@@ -1,10 +1,75 @@
-$v12-brand-brown: #6a3b1b;
-$v12-primary-brown: #7b5532;
-$v12-deep-coffee: #2f2925;
-$v12-warm-gold: #c8a679;
-$v12-page-beige: #f7f4ee;
-$v12-surface: #fffdf8;
-$v12-secondary-text: #786858;
-$v12-divider: #e8ded1;
-$v12-success: #49745c;
-$v12-error: #b45545;
+// ============================================================
+// v12 设计 Token —— 全小程序唯一取值源
+// 规则：页面/组件样式禁止裸写 hex，一律引用本文件变量；
+// 字号/圆角/控件高度/图标尺寸只允许取阶梯值（scripts/check-design-tokens.mjs 校验）。
+// ============================================================
+
+// —— 品牌与功能色 ——
+$v12-brand:         #6a3b1b;  // 品牌深棕（tab 激活、次级按钮描边）
+$v12-primary:       #7b5532;  // 主操作棕
+$v12-primary-deep:  #8b4818;  // 主按钮渐变起点 / 深棕强调（箭头、价格）
+$v12-gold:          #c8a679;  // 点缀金（浅）
+$v12-gold-deep:     #b9690b;  // 点缀金（深）/ 琥珀强调
+$v12-success:       #49745c;  // 功能绿（低饱和）
+$v12-success-bg:    #f6faf3;
+$v12-error:         #b45545;  // 功能红（低饱和砖红）
+$v12-error-bg:      #fcebea;
+
+// —— 文字色阶（1 主 → 4 禁用/占位）——
+$v12-text-1:        #2f2925;
+$v12-text-2:        #786858;
+$v12-text-3:        #a89a8c;
+$v12-text-4:        #b6b4b0;  // 禁用/占位图标与文字
+
+// —— 面与线 ——
+$v12-page:          #f7f4ee;  // 页面底
+$v12-surface:       #fffdf8;  // 卡片面
+$v12-surface-alt:   #f4f0e9;  // 卡内嵌浅面板
+$v12-warning-bg:    #fdf5e9;  // 提示条底
+$v12-gold-bg:       #f5e5d0;  // 金色浅底（勋章、推荐位）
+$v12-divider:       #e8ded1;  // 分隔线/描边
+$v12-white:         #ffffff;
+$v12-disabled:      #cfc5ba;  // 禁用按钮底
+
+// —— 圆角阶梯（xs 8 / sm 12 / md 16 / lg 24 / full 胶囊）——
+$v12-radius-xs:     8rpx;
+$v12-radius-sm:     12rpx;
+$v12-radius-md:     16rpx;
+$v12-radius-lg:     24rpx;
+$v12-radius-full:   999rpx;
+
+// —— 字阶（20 / 22 / 24 / 26 / 28 / 32 / 34 / 40，特例 46 仅首页 hero）——
+$v12-font-xs:       20rpx;
+$v12-font-sm:       22rpx;
+$v12-font-body:     24rpx;
+$v12-font-md:       26rpx;
+$v12-font-lg:       28rpx;
+$v12-font-xl:       32rpx;
+$v12-font-title:    34rpx;
+$v12-font-hero:     40rpx;
+
+// —— 控件高度 ——
+$v12-control-sm:    68rpx;
+$v12-control-md:    80rpx;
+$v12-control-lg:    92rpx;
+
+// —— 阴影（卡面 / 主按钮，各一档）——
+$v12-shadow-card:    0 10rpx 30rpx rgba(72, 49, 32, 0.07);
+$v12-shadow-primary: 0 10rpx 24rpx rgba(106, 59, 27, 0.14);
+
+// —— 字体族 ——
+$v12-font-family:       -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+$v12-font-family-serif: "Songti SC", STSong, serif;  // 首页 hero 品牌衬线
+
+// —— 图标规范（t-icon）：尺寸 16/20/24/32px 四档；颜色仅允许
+//    #7b5532 primary / #8b4818 primary-deep / #b9690b gold-deep / #c8a679 gold /
+//    #786858 text-2 / #a89a8c text-3 / #b6b4b0 text-4 / #2f2925 text-1 /
+//    #49745c success / #b45545 error —— wxml 中因无法引用 SCSS 变量而写这些标准值。
+
+// —— 旧变量名（过渡期保留，禁止新代码使用）——
+$v12-brand-brown:    $v12-brand;
+$v12-primary-brown:  $v12-primary;
+$v12-deep-coffee:    $v12-text-1;
+$v12-warm-gold:      $v12-gold;
+$v12-page-beige:     $v12-page;
+$v12-secondary-text: $v12-text-2;

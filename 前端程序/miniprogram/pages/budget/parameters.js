@@ -42,6 +42,8 @@ protectedPage({
       let storageError = '';
       try { draft = draftStore.read(this._projectId, this._versionId) || draft; draftStore.write(draft); }
       catch (error) { storageError = '本机草稿无法保存，请恢复存储后重试'; }
+      // 页面级撤销快照：进入本页（或会话重建）时的草稿状态，撤销=整体写回
+      this._snapshot = JSON.parse(JSON.stringify(draft));
       this.setData(Object.assign({ loading: false, storageError, regionNames: regionResult.regions.map(item => item.name) }, regionResult));
       this.renderDraft(draft);
     }).catch(error => {
@@ -97,6 +99,12 @@ protectedPage({
     }
   },
   restore() { if (this.currentSession() && this.data.draft) this.updateDraft(draftStore.restore(this.data.draft)); },
+  // 撤销本次修改：写回进入本页时的快照（编辑即时落草稿，这是唯一的整页回滚手段）
+  revert() {
+    if (!this.currentSession() || !this._snapshot) return;
+    this.updateDraft(JSON.parse(JSON.stringify(this._snapshot)));
+    wx.showToast({ title: '已恢复进入本页时的参数', icon: 'none' });
+  },
   // T14：跳转我的当地单价（把基准价调成当地成本价，跟账号永久生效）
   openMyPrices() {
     const regionCode = this.data.draft ? draftStore.values(this.data.draft).regionCode : '';

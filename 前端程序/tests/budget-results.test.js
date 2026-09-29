@@ -62,12 +62,32 @@ test('金额按整数分展示：万元半入、精确两位、免费零及缺�
   assert.equal(view.yuan(1), '0.01'); assert.equal(view.yuan(0), '0.00');
   for (const bad of [null, undefined, -1, 1.2, '100', Number.MAX_SAFE_INTEGER + 1]) assert.equal(view.yuan(bad), '—');
 });
-test('结果展示仅取公开字段，内部工程量价格规则不进入页面', () => {
+test('结果展示仅取公开字段：行级数量/单位随行公开（决策B），内部单价与工程量规则仍不进入页面', () => {
   const { view } = runtime(), raw = fixture();
-  raw.unitPrice = 1; raw.inputSummary.quantities = { private: 1 }; raw.items[0].internalNote = 'secret'; raw.items[0].lines[0].quantity = 12;
+  raw.unitPrice = 1; raw.inputSummary.quantities = { private: 1 }; raw.items[0].internalNote = 'secret';
+  raw.items[0].lines[0].quantity = '120'; raw.items[0].lines[0].unit = 'SQM';
   const result = view.publicBudget(raw);
-  assert.doesNotMatch(JSON.stringify(result), /unitPrice|quantities|internalNote|quantity|secret/);
-  assert.equal(result.budgetId, budgetId); assert.equal(result.items[1].lines[1].amountCents, 0);
+  assert.doesNotMatch(JSON.stringify(result), /unitPrice|quantities|internalNote|secret/);
+  assert.equal(result.items[0].lines[0].quantity, '120');
+  assert.equal(result.items[0].lines[0].unit, 'SQM');
+  assert.equal(result.items[1].lines[1].amountCents, 0);
+  assert.equal(view.viewModel(result, 'BODY', false).groups[0].lines[0].quantityText, '120m²');
+  const bad = fixture(); bad.items[0].lines[0].quantity = 12;
+  assert.throws(() => view.publicBudget(bad), /数量/);
+});
+test('转发卡片按万元命名并落首页；预算图仅完整预算可导（canvas 与按钮条件）', async () => {
+  const r = runtime(), p = r.page('result'); await flush();
+  const card = p.onShareAppMessage();
+  assert.match(card.title, /参考预算约48\.20万/);
+  assert.equal(card.path, '/pages/home/index');
+  const wxml = fs.readFileSync(path.join(root, 'pages/budget/result.wxml'), 'utf8');
+  assert.match(wxml, /bindtap="exportImage"/);
+  assert.match(wxml, /wx:if="\{\{estimate\.completeness === 'COMPLETE'\}\}"/);
+  assert.match(wxml, /<canvas type="2d" id="budgetCanvas"/);
+  // 不完整预算：卡片退化为品牌名，页面给出补齐提示
+  const incomplete = runtime({ getBudgetEstimate: async () => fixture({ completeness: 'INCOMPLETE', totalCents: null }) });
+  const q = incomplete.page('result'); await flush();
+  assert.doesNotMatch(q.onShareAppMessage().title, /48\.20/);
 });
 test('结果按URL预算和修订ID从后端读取，不依赖全局临时结果', async () => {
   const r = runtime(), p = r.page('result', { budgetId, revisionId }); await flush();

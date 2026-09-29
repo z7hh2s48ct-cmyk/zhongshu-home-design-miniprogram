@@ -1,11 +1,11 @@
 <view class="v12-page recharge-page" wx:if="{{accessReady}}">
   <v12-navbar title="设计点充值" show-back show-brand="{{false}}" />
-  <view class="v12-card balance-card"><text>当前设计点</text><b>{{points}}</b><span>1 元 = 10设计点</span><view bindtap="openRecords">充值记录 <t-icon name="chevron-right" size="16px" color="#777" /></view></view>
+  <view class="v12-card balance-card"><text>当前设计点</text><b>{{points}}</b><span>1 元 = 10设计点</span><view bindtap="openRecords">充值记录 <t-icon name="chevron-right" size="16px" color="#786858" /></view></view>
   <text class="section-title">选择充值方案</text>
   <view class="package-row"><view wx:for="{{packages}}" wx:key="price" class="package {{selected === index ? 'selected' : ''}}" data-index="{{index}}" bindtap="selectPackage"><text wx:if="{{index === 1}}" class="recommend">推荐</text><b>¥{{item.price}}</b><view><text>基础</text><span>{{item.base}}设计点</span></view><view class="bonus"><text>赠送</text><span>{{item.bonus}}设计点</span></view><view><text>到账</text><span>{{item.total}}设计点</span></view><i wx:if="{{selected === index}}">✓</i></view></view>
   <text class="section-title pay-title">选择支付方式</text>
-  <block wx:if="{{!iosBlocked}}"><view class="v12-card wechat"><view class="wechat-icon"><t-icon name="logo-wechat-stroke-filled" size="27px" color="#20be42" /></view><text>微信支付</text><i></i></view></block>
-  <view wx:else class="v12-card ios-notice"><t-icon name="info-circle" size="18px" color="#777" /><text>受苹果平台政策限制，iOS 设备暂不支持设计点在线充值。请使用安卓设备充值，或联系客服协助处理。</text></view>
-  <view class="pay-tips"><view><t-icon name="secured" size="18px" color="#777" /> 支付成功后设计点自动到账</view><view><t-icon name="info-circle" size="18px" color="#777" /> 设计点用于AI方案生成</view></view>
+  <block wx:if="{{!iosBlocked}}"><view class="v12-card wechat"><view class="wechat-icon"><t-icon name="logo-wechat-stroke-filled" size="24px" color="#49745c" /></view><text>微信支付</text><i></i></view></block>
+  <view wx:else class="v12-card ios-notice"><t-icon name="info-circle" size="20px" color="#786858" /><text>受苹果平台政策限制，iOS 设备暂不支持设计点在线充值。请使用安卓设备充值，或联系客服协助处理。</text></view>
+  <view class="pay-tips"><view><t-icon name="secured" size="20px" color="#786858" /> 支付成功后设计点自动到账</view><view><t-icon name="info-circle" size="20px" color="#786858" /> 设计点用于AI方案生成</view></view>
   <view class="pay-bar" wx:if="{{!iosBlocked}}"><view><text>待支付 <b>¥{{packages[selected].price}}</b></text><text>到账 <b>{{packages[selected].total}}</b>设计点</text></view><view class="v12-primary-button" bindtap="pay">微信支付</view></view>
 </view>

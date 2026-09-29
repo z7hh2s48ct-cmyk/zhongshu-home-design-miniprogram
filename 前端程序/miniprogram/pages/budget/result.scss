@@ -2,7 +2,9 @@
 
 .quote-card { margin-top: 24rpx; padding: 30rpx; border: 2rpx solid rgba(168, 91, 22, .2); }
 .quote-title-row, .quote-basis { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
-.quote-badge { padding: 6rpx 14rpx; border-radius: 999rpx; color: #fff; background: #8b4b13; font-size: 22rpx; }
-.quote-amount { margin: 10rpx 0 16rpx; color: #82470f; font-size: 54rpx; font-weight: 700; }
-.quote-basis { margin-bottom: 16rpx; color: #5d626b; font-size: 24rpx; }
-.quote-loading { padding: 16rpx 8rpx; color: #777b83; font-size: 24rpx; text-align: center; }
+.quote-badge { padding: 6rpx 14rpx; border-radius: $v12-radius-full; color: $v12-white; background: $v12-primary-deep; font-size: $v12-font-sm; }
+.quote-amount { margin: 10rpx 0 16rpx; color: $v12-primary-deep; font-size: 54rpx; font-weight: 700; }
+.quote-basis { margin-bottom: 16rpx; color: $v12-text-2; font-size: $v12-font-body; }
+.quote-loading { padding: 16rpx 8rpx; color: $v12-text-2; font-size: $v12-font-body; text-align: center; }
+.action-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 22rpx; }
+.share-canvas { position: fixed; left: 2000rpx; top: 0; width: 375px; height: 600px; }

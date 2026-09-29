@@ -3,29 +3,29 @@
   <view class="v12-content v12-content--tab profile-content">
     <view class="user-card" bindtap="{{authorized ? 'openEdit' : 'openAuthorization'}}" role="button" aria-label="{{authorized ? '编辑个人资料' : '激活账号'}}">
       <image wx:if="{{authorized && avatar}}" src="{{avatar}}" mode="aspectFill" />
-      <view wx:else class="guest-avatar"><t-icon name="user" size="30px" color="#9a6d39" /></view>
+      <view wx:else class="guest-avatar"><t-icon name="user" size="32px" color="#786858" /></view>
       <view class="identity-copy"><text class="name">{{authorized ? (nickname || '筑梦人') : '访客'}}</text><text class="identity-hint">{{authorized ? '编辑头像与昵称' : '激活账号，开启设计'}}</text></view>
-      <t-icon name="chevron-right" size="18px" color="#8d8178" />
+      <t-icon name="chevron-right" size="20px" color="#a89a8c" />
     </view>
     <v12-desktop-guide />
     <view class="v12-card profile-section">
       <text class="section-label">我的创作</text>
       <view class="creation-grid">
-        <view bindtap="openRecords" data-type="projects" role="button"><view class="creation-icon"><t-icon name="file" size="25px" color="#8a572f" /></view><text>我的方案</text><text class="creation-hint">{{authorized ? projectCount + ' 个记录' : '生成记录'}}</text></view>
-        <view bindtap="openRecords" data-type="submissions" role="button"><view class="creation-icon"><t-icon name="upload" size="25px" color="#8a572f" /></view><text>户型投稿</text><text class="creation-hint">{{authorized ? publishedCount + ' 个已发布' : '分享作品'}}</text></view>
-        <view bindtap="openRecords" data-type="favorites" role="button"><view class="creation-icon"><t-icon name="star" size="25px" color="#8a572f" /></view><text>收藏户型</text><text class="creation-hint">收藏灵感</text></view>
+        <view bindtap="openRecords" data-type="projects" role="button"><view class="creation-icon"><t-icon name="file" size="24px" color="#7b5532" /></view><text>我的方案</text><text class="creation-hint">{{authorized ? projectCount + ' 个记录' : '生成记录'}}</text></view>
+        <view bindtap="openRecords" data-type="submissions" role="button"><view class="creation-icon"><t-icon name="upload" size="24px" color="#7b5532" /></view><text>户型投稿</text><text class="creation-hint">{{authorized ? publishedCount + ' 个已发布' : '分享作品'}}</text></view>
+        <view bindtap="openRecords" data-type="favorites" role="button"><view class="creation-icon"><t-icon name="star" size="24px" color="#7b5532" /></view><text>收藏户型</text><text class="creation-hint">收藏灵感</text></view>
       </view>
     </view>
     <view class="v12-card profile-section account-section">
-      <view class="section-heading"><text class="section-label">设计点账户</text><view class="record-link" bindtap="openRecords" data-type="orders" role="button">充值记录<t-icon name="chevron-right" size="14px" color="#8d8178" /></view></view>
+      <view class="section-heading"><text class="section-label">设计点账户</text><view class="record-link" bindtap="openRecords" data-type="orders" role="button">充值记录<t-icon name="chevron-right" size="16px" color="#a89a8c" /></view></view>
       <view class="balance-row"><view><text class="balance-value">{{authorized ? availablePoints : '—'}}<text class="balance-unit">设计点</text></text><text class="balance-hint">{{authorized ? '可用于 AI 方案生成' : '激活后查看与使用'}}</text></view><view class="recharge" bindtap="openRecharge" role="button">充值</view></view>
     </view>
     <view class="v12-card profile-section service-section">
       <text class="section-label">消息与服务</text>
       <view class="menu-card">
-        <view bindtap="openMessages" role="button"><t-icon name="notification" size="23px" color="#817367" /><text>消息中心</text><text wx:if="{{unreadCount > 0}}" class="message-count">{{unreadCount > 99 ? '99+' : unreadCount}}条未读</text><t-icon name="chevron-right" size="16px" color="#96908b" /></view>
-        <view bindtap="contact" role="button"><t-icon name="service" size="23px" color="#817367" /><text>联系客服</text><t-icon name="chevron-right" size="16px" color="#96908b" /></view>
-        <view bindtap="openServices" role="button"><t-icon name="setting" size="23px" color="#817367" /><text>设置</text><t-icon name="chevron-right" size="16px" color="#96908b" /></view>
+        <view bindtap="openMessages" role="button"><t-icon name="notification" size="24px" color="#a89a8c" /><text>消息中心</text><text wx:if="{{unreadCount > 0}}" class="message-count">{{unreadCount > 99 ? '99+' : unreadCount}}条未读</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view>
+        <view bindtap="contact" role="button"><t-icon name="service" size="24px" color="#a89a8c" /><text>联系客服</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view>
+        <view bindtap="openServices" role="button"><t-icon name="setting" size="24px" color="#a89a8c" /><text>设置</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view>
       </view>
     </view>
   </view>

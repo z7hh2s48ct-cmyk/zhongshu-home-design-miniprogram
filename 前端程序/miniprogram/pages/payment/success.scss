@@ -1,17 +1,17 @@
 @import '../../styles/v12-theme.scss';
 
-.payment-page { padding: 30rpx 36rpx calc(70rpx + env(safe-area-inset-bottom)); }
+.payment-page { padding: 30rpx 32rpx calc(70rpx + env(safe-area-inset-bottom)); }
 .payment-page > v12-navbar { margin: -30rpx -36rpx 0; }
 .success-mark { padding: 64rpx 0 55rpx; text-align: center; }
 .success-mark text { display: block; margin-top: 35rpx; font-size: 51rpx; font-weight: 500; }
-.success-mark span { display: block; margin-top: 16rpx; color: #777; font-size: 31rpx; }
+.success-mark span { display: block; margin-top: 16rpx; color: $v12-text-2; font-size: $v12-font-xl; }
 .receipt { padding: 28rpx 40rpx; }
-.receipt > view { min-height: 102rpx; display: flex; align-items: center; justify-content: space-between; border-bottom: 1rpx dashed #cfc9c3; color: #666; font-size: 28rpx; }
+.receipt > view { min-height: 102rpx; display: flex; align-items: center; justify-content: space-between; border-bottom: 1rpx dashed $v12-disabled; color: $v12-text-2; font-size: $v12-font-lg; }
 .receipt > view:last-child { border: 0; }
-.receipt .bonus { color: #e88d00; }
-.receipt .total { color: #7b3f17; }
-.receipt .total span { font-size: 36rpx; font-weight: 600; }
-.receipt span.done { color: #7b5532; }
+.receipt .bonus { color: $v12-gold-deep; }
+.receipt .total { color: $v12-primary-deep; }
+.receipt .total span { font-size: $v12-font-title; font-weight: 600; }
+.receipt span.done { color: $v12-primary; }
 .receipt + .v12-primary-button { margin-top: 64rpx; }
 .payment-page > .v12-secondary-button { margin-top: 28rpx; }
-.foot-note { display: block; margin-top: 56rpx; text-align: center; color: #777; font-size: 23rpx; }
+.foot-note { display: block; margin-top: 56rpx; text-align: center; color: $v12-text-2; font-size: $v12-font-body; }

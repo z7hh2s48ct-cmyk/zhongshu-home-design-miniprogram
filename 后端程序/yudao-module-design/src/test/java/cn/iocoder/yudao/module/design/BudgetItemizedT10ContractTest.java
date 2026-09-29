@@ -163,11 +163,12 @@ class BudgetItemizedT10ContractTest {
                     "completeness", "pricedSubtotalCents", "amountCents", "lines");
             assertThat(parent.path("itemId").isTextual()).isTrue();
             for (JsonNode line : parent.path("lines")) {
-                assertThat(fields(line)).containsExactlyInAnyOrder("lineId", "optionLabel", "status", "amountCents");
+                // 2026-09-29 决策 B：行级 quantity/unit 对用户公开（源自用户自己的参数）；单价与规则键仍不外发
+                assertThat(fields(line)).containsExactlyInAnyOrder("lineId", "optionLabel", "status", "amountCents", "quantity", "unit");
                 assertThat(line.path("lineId").isTextual()).isTrue();
             }
         }
-        assertThat(data.toString()).doesNotContain("unitPrice", "unit_price", "priceVersion", "quantity", "quantities",
+        assertThat(data.toString()).doesNotContain("unitPrice", "unit_price", "priceVersion", "quantities",
                 "quantitySource", "quantityKey", "sourceReference", "pricingSnapshot", "freeReason", "excludedReason",
                 "internalNote", "DOOR_HOUSEHOLDS", "private fixture prompt", "requestHash");
         assertThat(data.path("disclaimer").asText()).contains("参考");

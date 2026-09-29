@@ -1,9 +1,9 @@
 <view class="v12-page budget-page prices-page" wx:if="{{accessReady}}">
   <v12-navbar title="我的当地单价" show-back show-brand="{{false}}" />
-  <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>覆盖价跟账号生效，只影响你自己的新预算测算；平台基准价与他人不受影响。</text></view>
+  <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b9690b" /><text>覆盖价跟账号生效，只影响你自己的新预算测算；平台基准价与他人不受影响。</text></view>
   <view class="budget-card prices-card">
     <picker range="{{regionNames}}" value="{{regionIndex < 0 ? 0 : regionIndex}}" bindchange="onRegionChange" disabled="{{!regions.length}}">
-      <view class="parameter-row"><text>建造地区</text><view class="input-value"><text>{{regionNames[regionIndex] || '请选择'}}</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view></view>
+      <view class="parameter-row"><text>建造地区</text><view class="input-value"><text>{{regionNames[regionIndex] || '请选择'}}</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view></view>
     </picker>
     <view wx:if="{{overriddenCount}}" class="prices-hint">已启用 {{overriddenCount}} 项当地单价</view>
   </view>
@@ -32,7 +32,7 @@
         </view>
       </view>
     </view>
-    <view class="explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">填写说明</text><text class="muted">单价按各项目计价单位填写，最多两位小数<text class="help-line">保存后新生成的预算即按当地单价计算</text><text class="help-line">已保存的预算与平台报价不受影响</text></text></view></view>
+    <view class="explanation"><view class="round-icon"><t-icon name="file" size="32px" color="#7b5532" /></view><view><text class="section-title">填写说明</text><text class="muted">单价按各项目计价单位填写，最多两位小数<text class="help-line">保存后新生成的预算即按当地单价计算</text><text class="help-line">已保存的预算与平台报价不受影响</text></text></view></view>
   </block>
   <view wx:elif="{{!loading && !error}}" class="budget-card state-card"><text>当前地区暂无可配置的预算项目</text></view>
 </view>

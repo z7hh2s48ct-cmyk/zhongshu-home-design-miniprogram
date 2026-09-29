@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 import java.util.Map;
 
-/** Public budget snapshot. Internal unit prices, quantities, rules and reasons are deliberately absent. */
+/** Public budget snapshot. Internal unit prices, rules and reasons are deliberately absent;
+ *  line quantity/unit are exposed (2026-09-29 decision B) because they derive from the user's own inputs. */
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public record AppItemizedBudgetRespVO(
         String budgetId, String revisionId, String model, String projectId, String projectName,
@@ -17,7 +18,8 @@ public record AppItemizedBudgetRespVO(
     public record Item(String itemId, String itemCode, String category, String publicName, String source,
                        String completeness, long pricedSubtotalCents, Long amountCents, List<Line> lines) {}
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    public record Line(String lineId, String optionLabel, String status, Long amountCents) {}
+    public record Line(String lineId, String optionLabel, String status, Long amountCents,
+                       String quantity, String unit) {}
 
     public AppItemizedBudgetRespVO withSaved(boolean value) {
         return new AppItemizedBudgetRespVO(budgetId, revisionId, model, projectId, projectName, resultVersionId,

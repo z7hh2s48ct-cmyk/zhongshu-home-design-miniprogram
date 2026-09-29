@@ -8,15 +8,15 @@
       <text class="section-title">费用项目</text>
       <view class="detail-group" wx:for="{{groups}}" wx:key="itemId">
         <view class="detail-group-row" bindtap="expand" data-index="{{index}}" role="button" aria-label="查看{{item.publicName}}子项">
-          <view class="round-icon"><t-icon name="{{item.icon}}" size="27px" color="#82470f" /></view>
+          <view class="round-icon"><t-icon name="{{item.icon}}" size="24px" color="#7b5532" /></view>
           <view class="summary-copy"><text>{{item.publicName}}<text class="custom-tag" wx:if="{{item.custom}}">补充项</text></text><text class="row-description">{{item.description}}</text></view><view class="row-price"><text>{{item.amountText}}</text><text class="row-description" wx:if="{{item.completeness === 'INCOMPLETE'}}">已计价{{item.subtotalText}}</text></view>
         </view>
-        <view class="line-details" wx:if="{{expanded[index]}}"><view class="line-detail" wx:for="{{item.lines}}" wx:for-item="line" wx:key="lineId"><text>{{line.optionLabel || line.statusLabel}}</text><text>{{line.amountText}}</text></view></view>
+        <view class="line-details" wx:if="{{expanded[index]}}"><view class="line-detail" wx:for="{{item.lines}}" wx:for-item="line" wx:key="lineId"><text>{{line.optionLabel || line.statusLabel}}<text wx:if="{{line.quantityText}}" class="line-quantity">（{{line.quantityText}}）</text></text><text>{{line.amountText}}</text></view></view>
       </view>
     </view>
     <view class="budget-card result-section" wx:if="{{category === 'BODY'}}"><text class="section-title">项目说明</text><view class="explanation-row" wx:for="{{groups}}" wx:key="itemId"><text>{{item.publicName}}</text><text>{{item.explanation}}</text></view></view>
     <view class="inline-warning" wx:if="{{warningText}}">{{warningText}}</view>
-    <view class="auto-note result-note"><t-icon name="info-circle-filled" size="18px" color="#b35c07" /><text>费用明细仅展示项目金额，不展示内部计价规则</text></view>
+    <view class="auto-note result-note"><t-icon name="info-circle-filled" size="20px" color="#b9690b" /><text>费用明细仅展示项目金额，不展示内部计价规则</text></view>
     <view class="result-actions"><button class="budget-primary" bindtap="back">返回预算</button></view>
   </block>
 </view>

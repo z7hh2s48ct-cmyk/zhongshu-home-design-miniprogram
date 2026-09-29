@@ -2,23 +2,23 @@
   <v12-navbar title="基础参数" show-back show-brand="{{false}}" />
   <view wx:if="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在导入基础参数…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{draft}}">
-    <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>基础参数已从{{draft.resultVersionId ? '方案' : '项目'}}带入</text><button class="text-action source-tag" bindtap="restore">恢复导入值</button></view>
+    <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b9690b" /><text>基础参数已从{{draft.resultVersionId ? '方案' : '项目'}}带入</text><button class="text-action source-tag" bindtap="restore">恢复导入值</button></view>
     <view class="budget-card parameters-card">
       <view class="parameters-head"><text class="section-title">项目参数</text></view>
       <view class="parameter-row"><text>占地面积</text><view class="input-value"><input type="digit" value="{{values.footprintArea}}" placeholder="请填写" maxlength="20" data-field="footprintArea" bindinput="onAreaInput" aria-label="占地面积" /><text class="unit">m²</text></view></view>
       <text wx:if="{{errors.footprintArea}}" class="field-error">{{errors.footprintArea}}</text>
-      <picker range="{{floorNames}}" value="{{floorIndex < 0 ? 0 : floorIndex}}" bindchange="onFloorChange"><view class="parameter-row"><text>建筑层数</text><view class="input-value"><text>{{values.floorCount ? values.floorCount + '层' : '请选择'}}</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view></view></picker>
+      <picker range="{{floorNames}}" value="{{floorIndex < 0 ? 0 : floorIndex}}" bindchange="onFloorChange"><view class="parameter-row"><text>建筑层数</text><view class="input-value"><text>{{values.floorCount ? values.floorCount + '层' : '请选择'}}</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view></view></picker>
       <text wx:if="{{errors.floorCount}}" class="field-error">{{errors.floorCount}}</text>
       <view class="parameter-row"><text>屋顶面积</text><view class="input-value"><input type="digit" value="{{values.roofArea}}" placeholder="请填写" maxlength="20" data-field="roofArea" bindinput="onAreaInput" aria-label="屋顶面积" /><text class="unit">m²</text><button wx:if="{{values.footprintArea}}" class="text-action same-roof" bindtap="copyFootprint" aria-label="按占地面积填充屋顶面积">同占地</button></view></view>
       <text wx:if="{{errors.roofArea}}" class="field-error">{{errors.roofArea}}</text>
-      <picker range="{{regionNames}}" value="{{regionIndex < 0 ? 0 : regionIndex}}" bindchange="onRegionChange" disabled="{{!regions.length}}"><view class="parameter-row"><text>建造地区</text><view class="input-value"><text class="region-name">{{regionName}}</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view></view></picker>
+      <picker range="{{regionNames}}" value="{{regionIndex < 0 ? 0 : regionIndex}}" bindchange="onRegionChange" disabled="{{!regions.length}}"><view class="parameter-row"><text>建造地区</text><view class="input-value"><text class="region-name">{{regionName}}</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view></view></picker>
       <text wx:if="{{errors.regionCode}}" class="field-error">{{errors.regionCode}}</text>
-      <view class="parameter-row last-row prices-entry" bindtap="openMyPrices" role="button" aria-label="我的当地单价"><text>我的当地单价</text><view class="input-value"><text class="region-name">按当地成本调价</text><t-icon name="chevron-right" size="16px" color="#888b91" /></view></view>
+      <view class="parameter-row last-row prices-entry" bindtap="openMyPrices" role="button" aria-label="我的当地单价"><text>我的当地单价</text><view class="input-value"><text class="region-name">按当地成本调价</text><t-icon name="chevron-right" size="16px" color="#a89a8c" /></view></view>
     </view>
     <view wx:if="{{!regions.length}}" class="inline-warning"><text>{{regionsError || '暂无已启用的地区，请管理员先配置地区。'}}</text><button class="text-action" bindtap="load">重试</button></view>
     <view wx:if="{{storageError}}" class="inline-warning">{{storageError}}</view>
     <view wx:if="{{needsReview}}" class="inline-warning">项目实际建筑面积与当前参数存在差异，已保留项目原值，请管理员复核。</view>
-      <view class="explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">填写说明</text><text class="muted">占地面积用于地基基础等项目测算<text class="help-line">屋顶面积用于屋面结构项目测算，平屋顶可点「同占地」快速填充</text></text></view></view>
-    <view class="budget-footer"><text class="footer-hint">参数保留在本机草稿，不修改原方案或已保存预算</text><button class="budget-primary" bindtap="save" disabled="{{saving || !regions.length}}" loading="{{saving}}">保存参数</button></view>
+      <view class="explanation"><view class="round-icon"><t-icon name="file" size="32px" color="#7b5532" /></view><view><text class="section-title">填写说明</text><text class="muted">占地面积用于地基基础等项目测算<text class="help-line">屋顶面积用于屋面结构项目测算，平屋顶可点「同占地」快速填充</text></text></view></view>
+    <view class="budget-footer"><text class="footer-hint">修改即时保留在本机草稿，可撤销本次修改；不改动原方案或已保存预算</text><view class="footer-actions"><button class="budget-secondary" bindtap="revert" disabled="{{saving}}">撤销本次修改</button><button class="budget-primary" bindtap="save" disabled="{{saving || !regions.length}}" loading="{{saving}}">完成</button></view></view>
   </block>
 </view>

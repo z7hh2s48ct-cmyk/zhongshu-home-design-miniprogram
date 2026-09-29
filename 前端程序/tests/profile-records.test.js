@@ -163,10 +163,6 @@ test('指定版本不存在不偷偷显示最新版本，读取图片期间换�
   const e = environment('pages/ai-design/result.js', { getResultVersions: async () => ({ list: [{ versionId: '99', version: 2 }] }) });
   e.page.onLoad({ projectId: ID, resultVersionId: VERSION }); await tick(); assert.match(e.page.data.error, /不可用/); assert.equal(e.page.data.latest, null);
   e.state.token = ''; await e.page.loadVersions(); assert.equal(e.page.data.latest, null);
-  for (const filename of ['plane-select', 'elevation-select']) {
-    const f = environment('pages/ai-design/' + filename + '.js', { getProject: async projectId => { assert.equal(projectId, ID); return { candidates: [] }; } });
-    f.page.onLoad({ projectId: ID }); await tick(); assert.equal(f.page.data.projectId, ID);
-  }
 });
 
 test('充值详情忽略 URL 金额，已支付但未入账时不显示充值成功', async () => {
