@@ -22,6 +22,8 @@
 .files > view:last-child { border: 0; }
 .files > view text { flex: 1; font-size: 25rpx; }
 .result-actions { margin-top: 22rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
-.tool-row { margin-top: 20rpx; display: grid; grid-template-columns: repeat(3,1fr); gap: 16rpx; }
+.tool-row { margin-top: 20rpx; display: grid; gap: 16rpx; }
+.tool-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.tool-row.cols-1 { grid-template-columns: 1fr; }
 .tool-row view { height: 76rpx; border: 1rpx solid $v12-divider; border-radius: 14rpx; background: #fffdf8; display: flex; align-items: center; justify-content: center; gap: 10rpx; font-size: 22rpx; }
 .publish-note { margin-top: 30rpx; display: flex; align-items: center; justify-content: center; gap: 10rpx; color: #888; font-size: 22rpx; }

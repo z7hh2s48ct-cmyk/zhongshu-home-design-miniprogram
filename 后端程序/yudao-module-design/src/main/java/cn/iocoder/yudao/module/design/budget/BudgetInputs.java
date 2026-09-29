@@ -143,6 +143,14 @@ public final class BudgetInputs {
         for (String field : FIELDS) {
             if (snapshot.containsKey(field)) fields.put(field, snapshot.get(field));
         }
+        // T15 设计输入以 faceWidthM/depthM 落快照；预算派生读取 faceWidth/depth。仅补键名映射，值原样，
+        // 让设计阶段已填的尺寸能派生出占地面积，否则预算页一片“待填写”。
+        if (!fields.containsKey("faceWidth") && snapshot.get("faceWidthM") != null) {
+            fields.put("faceWidth", snapshot.get("faceWidthM"));
+        }
+        if (!fields.containsKey("depth") && snapshot.get("depthM") != null) {
+            fields.put("depth", snapshot.get("depthM"));
+        }
         if (!fields.containsKey("floorCount") && "两层".equals(snapshot.get("floor"))) {
             fields.put("floorCount", 2); // The existing app's stored enum, not a guessed default.
         }

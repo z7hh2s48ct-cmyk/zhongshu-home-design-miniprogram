@@ -11,7 +11,7 @@
   </view>
   <view wx:if="{{imageError}}" class="v12-card result-main"><text>{{imageError}}</text><button bindtap="loadImages">重试图片</button></view>
   <view class="result-actions"><view wx:if="{{!readOnly}}" class="v12-secondary-button" bindtap="adjust">重新生成立面</view><view class="v12-primary-button" bindtap="budget">生成预算</view></view>
-  <view class="tool-row"><view bindtap="save"><t-icon name="bookmark" size="23px" color="#7b3f17" /><text>我的方案</text></view><view wx:if="{{!readOnly}}" bindtap="publish"><t-icon name="home" size="23px" color="#7b3f17" /><text>投稿到户型库</text></view><view wx:if="{{!readOnly}}" bindtap="regenerate"><t-icon name="refresh" size="23px" color="#111" /><text>重新生成</text></view></view>
-  <view class="publish-note"><t-icon name="secured" size="16px" color="#888" /> 发布前将校核户型库必填参数</view>
+  <view class="tool-row {{readOnly ? 'cols-1' : 'cols-2'}}"><view bindtap="save"><t-icon name="bookmark" size="23px" color="#7b3f17" /><text>我的方案</text></view><view wx:if="{{!readOnly}}" bindtap="publish"><t-icon name="home" size="23px" color="#7b3f17" /><text>投稿到户型库</text></view></view>
+  <view wx:if="{{!readOnly}}" class="publish-note"><t-icon name="secured" size="16px" color="#888" /> 发布前将校核户型库必填参数</view>
   </block>
 </view>

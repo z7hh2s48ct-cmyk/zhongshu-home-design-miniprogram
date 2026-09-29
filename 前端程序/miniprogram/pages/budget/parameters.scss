@@ -16,3 +16,5 @@
 .field-error { display: block; padding: 6rpx 0 12rpx; color: #bc3d24; font-size: 21rpx; }
 @media (max-width: 350px) { .input-value input { width: 220rpx; } .input-value { gap: 12rpx; } }
 .prices-entry .region-name { color: #858893; font-size: 24rpx; }
+.same-roof { flex-shrink: 0; margin-left: 4rpx; font-size: 22rpx; }
+@media (max-width: 350px) { .same-roof { margin-left: 0; } }

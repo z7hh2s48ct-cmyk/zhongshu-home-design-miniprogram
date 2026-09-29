@@ -60,7 +60,9 @@ protectedPage({
       global.selectedElevationAssetId = sel.assetId;
       global.elevationLabel = sel.name;
       global.resultVersionId = (vo && vo.resultVersionId) ? vo.resultVersionId : null;
-      wx.redirectTo({ url: '/pages/ai-design/result' });
+      // 带 projectId/resultVersionId 直达，不依赖 globalData（场景恢复后内存态可能为空）
+      wx.redirectTo({ url: '/pages/ai-design/result?projectId=' + self.data.projectId
+        + (global.resultVersionId ? '&resultVersionId=' + global.resultVersionId : '') });
     }).catch(function (err) {
       self.setData({ submitting: false });
       wx.showToast({ title: (err && err.msg) || '选定失败，请重试', icon: 'none' });

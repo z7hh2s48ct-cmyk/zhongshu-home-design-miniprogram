@@ -5,7 +5,8 @@ const draftStore = require('../../utils/budget-draft');
 
 protectedPage({
   data: { loading: false, error: '', draft: null, values: {}, regions: [], regionNames: [], regionIndex: -1, regionName: '请选择',
-    floorNames: Array.from({ length: 20 }, (_, index) => (index + 1) + '层'), floorIndex: -1,
+    // 层数口径与设计输入端一致（1~4 层）；超出范围的历史草稿由草稿校验拦截
+    floorNames: ['1层', '2层', '3层', '4层'], floorIndex: -1,
     errors: {}, needsReview: false, storageError: '', saving: false },
   onLoad(options) {
     this._projectId = draftStore.id(options.projectId);
@@ -79,6 +80,12 @@ protectedPage({
     this.renderDraft(draft);
   },
   onAreaInput(event) { if (this.currentSession() && this.data.draft) this.updateDraft(draftStore.edit(this.data.draft, event.currentTarget.dataset.field, event.detail.value)); },
+  // 屋顶面积设计流程不采集：一键按当前占地面积填充（平屋顶常规假设），仍可手改
+  copyFootprint() {
+    if (!this.currentSession() || !this.data.draft) return;
+    const footprint = draftStore.values(this.data.draft).footprintArea;
+    if (footprint) this.updateDraft(draftStore.edit(this.data.draft, 'roofArea', footprint));
+  },
   onFloorChange(event) { if (this.currentSession() && this.data.draft) this.updateDraft(draftStore.edit(this.data.draft, 'floorCount', Number(event.detail.value) + 1)); },
   onRegionChange(event) {
     if (!this.currentSession() || !this.data.draft) return;

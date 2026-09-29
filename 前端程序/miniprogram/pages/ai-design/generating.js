@@ -14,7 +14,7 @@ protectedPage({
   data: { stage: 'plane', count: 2, progress: 0, status: 'QUEUED',
           statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '',
           stepIndex: 0, elapsedText: '00:00',
-          candidates: [], pendingSlots: 0,
+          candidates: [], pendingSlots: 0, candidatesError: '',
           selectedId: '', selectDone: false, selecting: false, nextLabel: '' },
   onLoad(query) {
     this._token = http.getToken();
@@ -122,7 +122,7 @@ protectedPage({
         added = true;
       });
       const pendingSlots = self.data.finished ? 0 : Math.max(0, (self.data.count || 0) - merged.length);
-      self.setData({ candidates: merged, pendingSlots: pendingSlots });
+      self.setData({ candidates: merged, pendingSlots: pendingSlots, candidatesError: '' });
       if (!added) return;
       merged.forEach(function (item, index) {
         if (item.url || !item.assetId) return;
@@ -134,7 +134,11 @@ protectedPage({
           }
         }).catch(function () { /* 单图加载失败保留占位 */ });
       });
-    }).catch(function () { /* 候选拉取失败不打断进度轮询，下轮重试 */ });
+    }).catch(function () {
+      // 候选拉取失败不打断进度轮询，下轮重试；但若已到终态，必须给用户显式重试出口而不是空页面
+      if (self._stopped || !self.current(self._token)) return;
+      if (self.data.finished && !self.data.candidates.length) self.setData({ candidatesError: '候选读取失败，可重试加载' });
+    });
   },
   current(token) { return http.isSameSession ? http.isSameSession(token) : token === http.getToken(); },
   // 页内选择：与 plane-select / elevation-select 完全同一接口与全局副作用，仅不再跳转
@@ -173,7 +177,20 @@ protectedPage({
   },
   nextStep() {
     if (!this.data.selectDone || !this.current(this._token)) return;
-    wx.redirectTo({ url: NEXT[this.data.stage].url, fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) });
+    // 带 projectId/resultVersionId 直达，不依赖 globalData（场景恢复后内存态可能为空）
+    let url = NEXT[this.data.stage].url;
+    if (this.data.stage === 'elevation' && this._projectId) {
+      const versionId = getApp().globalData.resultVersionId;
+      url += '?projectId=' + this._projectId + (versionId ? '&resultVersionId=' + versionId : '');
+    }
+    wx.redirectTo({ url: url, fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) });
+  },
+  retryCandidates() {
+    this.setData({ candidatesError: '' });
+    this.refreshCandidates();
+  },
+  leavePage() {
+    wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/ai-design/index' }) });
   },
   cancel() {
     if (this._cancelling) return;

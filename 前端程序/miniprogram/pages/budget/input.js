@@ -7,7 +7,7 @@ const selection = require('../../utils/budget-selection');
 protectedPage({
   data: { loading: false, error: '', noProject: false, draft: null, values: {}, regions: [], regionName: '待选择', sourceLabel: '', storageError: '', needsReview: false,
     bodyCount: 0, exteriorCount: 0, customCount: 0, pendingPriceCount: 0, catalogLoading: false, catalogError: '',
-    catalogReady: false, selectionNotice: '', canGenerate: false, creating: false, generateError: '',
+    catalogReady: false, selectionNotice: '', canGenerate: false, disabledReason: '', creating: false, generateError: '',
     importConflict: false, reimporting: false, importError: '' },
   onLoad(options) {
     const global = getApp().globalData || {};
@@ -87,7 +87,7 @@ protectedPage({
     this.setData({ loading: false, draft: null, values: {}, regions: [], regionName: '待选择', sourceLabel: '',
       storageError: '', regionsError: '', needsReview: false, error: '登录身份已变化，请重新导入参数',
       bodyCount: 0, exteriorCount: 0, customCount: 0, pendingPriceCount: 0, catalogLoading: false, catalogReady: false,
-      catalogError: '', selectionNotice: '', canGenerate: false, creating: false, generateError: '',
+      catalogError: '', selectionNotice: '', canGenerate: false, disabledReason: '', creating: false, generateError: '',
       importConflict: false, reimporting: false, importError: '' });
   },
   acceptResponse(scope, requestId) {
@@ -107,24 +107,32 @@ protectedPage({
     const body = selection.summary(this._catalog || [], draft, 'BODY');
     const exterior = selection.summary(this._catalog || [], draft, 'EXTERIOR');
     const invalidProvided = Object.keys(validation.errors).some(key => key === 'regionCode' || (values[key] != null && values[key] !== ''));
+    const canGenerate = !!region && !invalidProvided && !this.data.storageError && this.data.catalogReady && this._catalogRegion === values.regionCode;
+    // 按钮不可用时把原因放在底栏，而不是让用户猜为什么灰
+    let disabledReason = '';
+    if (!region) disabledReason = invalidProvided ? '基础参数有误，请点「修改」更正后再生成' : '请先在「基础参数」中选择建造地区';
+    else if (invalidProvided) disabledReason = '基础参数有误，请点「修改」更正后再生成';
+    else if (this.data.storageError) disabledReason = '本机草稿不可用，请恢复存储后重试';
+    else if (!this.data.catalogReady) disabledReason = this.data.catalogError ? '预算配置加载失败，请点上方「重试」' : '正在校验地区可选配置…';
+    else if (this._catalogRegion !== values.regionCode) disabledReason = '正在同步当前地区的可选配置…';
     this.setData({ draft, values, regionName: region ? region.name : values.regionCode ? '原地区已不可选' : '待选择',
       sourceLabel: draft.resultVersionId ? '已关联设计方案' : '已关联设计项目', needsReview: validation.needsReview,
       bodyCount: body.completeCount, exteriorCount: exterior.completeCount,
       customCount: body.selectedCustomCount + exterior.selectedCustomCount,
       pendingPriceCount: body.pendingPriceCount + exterior.pendingPriceCount, selectionNotice: selection.selectionNotice(draft),
-      canGenerate: !!region && !invalidProvided && !this.data.storageError && this.data.catalogReady && this._catalogRegion === values.regionCode });
+      canGenerate, disabledReason });
     if (this._catalogRegion !== values.regionCode && !this.data.catalogLoading) this.loadCatalog();
   },
   loadCatalog() {
     if (!this.currentSession() || !this.data.draft || this.data.creating || this.data.catalogLoading || this.data.reimporting || this._confirmingImport) return;
     const region = draftStore.values(this.data.draft).regionCode;
     if (!this.data.regions.some(item => item.code === region)) {
-      this.setData({ catalogReady: false, canGenerate: false, catalogError: '请先选择已启用的建造地区' });
+      this.setData({ catalogReady: false, canGenerate: false, disabledReason: '请先在「基础参数」中选择建造地区', catalogError: '请先选择已启用的建造地区' });
       return;
     }
     const scope = this._sessionScope;
     const requestId = this._catalogRequestId = (this._catalogRequestId || 0) + 1;
-    this.setData({ catalogLoading: true, catalogReady: false, canGenerate: false, catalogError: '' });
+    this.setData({ catalogLoading: true, catalogReady: false, canGenerate: false, disabledReason: '正在校验地区可选配置…', catalogError: '' });
     api.getBudgetOptions(region).then(response => {
       if (requestId !== this._catalogRequestId) return;
       if (scope !== draftStore.sessionScope()) { this.invalidateSession(); return; }
@@ -142,7 +150,7 @@ protectedPage({
     }).catch(error => {
       if (requestId !== this._catalogRequestId) return;
       if (scope !== draftStore.sessionScope()) { this.invalidateSession(); return; }
-      this.setData({ catalogLoading: false, catalogReady: false, canGenerate: false,
+      this.setData({ catalogLoading: false, catalogReady: false, canGenerate: false, disabledReason: '预算配置加载失败，请点上方「重试」',
         catalogError: (error && (error.msg || error.message)) || '配置加载失败，请重试' });
     });
   },
@@ -192,6 +200,10 @@ protectedPage({
     });
   },
   selectProject() { wx.switchTab({ url: '/pages/ai-design/index' }); },
+  // 首页预算入口无参进入且 globalData 已清空（如重启）时，引导从已有项目进入而不是只能重新生成
+  openMyProjects() {
+    wx.navigateTo({ url: '/pages/profile/records?type=projects', fail: () => wx.switchTab({ url: '/pages/profile/index' }) });
+  },
   configuration(event) {
     if (!this.currentSession() || !this.data.draft || this.data.creating || this.data.storageError || this.data.reimporting || this._confirmingImport) return;
     const category = event && event.currentTarget.dataset.category;

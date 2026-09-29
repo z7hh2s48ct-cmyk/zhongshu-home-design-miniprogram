@@ -114,6 +114,20 @@ class BudgetInputsT10ContractTest {
     }
 
     @Test
+    void designSnapshotLengthKeysDeriveFootprintForBudgetImport() {
+        // T15 设计输入以 faceWidthM/depthM 落快照；预算导入映射键名后应能派生占地与建筑面积，
+        // 否则预算页只能看到“待填写”（2026-09-29 修复回归锚点）
+        var resolved = BudgetInputs.resolve(BudgetInputs.fromSnapshot(
+                Map.of("faceWidthM", 12.6, "depthM", "13.8", "floorCount", 3)), Map.of());
+        assertThat(resolved.values())
+                .containsEntry("footprintArea", "173.88")
+                .containsEntry("buildingArea", "521.64");
+        assertThat(resolved.sources())
+                .containsEntry("footprintArea", "DERIVED")
+                .containsEntry("buildingArea", "DERIVED");
+    }
+
+    @Test
     void identifiersAreExactPositiveLongStrings() {
         assertThat(BudgetInputs.positiveId("9007199254740993")).isEqualTo(9007199254740993L);
         for (String id : new String[]{"0", "-1", "01", "1e3", "1.0", " 1", "9223372036854775808", ""}) {

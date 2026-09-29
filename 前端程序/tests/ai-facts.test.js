@@ -77,7 +77,8 @@ test('立面完成页内选定后引导查看最终方案', async () => {
   assert.equal(e.page.data.nextLabel, '查看最终方案');
   assert.equal(e.state.global.resultVersionId, 'v9');
   e.page.nextStep();
-  assert.equal(e.state.calls.at(-1)[0], 'redirectTo'); assert.equal(e.state.calls.at(-1)[1].url, '/pages/ai-design/result');
+  // 直达结果页必须带 projectId/resultVersionId，不依赖 globalData（场景恢复后内存态可能为空）
+  assert.equal(e.state.calls.at(-1)[0], 'redirectTo'); assert.equal(e.state.calls.at(-1)[1].url, '/pages/ai-design/result?projectId=91&resultVersionId=v9');
   e.page.onUnload();
 });
 test('重新生成先确认准确报价，失败重试保持请求与幂等键；取消不建单', async () => {

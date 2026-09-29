@@ -21,7 +21,10 @@
 .config-status { font-size: 23rpx; color: #777a82; flex-shrink: 0; }
 .config-status.config-complete { color: #36863b; }
 .budget-history-links { display: flex; flex-wrap: wrap; gap: 24rpx; }
+.state-actions { margin-top: 18rpx; display: flex; flex-direction: column; gap: 6rpx; align-items: flex-start; }
+.state-actions .text-action { padding: 8rpx 0; font-size: 26rpx; }
 .context-note { margin: 20rpx 12rpx; color: #777a82; font-size: 20rpx; word-break: break-all; }
 .context-note > text { display: block; }
 .budget-page .legacy-link { margin-top: 8rpx; font-size: 22rpx; }
+.footer-error { display: block; margin-bottom: 10rpx; padding: 12rpx 20rpx; border-radius: 12rpx; background: #fbeae5; color: #a33b21; font-size: 22rpx; line-height: 1.5; text-align: center; }
 @media (max-width: 350px) { .config-row { gap: 14rpx; } .config-status { font-size: 21rpx; } }

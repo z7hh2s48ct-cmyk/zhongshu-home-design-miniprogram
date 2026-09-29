@@ -2,8 +2,11 @@
   <v12-navbar title="快速预算" show-back show-brand="{{false}}" />
   <view wx:if="{{noProject}}" class="budget-card state-card">
     <text class="section-title">请先选择设计项目</text>
-    <text class="muted">请从已有设计项目进入预算，无需重新生成AI方案。</text>
-    <button class="text-action" bindtap="selectProject">前往设计项目</button>
+    <text class="muted">预算基于已生成的AI设计方案测算，请从已有设计项目进入。</text>
+    <view class="state-actions">
+      <button class="text-action" bindtap="openMyProjects">从我的方案选择已有项目</button>
+      <button class="text-action" bindtap="selectProject">前往 AI 设计新建方案</button>
+    </view>
   </view>
   <view wx:elif="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在导入项目参数…' : error}}" action-text="{{loading ? '' : '重新加载'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{draft}}">
@@ -31,13 +34,12 @@
     <view wx:if="{{catalogError}}" class="inline-warning"><text>{{catalogError}}</text><button class="text-action" bindtap="loadCatalog">重试</button></view>
     <view wx:if="{{selectionNotice}}" class="inline-warning">{{selectionNotice}}</view>
     <view wx:if="{{pendingPriceCount}}" class="inline-warning">已选配置中有{{pendingPriceCount}}项待补价，选择完成不代表完整计价。</view>
-    <view wx:if="{{generateError}}" class="inline-warning">{{generateError}}</view>
     <view wx:if="{{importConflict}}" class="inline-warning">项目参数已更新，请使用下方“重新导入当前参数”重建本机草稿，再重新配置预算。</view>
     <view wx:if="{{importError}}" class="inline-warning">{{importError}}</view>
     <view wx:if="{{reimporting}}" class="inline-warning">正在读取最新参数，成功后才替换当前本机草稿…</view>
     <view class="budget-card explanation"><view class="round-icon"><t-icon name="file" size="29px" color="#82470f" /></view><view><text class="section-title">测算说明</text><text class="muted">根据地区价格、项目面积和所选配置估算</text></view></view>
     <view class="context-note"><text>{{sourceLabel}} · 项目 {{draft.projectId}}</text><text wx:if="{{draft.resultVersionId}}">方案版本编号 {{draft.resultVersionId}}</text><view class="budget-history-links"><button class="text-action legacy-link" bindtap="history">项目预算历史</button><button class="text-action legacy-link" bindtap="legacy">旧版区间测算</button></view></view>
     <button class="text-action legacy-link" bindtap="confirmReimport" disabled="{{creating || loading || catalogLoading || reimporting}}">重新导入当前参数</button>
-    <view class="budget-footer"><text class="footer-hint">参数或配置未齐时生成待补充预算，不视为完整总价</text><button class="budget-primary" bindtap="generate" disabled="{{!canGenerate || creating || loading || catalogLoading || reimporting}}" loading="{{creating}}">{{creating ? '正在生成预算' : '生成参考预算'}}</button></view>
+    <view class="budget-footer"><text wx:if="{{generateError}}" class="footer-error">{{generateError}}</text><text class="footer-hint">{{disabledReason || '参数或配置未齐时生成待补充预算，不视为完整总价'}}</text><button class="budget-primary" bindtap="generate" disabled="{{!canGenerate || creating || loading || catalogLoading || reimporting}}" loading="{{creating}}">{{creating ? '正在生成预算' : '生成参考预算'}}</button></view>
   </block>
 </view>

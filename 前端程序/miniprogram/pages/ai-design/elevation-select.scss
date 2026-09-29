@@ -14,15 +14,8 @@
 .main-elevation { position: relative; margin-top: 34rpx; padding: 22rpx 26rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: 18rpx; background: #fffdf8; }
 .main-elevation.selected { border: 2rpx solid #8a4a1a; }
 .elevation-name { color: #8a3517; font-size: 29rpx; }
-.elevation-name text { margin-left: 24rpx; padding: 5rpx 13rpx; border: 1rpx solid #ba7c4f; border-radius: 6rpx; font-size: 19rpx; }
 .main-elevation image { width: 100%; height: 340rpx; margin-top: 22rpx; border-radius: 12rpx; }
 .check { position: absolute; right: 28rpx; top: 24rpx; width: 40rpx; height: 40rpx; border-radius: 50%; background: #8a4a1a; color: #fff; display: flex; align-items: center; justify-content: center; }
-.small-elevations { margin-top: 22rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 22rpx; }
-.small-elevations > view { padding: 22rpx 12rpx 12rpx; border: 1rpx solid $v12-divider; border-radius: 16rpx; background: #fffdf8; }
-.small-elevations > view > view { padding: 0 10rpx 15rpx; display: flex; justify-content: space-between; font-size: 27rpx; }
-.small-elevations i { width: 34rpx; height: 34rpx; border: 1rpx solid #aaa; border-radius: 50%; }
-.small-elevations i.selected { border: 8rpx solid #8a4a1a; box-sizing: border-box; }
-.small-elevations image { width: 100%; height: 186rpx; border-radius: 10rpx; }
 .locked-summary { position: relative; margin-top: 22rpx; padding: 22rpx; display: grid; grid-template-columns: 56rpx 1fr; gap: 18rpx; }
 .house-icon { width: 60rpx; height: 60rpx; border-radius: 10rpx; background: #f5eee6; display: flex; align-items: center; justify-content: center; }
 .locked-summary text { display: block; font-size: 25rpx; }

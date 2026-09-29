@@ -148,7 +148,7 @@ function validate(draft, regions) {
   const current = values(draft);
   const errors = {};
   if (area(current.footprintArea) == null) errors.footprintArea = '请输入大于0且不超过100万㎡的面积，最多4位小数';
-  if (!floor(current.floorCount)) errors.floorCount = '请选择1至20层';
+  if (!floor(current.floorCount)) errors.floorCount = '请选择1至4层';
   if (area(current.roofArea) == null) errors.roofArea = '请填写实际屋顶面积，最多4位小数';
   if (!current.regionCode || !regions.some(region => region.code === current.regionCode)) errors.regionCode = '请选择已启用的建造地区';
   const expected = area(current.footprintArea) * floor(current.floorCount);
