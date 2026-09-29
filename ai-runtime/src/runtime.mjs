@@ -76,12 +76,17 @@ export function config(env = process.env) {
   if (storageOrigins.some(x => new URL(x).origin !== x)) throw Error('INVALID_STORAGE_ORIGIN');
   const temperature = Number(env.ZS_AI_TEMPERATURE || '0.7');
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw Error('INVALID_TEMPERATURE');
+  const aiBase = origin('AI_BASE_URL', env.ZS_AI_BASE_URL || 'https://api.apilio.ai/v1');
   return {
     core: origin('CORE_URL', required('ZS_AI_CORE_URL'), true),
     secret: required('ZS_INTERNAL_SECRET'), key: required('ZS_AI_API_KEY'),
-    base: origin('AI_BASE_URL', env.ZS_AI_BASE_URL || 'https://api.apilio.ai/v1'),
+    base: aiBase,
     model: env.ZS_AI_MODEL || 'gpt-5.6-sol', imageModel: required('ZS_AI_IMAGE_MODEL'),
     temperature, storageMode, storageRoot, storageOrigins, dailyLimit: limit,
+    // 图片回包为 URL 模式时，仅允许下载白名单 origin（默认与供应商 API 同源）；渠道 CDN 不同源时显式配置
+    imageUrlOrigins: env.ZS_AI_IMAGE_URL_ORIGINS?.trim()
+      ? env.ZS_AI_IMAGE_URL_ORIGINS.split(',').map(x => origin('IMAGE_URL_ORIGIN', x.trim()))
+      : [new URL(aiBase).origin],
     journalPath: required('ZS_AI_JOURNAL_DIR'), providerCode: 'apilio', workerId: `runtime-${randomUUID()}`
   };
 }
@@ -191,15 +196,29 @@ export class Provider {
         images.forEach((image, i) => body.append('image[]', new Blob([image.bytes], { type: image.mimeType }), `reference-${i}.${image.mimeType === 'image/png' ? 'png' : 'jpg'}`));
         value = await this.request('/images/edits', body, false, signal);
       } else value = await this.request('/images/generations', { model: this.settings.imageModel, prompt: text, n: 1, size: '1024x1024' }, true, signal);
-      const encoded = value.data?.[0]?.b64_json;
-      // URL output requires a separately reviewed provider CDN policy; never fetch arbitrary model URLs.
-      if (typeof encoded !== 'string' || encoded.length > Math.ceil(MAX_IMAGE / 3) * 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw Error('PROVIDER_IMAGE_INVALID');
-      const bytes = Buffer.from(encoded, 'base64');
+      const payload = value.data?.[0] ?? {};
+      let bytes;
+      if (typeof payload.b64_json === 'string' && payload.b64_json.length <= Math.ceil(MAX_IMAGE / 3) * 4
+          && /^[A-Za-z0-9+/]+={0,2}$/.test(payload.b64_json)) {
+        bytes = Buffer.from(payload.b64_json, 'base64');
+      } else if (typeof payload.url === 'string') {
+        // URL 回包模式（如 gpt-image-2 经 apilio 代理）：仅下载白名单 origin，禁止重定向，
+        // 下载后重算魔数与摘要——不信任 URL 内容声明，摘要以后续下载字节为准。
+        bytes = await this.fetchImageUrl(payload.url, signal);
+      } else throw Error('PROVIDER_IMAGE_INVALID');
       const mimeType = bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? 'image/png'
         : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'image/jpeg' : null;
       if (!mimeType || bytes.length > MAX_IMAGE) throw Error('PROVIDER_IMAGE_INVALID');
-      return { encoded, mimeType, sha256: sha(bytes), sizeBytes: bytes.length };
+      return { encoded: bytes.toString('base64'), mimeType, sha256: sha(bytes), sizeBytes: bytes.length };
     });
+  }
+
+  async fetchImageUrl(url, signal) {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password
+        || !this.settings.imageUrlOrigins.includes(parsed.origin)) throw Error('PROVIDER_IMAGE_URL_ORIGIN');
+    const timeout = AbortSignal.any([signal, AbortSignal.timeout(180000)]);
+    return bounded(await this.fetch(parsed, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
   }
   async upload(url, image, signal) {
     if (this.settings.storageMode === 'local-fs') {

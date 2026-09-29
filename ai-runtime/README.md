@@ -26,6 +26,7 @@
 |ZS_AI_TEMPERATURE|默认 0.7，范围 0–2。|
 |ZS_AI_IMAGE_MODEL|必填，无默认值；必须先确认购买渠道实际支持的图片模型与同步返回协议。|
 |ZS_AI_STORAGE_ORIGINS|逗号分隔的 HTTPS 私有 COS/CDN origin 白名单；必须包含签名读写 URL 的实际 origin。|
+|ZS_AI_IMAGE_URL_ORIGINS|可选；图片回包为 URL 模式（如 gpt-image-2 经 apilio 代理返回 `webstatic.aiproxy.vip`）时允许下载的 HTTPS origin 白名单，逗号分隔。默认仅允许与 AI base 同源；渠道 CDN 不同源时必须显式配置。|
 |ZS_AI_STORAGE_MODE|可选，默认 `https`。`local-fs` 为开发模式：后端 LocalObjectStorageAdapter 签发 `local://` 内网地址，引擎直接读写与后端共享的资产根目录（见下节）；绝不用于生产。|
 |ZS_AI_STORAGE_ROOT|`ZS_AI_STORAGE_MODE=local-fs` 时必填；必须与后端 `zhongshu.design.asset.storage-root` 指向同一目录。|
 |ZS_AI_DAILY_CALL_LIMIT|单个持久日志目录每日最多发起的供应商请求数（含提示词、失败及未知结果），1–10000；不是人民币费用上限。多目录部署需分别分配预算并在供应商账户再设总额度。|
@@ -55,7 +56,7 @@ node src/main.mjs
 
 ## 供应商验收前必须核对
 
-- 项目选择的是 apilio。图片模型的参数、响应形态、额度和计费需要供应商当前官方合同及实际账户验收。本实现要求同步 `data[0].b64_json` 图片响应；不支持任务 ID 异步轮询或任意 CDN URL 回包。若实际套餐采用这两类协议，必须补供应商适配器后才能启用，不得仅修改模型名后上线。
+- 项目选择的是 apilio。图片模型的参数、响应形态、额度和计费需要供应商当前官方合同及实际账户验收。图片回包支持同步 `data[0].b64_json` 与 `data[0].url` 两种形态：URL 模式仅下载 `ZS_AI_IMAGE_URL_ORIGINS` 白名单内的 HTTPS origin、拒绝重定向、下载后重算魔数与摘要（已实测 apilio `gpt-image-2` 返回 `webstatic.aiproxy.vip` CDN 链接）。不支持任务 ID 异步轮询协议；若实际套餐采用该协议，必须补供应商适配器后才能启用，不得仅修改模型名后上线。
 - 确认 chat 模型支持输入图片、temperature 和 max_tokens；确认图生图参数 `image[]`、单张 `n=1` 及图片模型输出格式。需求传给模型不保证建筑结构正确，结果仍需设计人员验收。
 - 验收平面→选择→立面→选择→冻结版本，以及部分失败、超时、取消、进程重启、迟到回写；逐笔核对供应商实际费用与设计点结算。
 - 为账户设置实际金额上限、只读用量核对和报警；对外出站仅开放所选供应商与存储域名。入口健康 /health（8081）不要当作可公开管理接口。

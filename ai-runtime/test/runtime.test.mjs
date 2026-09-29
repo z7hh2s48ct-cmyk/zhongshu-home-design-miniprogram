@@ -72,10 +72,11 @@ test('internal signature covers exact UTF-8 body and request path, no provider c
   });
   await core.post('/internal-api/design/v1/ai-jobs/claims', { workerId: '中文测试', maxJobs: 1 });
 });
-test('provider URL responses and unapproved storage origins are rejected without a fetch', async () => {
+test('provider URL responses to non-whitelisted origins are rejected without a fetch', async () => {
   const provider = new Provider({ storageOrigins: ['https://storage.example'], base: 'https://provider.example', key: 'test-key', imageModel: 'fixture' },
     { once: (key, operation) => operation() }, async () => Response.json({ data: [{ url: 'http://127.0.0.1/secret' }] }));
-  await assert.rejects(provider.generate(job, 1, 'plan', [], new AbortController().signal), /IMAGE_INVALID/);
+  // T15 适配：URL 回包仅允许白名单 HTTPS origin；非 HTTPS/未配置白名单在下载前拒绝
+  await assert.rejects(provider.generate(job, 1, 'plan', [], new AbortController().signal), /PROVIDER_IMAGE_URL_ORIGIN/);
   await assert.rejects(provider.imageInput({ url: 'https://evil.example/img' }, new AbortController().signal), /STORAGE_ORIGIN/);
 });
 test('live config requires image model, spend limit and explicit trusted storage origins', () => {
