@@ -19,8 +19,18 @@ public interface AiJobPort {
         return createFlatJob(userId, count, key, projectRef);
     }
 
+    default long createFlatJob(long userId, int count, String key, String projectRef,
+                               PricingPort.PriceConfirmation price, GenerationImageOptions options) {
+        return createFlatJob(userId, count, key, projectRef, price);
+    }
+
     default long createElevationJob(long userId, int count, String key, String projectRef, PricingPort.PriceConfirmation price) {
         return createElevationJob(userId, count, key, projectRef);
+    }
+
+    default long createElevationJob(long userId, int count, String key, String projectRef,
+                                    PricingPort.PriceConfirmation price, GenerationImageOptions options) {
+        return createElevationJob(userId, count, key, projectRef, price);
     }
 
     Optional<JobView> getJob(long jobId);

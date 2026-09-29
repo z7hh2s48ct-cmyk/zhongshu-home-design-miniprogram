@@ -25,4 +25,10 @@ public class AppRevisionRequestReqVO {
     @Max(value = 4, message = "生成数量最多 4")
     private Integer count = 2;
 
+    @Schema(description = "出图分辨率：2K/4K；不传则继承上一轮立面任务")
+    private String resolution;
+
+    @Schema(description = "画面方向：LANDSCAPE/PORTRAIT；不传则继承上一轮立面任务")
+    private String orientation;
+
 }

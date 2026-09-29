@@ -5,6 +5,7 @@ const http = require('../../utils/request');
 const config = require('../../utils/config');
 const sha256 = require('../../utils/sha256');
 const designInputs = require('../../utils/design-inputs');
+const generationOptions = require('../../utils/generation-options');
 
 const SKETCH_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -23,9 +24,10 @@ protectedPage({
     familyLabels: designInputs.familyLabels(),
     floorIndex: designInputs.indexOfFloor('两层'),
     familyIndex: designInputs.indexOfFamily('5室3厅2卫'),
-    points: '—', creating: false,
+    points: '—', creating: false, quoteReady: false, quoteLoading: false, quoteError: '',
     refCase: null, refCaseText: '', note: '', prompt: '',
-    sketchAssetId: null, sketchImage: ''
+    sketchAssetId: null, sketchImage: '', resolution: '2K', orientation: 'PORTRAIT', outputPixels: '1152 × 2048',
+    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations('2K')
   },
   onLoad(options) {
     if (options && options.caseId) return; // 由 onShow 统一读全局参考案例
@@ -56,7 +58,20 @@ protectedPage({
     }).catch(function () { /* 静默保留占位 */ });
   },
   selectMode(e) { this.setData({ mode: Number(e.currentTarget.dataset.index) }); },
-  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'FLAT'); },
+  selectCount(e) { if (this.data.creating) return; this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'FLAT'); },
+  selectResolution(e) {
+    if (this.data.creating) return;
+    const selected = generationOptions.selection('FLAT', { resolution: e.currentTarget.dataset.value, orientation: this.data.orientation });
+    this.setData({ resolution: selected.resolution, orientation: selected.orientation, outputPixels: selected.outputPixels,
+      orientations: generationOptions.orientations(selected.resolution) });
+    require('../../utils/generation-price').refresh(this, 'FLAT');
+  },
+  selectOrientation(e) {
+    if (this.data.creating) return;
+    const selected = generationOptions.selection('FLAT', { resolution: this.data.resolution, orientation: e.currentTarget.dataset.value });
+    this.setData({ orientation: selected.orientation, outputPixels: selected.outputPixels });
+  },
+  retryQuote() { require('../../utils/generation-price').refresh(this, 'FLAT'); },
   chooseReference() { wx.switchTab({ url: '/pages/library/index' }); },
   clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null, refCaseText: '' }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
@@ -140,8 +155,9 @@ protectedPage({
   },
 
   generate() {
-    if (this.data.creating) return;
+    if (this.data.creating || !this.data.quoteReady) return;
     const count = this.data.count;
+    const imageOptions = generationOptions.selection('FLAT', this.data);
     const self = this;
     self.setData({ creating: true });
     const idemKey = 'proj-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
@@ -161,7 +177,7 @@ protectedPage({
           requirementInputs: built.inputs
         };
     let confirmedPrice;
-    require('../../utils/generation-price').confirm('FLAT', count).then(function (price) {
+    return require('../../utils/generation-price').confirm('FLAT', count, '', { resolution: imageOptions.resolution }).then(function (price) {
       confirmedPrice = price;
       return api.createProject(body);
     }).then(function (project) {
@@ -170,7 +186,8 @@ protectedPage({
       getApp().globalData.projectId = projectId;
       getApp().globalData.refCase = null;
       getApp().globalData.resultVersionId = null;
-      return api.createFlatJob(projectId, count, idemKey, confirmedPrice).then(function (job) {
+      return api.createFlatJob(projectId, count, idemKey, confirmedPrice,
+        { resolution: imageOptions.resolution, orientation: imageOptions.orientation }).then(function (job) {
         getApp().globalData.jobId = job.jobId;
         wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + count });
       });

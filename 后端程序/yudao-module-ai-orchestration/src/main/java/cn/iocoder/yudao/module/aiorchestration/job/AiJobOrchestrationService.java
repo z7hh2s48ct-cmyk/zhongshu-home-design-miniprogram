@@ -49,7 +49,8 @@ public class AiJobOrchestrationService {
     public record JobSnapshot(long jobId, long userId, String phase, String status, int requestedCount,
                               int acceptedCount, int progress, String cancelState, String projectRef,
                               Long unitPointCost, Long totalPointCost, Long refundedPointCost,
-                              java.time.Instant createdAt, java.time.Instant finishedAt) {
+                              java.time.Instant createdAt, java.time.Instant finishedAt,
+                              String resolution, String orientation) {
     }
 
     private final JdbcTemplate jdbcTemplate;
@@ -77,8 +78,13 @@ public class AiJobOrchestrationService {
     public boolean freezeInput(long jobId, Map<String,Object> snapshot) {
         if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("AI_INPUT_REQUIRES_TRANSACTION");
         try {
-            return jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
-                    new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(snapshot),jobId)==1;
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String json = mapper.writeValueAsString(snapshot);
+            if (jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
+                    json,jobId)==1) return true;
+            String existing = jdbcTemplate.queryForObject("SELECT input_snapshot::text FROM ai_job WHERE id=?", String.class, jobId);
+            if (existing != null && mapper.readTree(existing).equals(mapper.readTree(json))) return false;
+            throw exception(cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("AI_INPUT_INVALID"); }
     }
 

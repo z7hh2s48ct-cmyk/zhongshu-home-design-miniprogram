@@ -125,11 +125,21 @@ docker compose --env-file .env -f compose.dev.yml up -d --wait
 
 - 微信身份：Stub，待 T06-01。
 - 微信支付与回调：Stub/领域合同，待 T06-02。
-- 对象存储：本地实现，COS 待 T07-01。
+- 对象存储：已实现本地及私有 COS 适配器；`zsdev` 默认本地，`prod` 选择 COS，真实凭据与联调需要单独验收。
 - 内容审核：直通 Stub，待 T07-03。
 - AI Runtime/Provider：未接真实供应商，待 T08。
 
 Stub 通过只用于本地合同联调，不等于生产验收。
+
+## 私有 COS 图片存储
+
+用户草图、头像、公司案例、AI 平面与立面结果均复用 `ObjectStoragePort`。后端仅向小程序和 AI Runtime 签发对象级短期 URL，永久密钥只注入后端。
+
+部署时设置 `ZHONGSHU_DESIGN_ASSET_STORAGE_PROVIDER=cos`、`ZS_DEV_CONTENT_ENDPOINT=false`，并填齐 `.env.example` 的 `ZS_COS_*`。`ZS_COS_ENDPOINT` 使用区域地址（上海为 `https://cos.ap-shanghai.myqcloud.com`），`ZS_COS_BUCKET` 包含 APPID 后缀，`ZS_COS_PATH_STYLE_ACCESS=false`；SDK 自动生成带桶名的实际请求域名。禁止把完整桶域名再次当作区域 endpoint。
+
+从仓库根目录执行 `node scripts/cos-storage-check.mjs` 检查配置；`--live` 才上传一个随机诊断文本，核对 HEAD 大小、签名 GET 摘要及匿名访问被拒绝。脚本复用既有 COS 签名算法，不触发 AI 调用，不删除对象，输出诊断对象 key。
+
+切换前必须暂停新任务，按原 object key 复制并校验本地历史资产；数据库中的对象 key 保持不变。再同步切换 Runtime 的 `ZS_AI_STORAGE_MODE=https` 与 `ZS_AI_STORAGE_ORIGINS`，完成上传、读取及生成结果验收。运行中的服务不会自动读取后来修改的 `.env`。具体桶信息与当前验收边界见 [COS 接入记录](../项目文档/COS图片存储接入-2026-09-29.md)。
 
 ## Documentation and governance
 

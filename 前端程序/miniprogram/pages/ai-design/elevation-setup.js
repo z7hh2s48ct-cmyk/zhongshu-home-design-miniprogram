@@ -1,6 +1,7 @@
 'use strict';
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const generationOptions = require('../../utils/generation-options');
 const assets = require('../../utils/assets');
 
 // 立面参数以稳定编码入库（配置快照可复算），中文标签仅作展示
@@ -30,7 +31,9 @@ protectedPage({
     styleOptions: STYLE_OPTIONS, roofOptions: ROOF_OPTIONS,
     wallOptions: WALL_OPTIONS, accentOptions: ACCENT_OPTIONS,
     style: 'NEW_CHINESE', roof: 'GABLE_ROOF', wall: 'WHITE_STUCCO', accent: 'DEEP_WOOD',
-    count: 2, creating: false, points: '—',
+    count: 2, creating: false, points: '—', quoteReady: false, quoteLoading: false, quoteError: '',
+    resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152',
+    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations('2K'),
     flatLabel: '', flatImageUrl: ''
   },
   onShow() {
@@ -58,12 +61,26 @@ protectedPage({
     const field = e.currentTarget.dataset.field;
     this.setData({ [field]: e.currentTarget.dataset.value });
   },
-  selectCount(e) { this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'ELEVATION'); },
-  generate() {
+  selectCount(e) { if (this.data.creating) return; this.setData({ count: Number(e.currentTarget.dataset.count) }); require('../../utils/generation-price').refresh(this, 'ELEVATION'); },
+  selectResolution(e) {
     if (this.data.creating) return;
+    const selected = generationOptions.selection('ELEVATION', { resolution: e.currentTarget.dataset.value, orientation: this.data.orientation });
+    this.setData({ resolution: selected.resolution, orientation: selected.orientation, outputPixels: selected.outputPixels,
+      orientations: generationOptions.orientations(selected.resolution) });
+    require('../../utils/generation-price').refresh(this, 'ELEVATION');
+  },
+  selectOrientation(e) {
+    if (this.data.creating) return;
+    const selected = generationOptions.selection('ELEVATION', { resolution: this.data.resolution, orientation: e.currentTarget.dataset.value });
+    this.setData({ orientation: selected.orientation, outputPixels: selected.outputPixels });
+  },
+  retryQuote() { require('../../utils/generation-price').refresh(this, 'ELEVATION'); },
+  generate() {
+    if (this.data.creating || !this.data.quoteReady) return;
     const projectId = getApp().globalData.projectId;
     if (!projectId) { wx.showToast({ title: '请先完成平面设计', icon: 'none' }); return; }
     const self = this;
+    const imageOptions = generationOptions.selection('ELEVATION', this.data);
     self.setData({ creating: true });
     const idemKey = 'elev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     const config = {
@@ -73,9 +90,11 @@ protectedPage({
       material: self.data.wall,
       color: self.data.accent
     };
-    getApp().globalData.elevationConfig = config;
-    require('../../utils/generation-price').confirm('ELEVATION', self.data.count).then(function (price) {
+    return require('../../utils/generation-price').confirm('ELEVATION', self.data.count, '', { resolution: imageOptions.resolution }).then(function (price) {
+      config.resolution = imageOptions.resolution;
+      config.orientation = imageOptions.orientation;
       config.priceConfirmation = price;
+      getApp().globalData.elevationConfig = Object.assign({}, config);
       return api.createElevationJob(projectId, config, idemKey);
     }).then(function (job) {
       getApp().globalData.jobId = job.jobId;

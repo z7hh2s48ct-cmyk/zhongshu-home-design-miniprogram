@@ -76,12 +76,12 @@ module.exports = {
   getProject: function (projectId, jobId) {
     return http.get(BASE + '/design-projects/' + projectId + (jobId ? '?jobId=' + jobId : ''));
   },
-  getGenerationQuote: function (stage, count) {
-    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count);
+  getGenerationQuote: function (stage, count, resolution) {
+    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count + '&resolution=' + encodeURIComponent(resolution || '2K'));
   },
-  createFlatJob: function (projectId, count, idemKey, priceConfirmation) {
+  createFlatJob: function (projectId, count, idemKey, priceConfirmation, options) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-jobs',
-      { count: count, priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
+      { count: count, resolution: (options && options.resolution) || '2K', orientation: (options && options.orientation) || 'PORTRAIT', priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
   },
   selectFlat: function (projectId, jobId, candidateId) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-selections',

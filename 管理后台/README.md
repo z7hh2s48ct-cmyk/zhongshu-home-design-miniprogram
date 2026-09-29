@@ -51,6 +51,12 @@ pnpm build:prod
 
 `build:prod` 使用已入库的 `.env.prod` 安全默认值；部署环境可按目标域名覆盖公开的 Vite 构建变量。不要把令牌、密钥或其它机密放入 `VITE_*` 变量。
 
+## 出图价格管理
+
+「众墅运营 → 生成价格」位于 `/zs/generation-pricing`。平面、立面分别按 2K / 4K 配置每张设计点、允许张数和生效时间。调整价格会新增规则；停用保留历史记录，不改变已创建任务的冻结价格。
+
+现有价格迁移为 2K；4K 初始不设价格，运营人员配置生效规则后才能生成。查询与管理权限分别为 `commerce:generation-price:query`、`commerce:generation-price:manage`。接口说明见[出图规格与计价 API](../后端程序/docs/zhongshu-design/04-出图规格与计价API-2026-09-29.md)。
+
 ## 质量要求
 
 - 冻结安装、TypeScript 检查、Lint 和生产构建必须由根级 CI 执行。

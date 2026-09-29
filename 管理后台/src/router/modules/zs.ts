@@ -73,6 +73,12 @@ const zsRouter: RouteRecordRaw[] = [
         meta: { title: '充值方案', icon: 'ep:coin' }
       },
       {
+        path: 'generation-pricing',
+        component: () => import('@/views/zs/generation-pricing/index.vue'),
+        name: 'ZsGenerationPricing',
+        meta: { title: '生成价格', icon: 'ep:price-tag', noCache: true }
+      },
+      {
         path: 'recharge-plan/edit',
         component: () => import('@/views/zs/recharge/plan-edit.vue'),
         name: 'ZsRechargePlanEdit',

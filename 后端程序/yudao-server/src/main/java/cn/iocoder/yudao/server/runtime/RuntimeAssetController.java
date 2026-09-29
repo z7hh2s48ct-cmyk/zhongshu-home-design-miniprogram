@@ -56,7 +56,15 @@ public class RuntimeAssetController {
             images.add(Map.of("assetId",String.valueOf(assetId),"url",storage.presignDownloadUrl((String)asset.get("object_key"),120),
                     "sha256",asset.get("stored_sha256"),"sizeBytes",asset.get("stored_size"),"mimeType",asset.get("declared_mime")));
         }
-        return CommonResult.success(Map.of("schemaVersion",1,"phase",snapshot.get("phase"),"requirements",snapshot.get("requirements"),"images",images));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("schemaVersion", 1);
+        response.put("phase", snapshot.get("phase"));
+        response.put("requirements", snapshot.get("requirements"));
+        if (snapshot.get("imageOptions") instanceof Map<?, ?> imageOptions) {
+            response.put("imageOptions", imageOptions);
+        }
+        response.put("images", images);
+        return CommonResult.success(response);
     }
 
     @PostMapping("/{id}/output-tickets")
@@ -65,6 +73,7 @@ public class RuntimeAssetController {
         if(upload.slot()>((Number)job.get("requested_count")).intValue()) throw new AccessDeniedException("RUNTIME_SLOT");
         String key="ai-quarantine/"+id+"/"+upload.fencingToken()+"/"+upload.slot()+"/"+UUID.randomUUID()
                 +("image/png".equals(upload.mimeType())?".png":".jpg");
-        return CommonResult.success(Map.of("objectKey",key,"uploadUrl",storage.presignUploadUrl(key,120),"maxBytes",7*1024*1024));
+        return CommonResult.success(Map.of("objectKey",key,"uploadUrl",storage.presignUploadUrl(key,120),
+                "maxBytes",20*1024*1024));
     }
 }

@@ -5,6 +5,73 @@ export const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // 图片字节上限与后端隔离区 OUTPUT_POLICY（20MB）对齐；4K UHD PNG（渠道像素上限 8294400）可能达到十余 MB
 const MAX_IMAGE = 20 * 1024 * 1024;
+const MAX_IMAGE_BASE64 = Math.ceil(MAX_IMAGE / 3) * 4;
+const MAX_IMAGE_JSON = MAX_IMAGE_BASE64 + 64 * 1024;
+const IMAGE_OPTION_SIZES = Object.freeze({
+  '2K:LANDSCAPE': '2048x1152',
+  '2K:PORTRAIT': '1152x2048',
+  '4K:LANDSCAPE': '3840x2160',
+  '4K:PORTRAIT': '2160x3840'
+});
+const JPEG_SOF_MARKERS = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+
+function imageOptions(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+      || !['2K', '4K'].includes(value.resolution)
+      || !['LANDSCAPE', 'PORTRAIT'].includes(value.orientation)
+      || Object.keys(value).some(key => !['resolution', 'orientation'].includes(key))) throw Error('INPUT_IMAGE_OPTIONS');
+  return Object.freeze({ resolution: value.resolution, orientation: value.orientation });
+}
+
+function requestedImageSize(value, legacySize) {
+  if (value === undefined) return legacySize;
+  const selected = imageOptions(value);
+  return IMAGE_OPTION_SIZES[`${selected.resolution}:${selected.orientation}`];
+}
+
+function imageDimensions(bytes, mimeType) {
+  if (mimeType === 'image/png') {
+    if (bytes.length < 33 || bytes.readUInt32BE(8) !== 13 || bytes.toString('ascii', 12, 16) !== 'IHDR') return null;
+    const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+    return width && height ? { width, height } : null;
+  }
+  if (mimeType !== 'image/jpeg' || bytes.length < 4) return null;
+  let offset = 2;
+  while (offset < bytes.length) {
+    if (bytes[offset] !== 0xff) return null;
+    while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
+    if (offset >= bytes.length) return null;
+    const marker = bytes[offset++];
+    if (marker === 0xd9 || marker === 0xda) return null;
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
+    if (offset + 2 > bytes.length) return null;
+    const length = bytes.readUInt16BE(offset);
+    if (length < 2 || offset + length > bytes.length) return null;
+    if (JPEG_SOF_MARKERS.has(marker)) {
+      if (length < 8) return null;
+      const height = bytes.readUInt16BE(offset + 3), width = bytes.readUInt16BE(offset + 5);
+      return width && height ? { width, height } : null;
+    }
+    offset += length;
+  }
+  return null;
+}
+
+function verifyGeneratedImage(image, expectedSize) {
+  if (typeof image?.encoded !== 'string') throw Error('PROVIDER_IMAGE_INVALID');
+  if (image.encoded.length > MAX_IMAGE_BASE64) throw Error('PROVIDER_IMAGE_TOO_LARGE');
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image.encoded)) throw Error('PROVIDER_IMAGE_INVALID');
+  const bytes = Buffer.from(image.encoded, 'base64');
+  if (bytes.length > MAX_IMAGE || image.sizeBytes > MAX_IMAGE) throw Error('PROVIDER_IMAGE_TOO_LARGE');
+  if (bytes.length !== image.sizeBytes || sha(bytes) !== image.sha256) throw Error('PROVIDER_IMAGE_INVALID');
+  const mimeType = bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? 'image/png'
+    : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'image/jpeg' : null;
+  if (!mimeType || mimeType !== image.mimeType) throw Error('PROVIDER_IMAGE_INVALID');
+  const dimensions = imageDimensions(bytes, mimeType);
+  if (!dimensions) throw Error('PROVIDER_IMAGE_INVALID');
+  const [width, height] = expectedSize.split('x').map(Number);
+  if (dimensions.width !== width || dimensions.height !== height) throw Error('PROVIDER_IMAGE_SIZE_MISMATCH');
+}
 
 // dev 专用：后端 LocalObjectStorageAdapter 以 local://<objectKey> 签发内网对象地址。
 // local-fs 模式下引擎与后端共享同一资产根目录（ZS_AI_STORAGE_ROOT），直接读写文件；
@@ -188,7 +255,13 @@ export class Provider {
     const timeout = AbortSignal.any([signal, AbortSignal.timeout(this.settings.requestTimeoutMs || 180000)]);
     const response = await this.fetch(this.settings.base + path, { method: 'POST', body: json ? JSON.stringify(body) : body,
       redirect: 'error', signal: timeout, headers: { Authorization: `Bearer ${this.settings.key}`, ...(json ? { 'Content-Type': 'application/json' } : {}) } });
-    return JSON.parse(await bounded(response, 11 * 1024 * 1024, timeout));
+    const max = path.startsWith('/images/') ? MAX_IMAGE_JSON : 11 * 1024 * 1024;
+    try {
+      return JSON.parse(await bounded(response, max, timeout));
+    } catch (error) {
+      if (error.message === 'BODY_LIMIT' && max === MAX_IMAGE_JSON) throw Error('PROVIDER_IMAGE_RESPONSE_TOO_LARGE');
+      throw error;
+    }
   }
   async plan(job, input, images, signal) {
     return this.journal.once(`plan-${job.jobId}`, async () => {
@@ -201,11 +274,12 @@ export class Provider {
       return prompt;
     });
   }
-  async generate(job, slot, prompt, images, signal) {
-    return this.journal.once(`image-${job.jobId}-${slot}`, async () => {
+  async generate(job, slot, prompt, images, signal, options) {
+    const legacySize = job.phase === 'ELEVATION' ? this.settings.imageSizeElevation : this.settings.imageSizeFlat;
+    const size = requestedImageSize(options, legacySize);
+    const image = await this.journal.once(`image-${job.jobId}-${slot}`, async () => {
       const text = `${prompt}\n独立候选 ${slot}/${job.payload.requestedCount}，阶段 ${job.phase}。`;
-      // 比例随阶段适配：平面方案为竖版排版（多视图+信息栏）用竖幅，立面为横幅，避免正方形压小内容
-      const size = job.phase === 'ELEVATION' ? this.settings.imageSizeElevation : this.settings.imageSizeFlat;
+      // 历史任务沿用阶段配置；新任务只使用输入快照中冻结的清晰度和方向。
       let value;
       if (images.length) {
         const body = new FormData(); body.set('model', this.settings.imageModel); body.set('prompt', text); body.set('n', '1');
@@ -220,8 +294,10 @@ export class Provider {
       }
       const payload = value.data?.[0] ?? {};
       let bytes;
-      if (typeof payload.b64_json === 'string' && payload.b64_json.length <= Math.ceil(MAX_IMAGE / 3) * 4
-          && /^[A-Za-z0-9+/]+={0,2}$/.test(payload.b64_json)) {
+      if (typeof payload.b64_json === 'string' && payload.b64_json.length > MAX_IMAGE_BASE64) {
+        throw Error('PROVIDER_IMAGE_TOO_LARGE');
+      }
+      if (typeof payload.b64_json === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(payload.b64_json)) {
         bytes = Buffer.from(payload.b64_json, 'base64');
       } else if (typeof payload.url === 'string') {
         // URL 回包模式（如 gpt-image-2 经 apilio 代理）：仅下载白名单 origin，禁止重定向，
@@ -230,9 +306,12 @@ export class Provider {
       } else throw Error('PROVIDER_IMAGE_INVALID');
       const mimeType = bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) ? 'image/png'
         : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'image/jpeg' : null;
-      if (!mimeType || bytes.length > MAX_IMAGE) throw Error('PROVIDER_IMAGE_INVALID');
+      if (bytes.length > MAX_IMAGE) throw Error('PROVIDER_IMAGE_TOO_LARGE');
+      if (!mimeType) throw Error('PROVIDER_IMAGE_INVALID');
       return { encoded: bytes.toString('base64'), mimeType, sha256: sha(bytes), sizeBytes: bytes.length };
     });
+    if (options !== undefined) verifyGeneratedImage(image, size);
+    return image;
   }
 
   async fetchImageUrl(url, signal) {
@@ -240,7 +319,12 @@ export class Provider {
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password
         || !this.settings.imageUrlOrigins.includes(parsed.origin)) throw Error('PROVIDER_IMAGE_URL_ORIGIN');
     const timeout = AbortSignal.any([signal, AbortSignal.timeout(this.settings.requestTimeoutMs || 180000)]);
-    return bounded(await this.fetch(parsed, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
+    try {
+      return await bounded(await this.fetch(parsed, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
+    } catch (error) {
+      if (error.message === 'BODY_LIMIT') throw Error('PROVIDER_IMAGE_TOO_LARGE');
+      throw error;
+    }
   }
   async upload(url, image, signal) {
     if (this.settings.storageMode === 'local-fs') {
@@ -277,12 +361,13 @@ export async function runJob(job, core, provider, settings, options = {}) {
     const input = await core.job(job, 'inputs', {}, signal);
     if (input.schemaVersion !== 1 || input.phase !== job.phase || !Array.isArray(input.images) || input.images.length > 8
         || (job.phase === 'ELEVATION' && input.images.length === 0)) throw Error('INPUT_CONTRACT');
+    const generationOptions = Object.hasOwn(input, 'imageOptions') ? imageOptions(input.imageOptions) : undefined;
     const images = [];
     for (const image of input.images) images.push(await provider.imageInput(image, signal));
     const prompt = await provider.plan(job, input, images, signal);
     for (let slot = 1; slot <= job.payload.requestedCount; slot++) {
       signal.throwIfAborted();
-      const image = await provider.generate(job, slot, prompt, images, signal);
+      const image = await provider.generate(job, slot, prompt, images, signal, generationOptions);
       const ticket = await core.job(job, 'output-tickets', { slot, mimeType: image.mimeType }, signal);
       await provider.upload(ticket.uploadUrl, image, signal);
       const event = { providerCode: settings.providerCode, sourceEventId: `result-${job.jobId}-${job.fencingToken}-${slot}`,

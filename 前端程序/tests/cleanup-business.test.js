@@ -15,8 +15,8 @@ function load(file, deps, globals = {}) {
 
 test('生成确认读取最新价格，携带字符串规则 ID 和版本，取消不提交', async () => {
   let total = 26, confirm = true; const prompts = [];
-  const price = load('utils/generation-price.js', { './request': { getToken: () => 'owner', isSameSession: () => true }, './api': { getGenerationQuote: async (stage, count) => ({
-    stage, count, totalPointCost: total, unitPointCost: total / count, ruleId: '2100000000000000001', ruleVersion: 2
+  const price = load('utils/generation-price.js', { './request': { getToken: () => 'owner', isSameSession: () => true }, './api': { getGenerationQuote: async (stage, count, resolution) => ({
+    stage, count, resolution, totalPointCost: total, unitPointCost: total / count, ruleId: '2100000000000000001', ruleVersion: 2
   }) } }, { wx: { showModal: options => { prompts.push(options.content); options.success({ confirm }); } } });
   const result = await price.confirm('FLAT', 2);
   assert.equal(result.ruleId, '2100000000000000001'); assert.equal(result.ruleVersion, 2);
@@ -28,17 +28,18 @@ test('生成确认读取最新价格，携带字符串规则 ID 和版本，取�
 
 test('数量快速改变时旧报价不能覆盖新报价', async () => {
   const pending = [];
-  const price = load('utils/generation-price.js', { './api': { getGenerationQuote: (stage, count) =>
-    new Promise(resolve => pending.push({ resolve, count, stage })) } });
-  const page = { data: { count: 1 }, setData(patch) { Object.assign(this.data, patch); } };
+  const price = load('utils/generation-price.js', { './api': { getGenerationQuote: (stage, count, resolution) =>
+    new Promise(resolve => pending.push({ resolve, count, stage, resolution })) } });
+  const page = { data: { count: 1, resolution: '2K' }, setData(patch) { Object.assign(this.data, patch); } };
   const old = price.refresh(page, 'FLAT'); page.data.count = 4; const latest = price.refresh(page, 'FLAT');
-  const resolve = i => pending[i].resolve({ count: pending[i].count, stage: 'FLAT', totalPointCost: pending[i].count * 7, unitPointCost: 7, ruleId: '1' });
+  const resolve = i => pending[i].resolve({ count: pending[i].count, stage: 'FLAT', resolution: pending[i].resolution, totalPointCost: pending[i].count * 7, unitPointCost: 7, ruleId: '1' });
   resolve(1); await latest; resolve(0); await old;
   assert.match(page.data.priceText, /28/);
 });
 
 test('恢复按服务端动作定位：选择态收敛到生成页内联，配置/结果各归其位', () => {
-  const resume = load('utils/project-resume.js', { './api': {}, './record-view': view });
+  const resume = load('utils/project-resume.js', { './api': {}, './record-view': view,
+    './generation-options': require('../miniprogram/utils/generation-options') });
   const project = { projectId: '2100000000000000001', jobId: '2100000000000000003', stage: 'FLAT', requestedCount: 4 };
   assert.match(resume.target({ ...project, resumeAction: 'POLL_JOB' }), /stage=plane&count=4$/);
   // 2026-09-29 决策 2：SELECT_FLAT/SELECT_ELEVATION 与主路径同体验，收敛到 generating 内联候选

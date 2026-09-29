@@ -14,12 +14,21 @@ public interface PricingPort {
         }
     }
 
-    PriceSnapshot quote(String stage, int count);
+    default PriceSnapshot quote(String stage, int count) {
+        return quote(stage, count, "2K");
+    }
+
+    PriceSnapshot quote(String stage, int count, String resolution);
 
     void validateSnapshotStillValid(PriceSnapshot snapshot);
 
-    record PriceSnapshot(long ruleId, long ruleVersion, String stage,
+    record PriceSnapshot(long ruleId, long ruleVersion, String stage, String resolution,
                          long unitPointCost, int count, long totalPointCost) {
+
+        public PriceSnapshot(long ruleId, long ruleVersion, String stage,
+                             long unitPointCost, int count, long totalPointCost) {
+            this(ruleId, ruleVersion, stage, "2K", unitPointCost, count, totalPointCost);
+        }
     }
 
 }

@@ -4,9 +4,11 @@ const api = require('../../utils/api');
 const http = require('../../utils/request');
 const assets = require('../../utils/assets');
 const view = require('../../utils/record-view');
+const generationOptions = require('../../utils/generation-options');
 
 protectedPage({
-  data: { tab: 0, versions: [], latest: null, versionLabel: '', imageUrl: '', flatImageUrl: '', loading: false, error: '', imageError: '', readOnly: false },
+  data: { tab: 0, versions: [], latest: null, versionLabel: '', imageUrl: '', flatImageUrl: '', loading: false, error: '', imageError: '', readOnly: false,
+    resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152', optionsReady: false, optionsError: false },
   onLoad(options) {
     this._projectId = view.id(options.projectId || getApp().globalData.projectId);
     this._versionId = options.resultVersionId == null ? null : view.id(options.resultVersionId);
@@ -23,7 +25,8 @@ protectedPage({
   },
   loadVersions() {
     const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
-    this.setData({ loading: false, error: '', latest: null, versions: [], imageUrl: '', flatImageUrl: '', imageError: '' });
+    this.setData({ loading: false, error: '', latest: null, versions: [], imageUrl: '', flatImageUrl: '', imageError: '',
+      resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152', optionsReady: false, optionsError: false });
     if (!this._projectId || this._invalidVersion || !this._token) { this.setData({ error: '方案信息无效，请从「我的方案」重新进入' }); return; }
     this.setData({ loading: true });
     return api.getResultVersions(this._projectId).then(page => {
@@ -35,8 +38,21 @@ protectedPage({
       if (!selected || !view.id(selected.versionId)) throw Error('该方案版本不可用或尚未完成');
       this.setData({ versions: list, latest: selected, loading: false, versionLabel: '版本 v' + selected.version,
         readOnly: selected.superseded === true });
-      return this.loadImages();
+      return Promise.all([this.loadImages(), this.loadGenerationOptions()]);
     }).catch(error => { if (this.current(seq)) this.setData({ loading: false, error: view.errorText(error) }); });
+  },
+  loadGenerationOptions() {
+    if (!this.current(this._seq) || !this.data.latest) return;
+    const seq = this._seq;
+    this.setData({ optionsReady: false, optionsError: false });
+    return api.getProject(this._projectId).then(project => {
+      if (!this.current(seq)) return;
+      const selected = generationOptions.selection('ELEVATION', project);
+      this.setData({ resolution: selected.resolution, orientation: selected.orientation,
+        outputPixels: selected.outputPixels, optionsReady: true, optionsError: false });
+    }).catch(() => {
+      if (this.current(seq)) this.setData({ optionsReady: false, optionsError: true });
+    });
   },
   loadImages() {
     if (!this.current(this._seq) || !this.data.latest) return;
@@ -60,12 +76,15 @@ protectedPage({
   save() { wx.navigateTo({ url: '/pages/profile/records?type=projects' }); },
   adjust() { this.regenerate(); },
   regenerate() {
-    if (!this.current(this._seq) || !this.data.latest || this.data.readOnly || this.data.regenerating) return;
+    if (!this.current(this._seq) || !this.data.latest || this.data.readOnly || this.data.regenerating || !this.data.optionsReady) return;
     const seq = this._seq;
     this.setData({ regenerating: true });
-    return require('../../utils/generation-price').confirm('ELEVATION', 2, '原方案保留，本次重新生成立面，不包含局部修改。').then(priceConfirmation => {
+    const selected = generationOptions.selection('ELEVATION', this.data);
+    const resolution = selected.resolution;
+    const orientation = selected.orientation;
+    return require('../../utils/generation-price').confirm('ELEVATION', 2, '原方案保留，本次重新生成立面，不包含局部修改。', { resolution: resolution }).then(priceConfirmation => {
         if (!this.current(seq)) throw { cancelled: true };
-        const payload = { reason: '用户发起重新生成立面', count: 2, priceConfirmation };
+        const payload = { reason: '用户发起重新生成立面', count: 2, resolution: resolution, orientation: orientation, priceConfirmation: priceConfirmation };
         const signature = JSON.stringify(payload);
         if (signature !== this._revisionBody) {
           this._revisionBody = signature;

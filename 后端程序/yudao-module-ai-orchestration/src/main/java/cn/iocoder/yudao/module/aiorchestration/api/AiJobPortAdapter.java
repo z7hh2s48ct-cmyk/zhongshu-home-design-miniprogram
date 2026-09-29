@@ -51,9 +51,23 @@ public class AiJobPortAdapter implements AiJobPort {
     }
 
     @Override
+    public long createFlatJob(long userId, int count, String key, String ref,
+                              cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation price,
+                              cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options) {
+        return settlementService.createJobWithCharge(userId, "FLAT", count, key, ref, price, options.resolution());
+    }
+
+    @Override
     public long createElevationJob(long userId, int count, String key, String ref,
                                    cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation price) {
         return settlementService.createJobWithCharge(userId, "ELEVATION", count, key, ref, price);
+    }
+
+    @Override
+    public long createElevationJob(long userId, int count, String key, String ref,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation price,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options) {
+        return settlementService.createJobWithCharge(userId, "ELEVATION", count, key, ref, price, options.resolution());
     }
 
     @Override

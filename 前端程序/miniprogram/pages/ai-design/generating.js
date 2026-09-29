@@ -3,6 +3,7 @@ const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const http = require('../../utils/request');
 const assets = require('../../utils/assets');
+const generationOptions = require('../../utils/generation-options');
 const STATUS_TEXT = { QUEUED: '排队等待中', RUNNING: 'AI 正在绘制方案', VALIDATING: '正在校验生成结果', CANCEL_REQUESTED: '正在取消任务', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案已生成', FAILED: '生成失败', CANCELLED: '任务已取消' };
 const STEP_ORDER = ['QUEUED', 'RUNNING', 'VALIDATING'];
 const NEXT = {
@@ -15,7 +16,8 @@ protectedPage({
           statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '',
           stepIndex: 0, elapsedText: '00:00',
           candidates: [], pendingSlots: 0, candidatesError: '',
-          selectedId: '', selectDone: false, selecting: false, nextLabel: '', regenerating: false },
+          selectedId: '', selectDone: false, selecting: false, nextLabel: '', regenerating: false,
+          resolution: '2K', orientation: 'PORTRAIT', outputPixels: '1152 × 2048' },
   onLoad(query) {
     this._token = http.getToken();
     this._jobId = getApp().globalData.jobId;
@@ -74,6 +76,7 @@ protectedPage({
       if (!self._statusAt[job.status]) self._statusAt[job.status] = Date.now();
       self._serverProgress = Number(job.progress) || 0;
       self._projectId = job.projectId;
+      const jobOptions = generationOptions.selection(job.phase === 'ELEVATION' ? 'ELEVATION' : 'FLAT', job.imageOptions || job);
       const finished = ['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(job.status);
       const stepIndex = finished ? 3 : Math.max(0, STEP_ORDER.indexOf(job.status));
       self.setData({ status: job.status,
@@ -81,7 +84,8 @@ protectedPage({
         acceptedCount: job.acceptedCount || 0, statusText: STATUS_TEXT[job.status] || '状态待确认',
         canCancel: (job.allowedActions || []).includes('CANCEL'),
         stepIndex: stepIndex,
-        finished: finished, pollError: '' });
+        finished: finished, pollError: '', resolution: jobOptions.resolution,
+        orientation: jobOptions.orientation, outputPixels: jobOptions.outputPixels });
       // 候选是拉式晋升的：有新通过校验的方案，或任务刚到终态，都拉一次候选并内联呈现
       if ((job.acceptedCount || 0) > (self._acceptedSeen || 0) || finished) {
         self._acceptedSeen = job.acceptedCount || 0;
@@ -111,6 +115,7 @@ protectedPage({
     if (!this._projectId || !this._jobId) return;
     api.getProject(this._projectId, this._jobId).then(function (project) {
       if (self._stopped || !self.current(self._token)) return;
+      const selected = generationOptions.selection(self.data.stage === 'plane' ? 'FLAT' : 'ELEVATION', project);
       const list = (project.candidates || [])
         .filter(function (c) { return String(c.jobId) === String(self._jobId); });
       const merged = self.data.candidates.slice();
@@ -122,7 +127,8 @@ protectedPage({
         added = true;
       });
       const pendingSlots = self.data.finished ? 0 : Math.max(0, (self.data.count || 0) - merged.length);
-      self.setData({ candidates: merged, pendingSlots: pendingSlots, candidatesError: '' });
+      self.setData({ candidates: merged, pendingSlots: pendingSlots, candidatesError: '',
+        resolution: selected.resolution, orientation: selected.orientation, outputPixels: selected.outputPixels });
       if (!added) return;
       merged.forEach(function (item, index) {
         if (item.url || !item.assetId) return;
@@ -206,11 +212,13 @@ protectedPage({
     this._regenerating = true;
     const self = this;
     const count = this.data.count || 2;
+    const resolution = this.data.resolution || '2K';
+    const orientation = this.data.orientation || (stage === 'plane' ? 'PORTRAIT' : 'LANDSCAPE');
     const idemKey = stage + '-regen-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     this.setData({ regenerating: true });
-    require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count).then(function (price) {
-      if (stage === 'plane') return api.createFlatJob(projectId, count, idemKey, price);
-      const config = Object.assign({}, getApp().globalData.elevationConfig, { count: count, priceConfirmation: price });
+    return require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count, '', { resolution: resolution }).then(function (price) {
+      if (stage === 'plane') return api.createFlatJob(projectId, count, idemKey, price, { resolution: resolution, orientation: orientation });
+      const config = Object.assign({}, getApp().globalData.elevationConfig, { count: count, resolution: resolution, orientation: orientation, priceConfirmation: price });
       return api.createElevationJob(projectId, config, idemKey);
     }).then(function (job) {
       if (self._stopped) return;

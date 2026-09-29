@@ -64,6 +64,7 @@ public class AppAiJobController {
         vo.setPhase(job.phase());
         vo.setStatus(job.status());
         vo.setRequestedCount(job.requestedCount());
+        vo.setImageOptions(java.util.Map.of("resolution", job.resolution(), "orientation", job.orientation()));
         vo.setAcceptedCount(job.acceptedCount());
         vo.setProgress(job.progress());
         vo.setUnitPointCost(job.unitPointCost());

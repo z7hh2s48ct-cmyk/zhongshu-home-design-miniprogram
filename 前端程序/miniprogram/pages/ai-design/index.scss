@@ -5,11 +5,11 @@
 .mode-tabs { height: 70rpx; padding: 4rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-md; background: $v12-surface; }
 .mode-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: $v12-radius-sm; color: $v12-text-3; font-size: $v12-font-lg; }
 .mode-tabs .active { color: $v12-white; background: linear-gradient(95deg,$v12-primary-deep,$v12-primary); }
-.step-intro { margin: 32rpx 20rpx 24rpx; display: flex; align-items: center; gap: 16rpx; white-space: nowrap; }
+.step-intro { margin: 32rpx 20rpx 24rpx; display: flex; align-items: center; flex-wrap: wrap; gap: 8rpx 16rpx; }
 .step-intro text { padding: 8rpx 20rpx; border-radius: $v12-radius-lg; color: $v12-white; background: $v12-primary-deep; font-size: $v12-font-md; }
 .step-intro b { font-size: $v12-font-xl; font-weight: 500; }
 .step-intro i { width: 1rpx; height: 30rpx; background: $v12-divider; }
-.step-intro span { color: $v12-secondary-text; font-size: $v12-font-body; }
+.step-intro span { flex-basis: 100%; color: $v12-secondary-text; font-size: $v12-font-body; line-height: 1.5; }
 .reference-card { height: 168rpx; padding: 24rpx 28rpx; display: flex; align-items: center; }
 .reference-card image { width: 224rpx; height: 126rpx; border-radius: $v12-radius-md; }
 .reference-card > view:nth-child(2) { margin-left: 32rpx; }
@@ -42,21 +42,43 @@
 .tag-title { margin-top: 28rpx; }
 .tag-row { margin-top: 16rpx; display: flex; flex-wrap: wrap; gap: 16rpx; }
 .tag-row text { padding: 12rpx 24rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-xs; font-size: $v12-font-sm; }
-.count-block { margin: 12rpx -20rpx 0; padding: 12rpx 20rpx 0; border-top: 1rpx solid $v12-divider; }
-.count-tabs { height: 56rpx; margin-top: 12rpx; display: flex; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; overflow: hidden; }
-.count-tabs view { flex: 1; display: flex; align-items: center; justify-content: center; font-size: $v12-font-md; }
-.count-tabs .active { color: $v12-white; background: $v12-primary-deep; }
-.points { min-height: 58rpx; margin-top: 12rpx; padding: 0 16rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-sm; background: $v12-surface-alt; display: flex; align-items: center; gap: 8rpx; font-size: $v12-font-xs; }
-.points > text { white-space: nowrap; }
-.points > text:last-of-type { flex: 1; text-align: right; }
-.points .point-value, .points .point-total { color: $v12-primary-deep; font-size: $v12-font-md; font-weight: 600; }
-.points i { width: 1rpx; height: 38rpx; margin: 0 4rpx; background: $v12-divider; }
-.form-card > .v12-primary-button { margin-top: 12rpx; }
+.generation-settings { margin-top: 24rpx; padding: 28rpx; }
+.settings-head { display: flex; align-items: center; justify-content: space-between; }
+.settings-head text, .settings-head span { display: block; }
+.settings-head text { font-size: $v12-font-xl; font-weight: 600; }
+.settings-head span { margin-top: 8rpx; color: $v12-text-3; font-size: $v12-font-sm; }
+.settings-head b { padding: 12rpx 16rpx; border-radius: $v12-radius-xs; color: $v12-primary-deep; background: $v12-gold-bg; font-size: $v12-font-sm; font-weight: 600; }
+.settings-label { display: block; margin-top: 28rpx; color: $v12-text-2; font-size: $v12-font-md; font-weight: 500; }
+.resolution-grid, .orientation-grid { margin-top: 16rpx; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; }
+.resolution-option { position: relative; min-height: 92rpx; padding: 20rpx 24rpx; border: 2rpx solid $v12-divider; border-radius: $v12-radius-md; box-sizing: border-box; }
+.resolution-option text, .resolution-option span { display: block; }
+.resolution-option text { font-size: $v12-font-xl; font-weight: 600; }
+.resolution-option span { margin-top: 4rpx; color: $v12-text-3; font-size: $v12-font-xs; }
+.resolution-option > i { position: absolute; right: 16rpx; top: 16rpx; width: 32rpx; height: 32rpx; border-radius: 50%; color: $v12-white; background: $v12-primary-deep; display: flex; align-items: center; justify-content: center; font-style: normal; }
+.resolution-option.selected, .orientation-option.selected { border-color: $v12-primary-deep; background: $v12-surface-alt; }
+.orientation-option { min-height: 112rpx; padding: 20rpx; border: 2rpx solid $v12-divider; border-radius: $v12-radius-md; display: flex; align-items: center; gap: 20rpx; box-sizing: border-box; }
+.orientation-frame { width: 64rpx; height: 40rpx; border: 3rpx solid $v12-primary-deep; border-radius: $v12-radius-xs; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.orientation-frame.portrait { width: 36rpx; height: 64rpx; margin: 0 16rpx; }
+.orientation-frame i { width: 12rpx; height: 12rpx; border-radius: 50%; background: $v12-gold; }
+.orientation-option text, .orientation-option span { display: block; }
+.orientation-option text { font-size: $v12-font-md; font-weight: 500; }
+.orientation-option span { margin-top: 8rpx; color: $v12-text-3; font-size: $v12-font-xs; }
+.quantity-row { margin-top: 28rpx; padding-top: 24rpx; border-top: 1rpx solid $v12-divider; display: flex; align-items: center; justify-content: space-between; }
+.quantity-row > .settings-label { margin-top: 0; }
+.quantity-row > view { display: flex; gap: 12rpx; }
+.quantity-row > view text { min-width: 72rpx; padding: 12rpx 16rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; box-sizing: border-box; text-align: center; font-size: $v12-font-sm; }
+.quantity-row > view text.selected { border-color: $v12-primary-deep; color: $v12-white; background: $v12-primary-deep; }
+.settings-footer { margin: 28rpx -28rpx -28rpx; padding: 24rpx 28rpx 28rpx; border-top: 1rpx solid $v12-divider; background: $v12-surface-alt; }
+.cost-summary { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 20rpx; row-gap: 8rpx; }
+.cost-summary > text:first-child { color: $v12-text-3; font-size: $v12-font-sm; }
+.cost-summary b { color: $v12-primary-deep; font-size: $v12-font-md; text-align: right; }
+.cost-summary span { grid-column: 1 / -1; color: $v12-text-3; font-size: $v12-font-xs; }
+.cost-summary .quote-retry { grid-column: 1 / -1; color: $v12-primary-deep; font-size: $v12-font-sm; }
+.generate-button { margin-top: 20rpx; }
+.generate-button.disabled { opacity: .45; }
 
 @media (max-width: 350px) {
-  .step-intro { flex-wrap: wrap; row-gap: 8rpx; white-space: normal; }
   .step-intro i { display: none; }
-  .step-intro span { flex-basis: 100%; }
   .reference-card { padding-left: 20rpx; padding-right: 20rpx; }
   .reference-card image { width: 194rpx; }
   .reference-card > view:nth-child(2) { margin-left: 20rpx; }
@@ -64,9 +86,9 @@
   .upload-row { gap: 16rpx; }
   .upload-row text { font-size: $v12-font-sm; }
   .upload-row span { font-size: $v12-font-xs; }
-  .points { padding: 8rpx 12rpx; flex-wrap: wrap; row-gap: 4rpx; }
-  .points i { display: none; }
-  .points > text:last-of-type { flex-basis: 100%; text-align: left; }
+  .orientation-option { padding: 16rpx; gap: 12rpx; }
+  .orientation-option text { font-size: $v12-font-sm; }
+  .quantity-row { align-items: flex-start; }
 }
 .sketch-preview { margin-top: 16rpx; padding: 16rpx; border: 1rpx dashed $v12-gold; border-radius: $v12-radius-sm; display: flex; align-items: center; gap: 20rpx; background: $v12-surface-alt; }
 .sketch-preview image { width: 96rpx; height: 96rpx; border-radius: $v12-radius-xs; background: $v12-surface-alt; }

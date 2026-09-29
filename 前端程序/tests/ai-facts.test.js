@@ -13,12 +13,13 @@ function page(file, api, price) {
       '../../utils/request': { getToken: () => state.token, isSameSession: token => token === state.token },
       '../../utils/record-view': view, '../../utils/assets': { fetchProfileAvatar: async id => 'asset://' + id,
       fetchAssetDataUrl: async id => 'data:image/png;base64,' + id },
-      '../../utils/generation-price': price
+      '../../utils/generation-price': price,
+      '../../utils/generation-options': require('../miniprogram/utils/generation-options')
     }[name]; }, getApp: () => ({ globalData: state.global }),
     wx: Object.fromEntries(['redirectTo', 'navigateBack', 'navigateTo', 'showToast', 'showModal'].map(key => [key, value => state.calls.push([key, value])])),
     setTimeout: callback => { state.timers.push(callback); return state.timers.length; }, clearTimeout() {}, setInterval: () => 0, clearInterval() {}
   });
-  return { state, page: { ...definition, data: structuredClone(definition.data), setData(patch) {
+  return { state, api, page: { ...definition, data: structuredClone(definition.data), setData(patch) {
     // 与真机 setData 对齐：支持 'a[0].b' 路径键
     for (const [key, value] of Object.entries(patch)) {
       if (!/[\[.]/.test(key)) { this.data[key] = value; continue; }
@@ -39,6 +40,22 @@ test('生成页面显示服务端阶段与数量；已有一张结果仍等待�
   assert.equal(e.page.data.finished, false);
   assert.equal(e.page.data.candidates.length, 1); assert.equal(e.page.data.candidates[0].url, 'data:image/png;base64,a1');
   assert.equal(e.page.data.pendingSlots, 3); assert.equal(e.state.calls.length, 0); e.page.onUnload();
+});
+test('生成页从服务端任务冻结值恢复4K横屏，重新生成沿用原规格', async () => {
+  const requests = [];
+  const e = page('generating.js', {
+    getAiJob: async () => ({ jobId: '71', projectId: '91', phase: 'FLAT', status: 'SUCCEEDED', requestedCount: 2, acceptedCount: 1, progress: 100, allowedActions: [] }),
+    getProject: async () => ({ resolution: '4K', orientation: 'LANDSCAPE', candidates: [{ candidateId: 'c1', jobId: '71', assetId: 'a1', slotNo: 1 }] }),
+    createFlatJob: async (...args) => { requests.push(args); return { jobId: '72' }; }
+  }, { confirm: async (stage, count, description, options) => {
+    assert.equal(options.resolution, '4K');
+    return { ruleId: '4k', ruleVersion: 1 };
+  } });
+  e.page.onLoad({ stage: 'plane', count: '2' }); await tick();
+  assert.equal(e.page.data.resolution, '4K'); assert.equal(e.page.data.orientation, 'LANDSCAPE');
+  await e.page.regenerate();
+  assert.equal(requests[0][4].resolution, '4K'); assert.equal(requests[0][4].orientation, 'LANDSCAPE');
+  e.page.onUnload();
 });
 test('生成轮询迟到响应不能跨账号写入或跳转', async () => {
   let resolve; const e = page('generating.js', { getAiJob: () => new Promise(r => { resolve = r; }) });
@@ -84,11 +101,29 @@ test('立面完成页内选定后引导查看最终方案', async () => {
 test('重新生成先确认准确报价，失败重试保持请求与幂等键；取消不建单', async () => {
   const requests = []; let fail = true, confirm = true;
   const e = page('result.js', { getResultVersions: async () => ({ list: [{ versionId: '19', version: 1, superseded: false }] }),
+    getProject: async () => ({ resolution: '4K', orientation: 'PORTRAIT' }),
     createRevisionRequest: async (...args) => { requests.push(args); if (fail) throw Error('network'); return { jobId: '72' }; }
-  }, { confirm: async (stage, count, description) => { assert.equal(stage, 'ELEVATION'); assert.equal(count, 2); assert.match(description, /原方案保留/);
+  }, { confirm: async (stage, count, description, options) => { assert.equal(stage, 'ELEVATION'); assert.equal(count, 2); assert.match(description, /原方案保留/);
+    assert.equal(options.resolution, '4K');
     if (!confirm) throw { cancelled: true }; return { ruleId: '123', ruleVersion: 2 }; } });
-  e.page.onLoad({ projectId: '91' }); await tick();
+  e.page.onLoad({ projectId: '91' }); await tick(); await tick();
+  assert.equal(e.page.data.optionsReady, true);
   await e.page.regenerate(); fail = false; await e.page.regenerate();
   assert.deepEqual(requests[0], requests[1]); assert.equal(requests[0][1].priceConfirmation.ruleVersion, 2);
+  assert.equal(requests[0][1].resolution, '4K'); assert.equal(requests[0][1].orientation, 'PORTRAIT');
   confirm = false; await e.page.regenerate(); assert.equal(requests.length, 2);
+});
+
+test('结果页规格读取失败时不按默认2K重生，重试成功后才开放', async () => {
+  let fail = true, revisions = 0;
+  const e = page('result.js', {
+    getResultVersions: async () => ({ list: [{ versionId: '19', version: 1, superseded: false }] }),
+    getProject: async () => { if (fail) throw Error('network'); return { resolution: '4K', orientation: 'LANDSCAPE' }; },
+    createRevisionRequest: async () => { revisions++; return { jobId: '72' }; }
+  }, { confirm: async () => ({ ruleId: '4k', ruleVersion: 1 }) });
+  e.page.onLoad({ projectId: '91' }); await tick(); await tick();
+  assert.equal(e.page.data.optionsError, true); await e.page.regenerate(); assert.equal(revisions, 0);
+  fail = false; await e.page.loadGenerationOptions();
+  assert.equal(e.page.data.optionsReady, true); assert.equal(e.page.data.resolution, '4K');
+  await e.page.regenerate(); assert.equal(revisions, 1);
 });

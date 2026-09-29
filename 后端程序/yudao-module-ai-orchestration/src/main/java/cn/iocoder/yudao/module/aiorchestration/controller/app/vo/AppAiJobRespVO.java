@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Schema(description = "小程序 - AI 任务 Response VO（页面 06/09 生成中、07/10 选择）")
 @Data
@@ -26,6 +27,9 @@ public class AppAiJobRespVO {
 
     @Schema(description = "请求数量 N")
     private Integer requestedCount;
+
+    @Schema(description = "服务端冻结的出图选项")
+    private Map<String, String> imageOptions;
 
     @Schema(description = "已接受的有效结果数")
     private Integer acceptedCount;

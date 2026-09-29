@@ -22,6 +22,7 @@
 .files > view:last-child { border: 0; }
 .files > view text { flex: 1; font-size: $v12-font-md; }
 .result-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
+.result-actions .disabled { opacity: .45; }
 .tool-row { margin-top: 20rpx; display: grid; gap: 16rpx; }
 .tool-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
 .tool-row.cols-1 { grid-template-columns: 1fr; }

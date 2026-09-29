@@ -8,6 +8,9 @@ public interface PermissionConstants {
     String RECHARGE_PLAN_QUERY = "commerce:recharge-plan:query";
     String RECHARGE_PLAN_MANAGE = "commerce:recharge-plan:manage";
 
+    String GENERATION_PRICE_QUERY = "commerce:generation-price:query";
+    String GENERATION_PRICE_MANAGE = "commerce:generation-price:manage";
+
     String RECHARGE_ORDER_QUERY = "commerce:recharge-order:query";
     String PAYMENT_RECONCILE = "commerce:payment:reconcile";
 

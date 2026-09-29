@@ -59,6 +59,12 @@ public class AiJobSettlementService {
 
     public long createJobWithCharge(long userId, String phase, int count,
                                     String idempotencyKey, String projectRef, PricingPort.PriceConfirmation confirmation) {
+        return createJobWithCharge(userId, phase, count, idempotencyKey, projectRef, confirmation, "2K");
+    }
+
+    public long createJobWithCharge(long userId, String phase, int count,
+                                    String idempotencyKey, String projectRef,
+                                    PricingPort.PriceConfirmation confirmation, String resolution) {
         try {
             return txTemplate.execute(status -> {
                 if (idempotencyKey != null && !idempotencyKey.isBlank()) {
@@ -70,7 +76,7 @@ public class AiJobSettlementService {
                         return existing.get(0);
                     }
                 }
-                PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count);
+                PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count, resolution);
                 PricingPort.requireConfirmed(quote, confirmation);
                 pricingPort.validateSnapshotStillValid(quote); // 价格更新竞态：失效即 PRICE_RULE_CHANGED
 

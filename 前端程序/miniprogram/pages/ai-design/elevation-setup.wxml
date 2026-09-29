@@ -6,7 +6,25 @@
   <view class="v12-card option-card"><text>屋顶形式</text><view><text wx:for="{{roofOptions}}" wx:key="code" class="{{roof === item.code ? 'selected' : ''}}" data-field="roof" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{roof === item.code}}"><t-icon name="check" size="16px" /></i></text></view></view>
   <view class="v12-card option-card"><text>外墙材质</text><view><text wx:for="{{wallOptions}}" wx:key="code" class="{{wall === item.code ? 'selected' : ''}}" data-field="wall" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{wall === item.code}}"><t-icon name="check" size="16px" /></i></text></view></view>
   <view class="v12-card option-card"><text>点缀色</text><view><text wx:for="{{accentOptions}}" wx:key="code" class="{{accent === item.code ? 'selected' : ''}}" data-field="accent" data-value="{{item.code}}" bindtap="choose">{{item.label}}<i wx:if="{{accent === item.code}}"><t-icon name="check" size="16px" /></i></text></view></view>
-  <view class="v12-card option-card count-card"><text>生成数量</text><view><text wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'selected' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}}个</text></view></view>
-  <view class="v12-card point-cost"><view><text>当前余额</text><b>{{points}} <span>设计点</span></b></view><i></i><view><text>{{priceText || "正在获取报价…"}}</text></view></view>
-  <view class="v12-primary-button v12-primary-button--md" bindtap="generate">生成立面方案</view>
+  <view class="v12-card generation-settings">
+    <view class="settings-head"><view><text>出图设置</text><span>立面方案可独立选择规格</span></view><b>{{outputPixels}}</b></view>
+    <text class="settings-label">清晰度</text>
+    <view class="resolution-grid">
+      <view wx:for="{{resolutions}}" wx:key="value" class="resolution-option {{resolution === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectResolution">
+        <text>{{item.label}}</text><span>{{item.detail}}</span><i wx:if="{{resolution === item.value}}"><t-icon name="check" size="16px" /></i>
+      </view>
+    </view>
+    <text class="settings-label">画面方向</text>
+    <view class="orientation-grid">
+      <view wx:for="{{orientations}}" wx:key="value" class="orientation-option {{orientation === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectOrientation">
+        <view class="orientation-frame {{item.value === 'PORTRAIT' ? 'portrait' : 'landscape'}}"><i></i></view>
+        <view><text>{{item.label}} · {{item.ratio}}</text><span>{{item.pixels}}</span></view>
+      </view>
+    </view>
+    <view class="quantity-row"><text class="settings-label">生成数量</text><view><text wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'selected' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}} 张</text></view></view>
+    <view class="settings-footer">
+      <view class="cost-summary"><text>本次费用</text><b>{{priceText || '正在获取报价…'}}</b><span>余额 {{points}} 设计点</span><text wx:if="{{quoteError}}" class="quote-retry" bindtap="retryQuote">重新获取报价</text></view>
+      <view class="v12-primary-button generate-button {{!quoteReady || creating ? 'disabled' : ''}}" aria-disabled="{{!quoteReady || creating}}" bindtap="generate">{{creating ? '正在创建…' : '生成立面方案'}}</view>
+    </view>
+  </view>
 </view>

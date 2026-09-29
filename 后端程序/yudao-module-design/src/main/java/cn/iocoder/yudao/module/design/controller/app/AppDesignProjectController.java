@@ -137,7 +137,8 @@ public class AppDesignProjectController {
         AppRevisionRequestReqVO req = reqVO == null ? new AppRevisionRequestReqVO() : reqVO;
         var created = designProjectService.createRevisionRequest(userId, Long.parseLong(projectId),
                 req.getReason(), req.getConfigUpdates(),
-                req.getCount() == null ? 2 : req.getCount(), idempotencyKey, req.getPriceConfirmation());
+                req.getCount() == null ? 2 : req.getCount(), idempotencyKey, req.getPriceConfirmation(),
+                req.getResolution(), req.getOrientation());
         return success(jobAcceptedVo(projectId, created.newJobId()));
     }
 
@@ -151,7 +152,8 @@ public class AppDesignProjectController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
         var created = designProjectService.createFlatJob(userId, Long.parseLong(projectId),
-                reqVO.getCount(), idempotencyKey, reqVO.getPriceConfirmation());
+                reqVO.getCount(), idempotencyKey, reqVO.getPriceConfirmation(),
+                imageOptions("FLAT", reqVO.getResolution(), reqVO.getOrientation()));
         return success(jobAcceptedVo(projectId, created.jobId()));
     }
 
@@ -177,7 +179,8 @@ public class AppDesignProjectController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
         var created = designProjectService.createElevationJob(userId, Long.parseLong(projectId),
-                reqVO.getCount(), idempotencyKey, elevationConfig(reqVO), reqVO.getPriceConfirmation());
+                reqVO.getCount(), idempotencyKey, elevationConfig(reqVO), reqVO.getPriceConfirmation(),
+                imageOptions("ELEVATION", reqVO.getResolution(), reqVO.getOrientation()));
         return success(jobAcceptedVo(projectId, created.jobId()));
     }
 
@@ -228,11 +231,25 @@ public class AppDesignProjectController {
         }
     }
 
+    private cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions imageOptions(
+            String stage, String resolution, String orientation) {
+        try {
+            return cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions.normalize(
+                    stage, resolution, orientation);
+        } catch (IllegalArgumentException e) {
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(400, e.getMessage());
+        }
+    }
+
     /** 任务已受理：客户端据 jobId 轮询 /ai-jobs/{jobId} */
     private AppDesignProjectRespVO jobAcceptedVo(String projectId, long jobId) {
         AppDesignProjectRespVO vo = new AppDesignProjectRespVO();
         vo.setProjectId(projectId);
         vo.setJobId(String.valueOf(jobId));
+        var options = designProjectService.jobImageOptions(jobId);
+        vo.setResolution(options.resolution());
+        vo.setOrientation(options.orientation());
+        vo.setImageOptions(Map.of("resolution", options.resolution(), "orientation", options.orientation()));
         vo.setAllowedActions(List.of("POLL_JOB", "CANCEL_JOB"));
         return vo;
     }
@@ -270,6 +287,10 @@ public class AppDesignProjectController {
             if (jobId == null) vo.setJobId(String.valueOf(currentJob.jobId()));
             vo.setJobStatus(currentJob.status());
             vo.setRequestedCount(currentJob.requestedCount());
+            var options = designProjectService.jobImageOptions(currentJob.jobId());
+            vo.setResolution(options.resolution());
+            vo.setOrientation(options.orientation());
+            vo.setImageOptions(Map.of("resolution", options.resolution(), "orientation", options.orientation()));
         }
         Long flatAsset = designProjectService.selectedFlatAssetId(project.projectId());
         vo.setSelectedFlatAssetId(flatAsset == null ? null : String.valueOf(flatAsset));

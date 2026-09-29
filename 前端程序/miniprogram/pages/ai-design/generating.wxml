@@ -7,6 +7,7 @@
     </view>
     <text class="hero-title">{{statusText}}</text>
     <text class="hero-sub">为您生成 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案 · {{finished ? '点选一个方案继续' : '预计 1~2 分钟'}}</text>
+    <view class="job-spec"><text>{{resolution}}</text><i></i><text>{{orientation === 'PORTRAIT' ? '竖屏' : '横屏'}}</text><i></i><text>{{outputPixels}}</text></view>
     <view class="progress"><i class="shine" style="width: {{progress}}%;"></i></view>
     <view class="meter"><text class="percent">{{progress}}%</text><text class="elapsed">已用时 {{elapsedText}}</text></view>
   </view>
