@@ -28,6 +28,8 @@ class ZhongshuErrorCodeRegistryTest {
             // design 1-071
             "DESIGN_STAGE_CONFLICT", "ASSET_VALIDATION_FAILED", "PUBLICATION_VALIDATION_FAILED",
             "GENERATION_REFERENCE_NOT_AUTHORIZED", "SUBMISSION_STATE_CONFLICT",
+            // T15 设计需求输入白名单（T15 方案 §3 已批准新增码，本次回填登记）
+            "DESIGN_REQUIREMENT_INPUT_INVALID",
             "BUDGET_INPUT_INVALID", "BUDGET_INCOMPLETE", "BUDGET_PRICE_CONFLICT", "BUDGET_AMOUNT_LIMIT",
             // T14 账号级预算单价覆盖（T14 方案 §2 已批准新增码，本次回填登记）
             "BUDGET_ACCOUNT_PRICE_INVALID",

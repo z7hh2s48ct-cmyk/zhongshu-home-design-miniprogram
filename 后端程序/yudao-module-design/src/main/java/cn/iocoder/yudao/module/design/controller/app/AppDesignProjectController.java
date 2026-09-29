@@ -83,6 +83,9 @@ public class AppDesignProjectController {
             vo.setRefCaseId(item.refCaseId() == null ? null : String.valueOf(item.refCaseId()));
             vo.setStage(item.stage());
             vo.setStatus(item.status());
+            vo.setJobStatus(item.jobStatus());
+            vo.setCoverAssetId(item.coverAssetId());
+            vo.setHasResult(item.hasResult());
             vo.setCreatedAt(item.createTime() == null ? null
                     : LocalDateTime.ofInstant(item.createTime(), ZoneId.systemDefault()));
             vo.setAllowedActions(List.of("VIEW"));
@@ -279,6 +282,7 @@ public class AppDesignProjectController {
             action = flat == null ? "SELECT_FLAT" : "SELECT_ELEVATION";
         } else action = flat == null ? "CREATE_FLAT_JOB" : "CREATE_ELEVATION_JOB";
         vo.setResumeAction(action);
+        vo.setRequirements(designProjectService.latestDesignInputs(project.projectId()));
         return vo;
     }
 

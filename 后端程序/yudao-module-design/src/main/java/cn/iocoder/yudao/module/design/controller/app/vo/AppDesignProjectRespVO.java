@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Schema(description = "小程序 - 设计项目 Response VO（页面 04~11 主对象）")
 @Data
@@ -43,6 +44,15 @@ public class AppDesignProjectRespVO {
 
     @Schema(description = "候选列表（详情传入 jobId 时下发该任务已接受的候选，供选择页展示）")
     private List<AppDesignCandidateRespVO> candidates;
+
+    @Schema(description = "列表用封面资产（已选平面 > 最新结果版本），详情不下发")
+    private String coverAssetId;
+
+    @Schema(description = "列表用：是否已产生结果版本")
+    private Boolean hasResult;
+
+    @Schema(description = "需求输入（最新快照中的设计键；详情下发，供方案记录展示用户输入）")
+    private Map<String, Object> requirements;
 
     @Schema(description = "创建时间")
     private java.time.LocalDateTime createdAt;

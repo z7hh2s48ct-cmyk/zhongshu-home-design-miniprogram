@@ -629,7 +629,8 @@ public class DesignProjectService {
     // ========== 项目列表与聚合读（"我的 → 设计记录"、项目详情） ==========
 
     public record ProjectListItem(long projectId, String sourceType, Long refCaseId, String stage,
-                                  String status, java.time.Instant createTime) {
+                                  String status, java.time.Instant createTime,
+                                  String coverAssetId, String jobStatus, boolean hasResult) {
     }
 
     public record ProjectPage(List<ProjectListItem> list, String nextCursor) {
@@ -639,6 +640,8 @@ public class DesignProjectService {
      * 我的设计项目（游标分页，最新在前）。
      * 游标即上一页最后一行的 id：项目 id 由雪花算法生成、单调递增且唯一，
      * 直接用 id 降序翻页不会出现重复或漏行，无需复合游标。
+     * 附带封面资产（已选平面 > 最新结果版本平面/立面）、最新任务状态、是否已有结果版本，
+     * 供"我的方案"列表直出缩略图与进行中状态（UX 整改：列表不再只有编号与时间）。
      */
     public ProjectPage listProjects(long userId, String cursor, int limit) {
         int size = Math.min(Math.max(limit, 1), 50);
@@ -654,17 +657,65 @@ public class DesignProjectService {
         }
         sql.append(" ORDER BY id DESC LIMIT ?");
         args.add(size + 1); // 多取一行判断是否还有下一页
-        List<ProjectListItem> rows = jdbcTemplate.query(sql.toString(),
+        List<ProjectListItem> all = jdbcTemplate.query(sql.toString(),
                 (rs, i) -> new ProjectListItem(rs.getLong("id"), rs.getString("source_type"),
                         rs.getObject("ref_case_id") == null ? null : rs.getLong("ref_case_id"),
                         rs.getString("stage"), rs.getString("status"),
                         rs.getTimestamp("create_time") == null ? null
-                                : rs.getTimestamp("create_time").toInstant()),
+                                : rs.getTimestamp("create_time").toInstant(),
+                        null, null, false),
                 args.toArray());
-        boolean hasMore = rows.size() > size;
-        List<ProjectListItem> page = hasMore ? rows.subList(0, size) : rows;
+        boolean hasMore = all.size() > size;
+        List<ProjectListItem> page = hasMore ? all.subList(0, size) : all;
+        if (!page.isEmpty()) {
+            String inClause = page.stream().map(item -> String.valueOf(item.projectId()))
+                    .collect(java.util.stream.Collectors.joining(","));
+            var covers = new java.util.HashMap<Long, String>();
+            // 封面优先级：活动平面选择 > 最新结果版本的立面/平面资产
+            jdbcTemplate.query("SELECT s.project_id, c.asset_id FROM design_selection s "
+                            + "JOIN design_candidate c ON c.id = s.candidate_id AND c.deleted = FALSE "
+                            + "WHERE s.stage = 'FLAT' AND s.active = TRUE AND s.deleted = FALSE AND c.deleted = FALSE "
+                            + "AND s.project_id IN (" + inClause + ")",
+                    rs -> { covers.putIfAbsent(rs.getLong("project_id"), String.valueOf(rs.getLong("asset_id"))); });
+            jdbcTemplate.query("SELECT DISTINCT ON (rv.project_id) rv.project_id, "
+                            + "COALESCE(ec.asset_id, fc.asset_id) AS cover "
+                            + "FROM design_result_version rv "
+                            + "LEFT JOIN design_candidate ec ON ec.id = rv.elevation_candidate_id AND ec.deleted = FALSE "
+                            + "LEFT JOIN design_candidate fc ON fc.id = NULLIF(rv.flat_candidate_ids ->> 0, '')::bigint AND fc.deleted = FALSE "
+                            + "WHERE rv.deleted = FALSE AND rv.project_id IN (" + inClause + ") "
+                            + "ORDER BY rv.project_id, rv.id DESC",
+                    rs -> { covers.putIfAbsent(rs.getLong("project_id"), String.valueOf(rs.getLong("cover"))); });
+            var jobs = new java.util.HashMap<Long, String>();
+            // ai_job.project_ref 为 varchar 的项目 id（均为服务端生成的纯数字雪花串，可安全内联）
+            String quotedIds = page.stream().map(item -> "'" + item.projectId() + "'")
+                    .collect(java.util.stream.Collectors.joining(","));
+            jdbcTemplate.query("SELECT DISTINCT ON (project_ref) project_ref, status FROM ai_job "
+                            + "WHERE deleted = FALSE AND project_ref IN (" + quotedIds + ") ORDER BY project_ref, id DESC",
+                    rs -> { jobs.put(Long.parseLong(rs.getString("project_ref")), rs.getString("status")); });
+            var results = new java.util.HashSet<Long>(jdbcTemplate.queryForList(
+                    "SELECT DISTINCT project_id FROM design_result_version WHERE deleted = FALSE AND project_id IN (" + inClause + ")",
+                    Long.class));
+            page = page.stream().map(item -> new ProjectListItem(item.projectId(), item.sourceType(), item.refCaseId(),
+                    item.stage(), item.status(), item.createTime(),
+                    covers.get(item.projectId()), jobs.get(item.projectId()), results.contains(item.projectId()))).toList();
+        }
         String next = hasMore ? String.valueOf(page.get(page.size() - 1).projectId()) : null;
         return new ProjectPage(List.copyOf(page), next);
+    }
+
+    /** 最新需求快照中的设计键（UX：方案记录详情直出用户输入）；budgetInputs 属预算域不下发。 */
+    public Map<String, Object> latestDesignInputs(long projectId) {
+        List<String> rows = jdbcTemplate.queryForList(
+                "SELECT inputs::text FROM design_requirement_snapshot WHERE project_id = ? AND deleted = FALSE "
+                        + "ORDER BY input_version DESC, id DESC LIMIT 1", String.class, projectId);
+        if (rows.isEmpty() || rows.get(0) == null) return Map.of();
+        try {
+            Map<String, Object> inputs = new com.fasterxml.jackson.databind.ObjectMapper().readValue(rows.get(0), Map.class);
+            inputs.remove("budgetInputs");
+            return inputs;
+        } catch (java.io.IOException e) {
+            return Map.of();
+        }
     }
 
     private Long parseCursor(String cursor) {

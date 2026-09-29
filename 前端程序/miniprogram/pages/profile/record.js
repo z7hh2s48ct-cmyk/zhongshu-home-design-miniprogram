@@ -4,8 +4,26 @@ const api = require('../../utils/api');
 const http = require('../../utils/request');
 const view = require('../../utils/record-view');
 const format = require('../../utils/format');
+const assets = require('../../utils/assets');
+const JOB_TEXT = { QUEUED: '排队等待中', RUNNING: 'AI 正在绘制', VALIDATING: '正在校验结果', CANCEL_REQUESTED: '正在取消', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案已生成', FAILED: '生成失败', CANCELLED: '已取消' };
+const NEXT_LABEL = { POLL_JOB: '查看生成进度', SELECT_FLAT: '下一步：选择平面方案', SELECT_ELEVATION: '下一步：选择立面方案',
+  CREATE_ELEVATION_JOB: '下一步：配置立面生成', CREATE_FLAT_JOB: '下一步：生成平面方案', VIEW_RESULT: '查看最终方案' };
+function requirementRows(requirements) {
+  if (!requirements || typeof requirements !== 'object') return [];
+  const style = { NEW_CHINESE: '新中式', MODERN: '现代简约', CHINESE: '中式', EUROPEAN: '欧式' };
+  const rows = [];
+  if (requirements.faceWidthM != null) rows.push({ label: '面宽', value: requirements.faceWidthM + ' 米' });
+  if (requirements.depthM != null) rows.push({ label: '进深', value: requirements.depthM + ' 米' });
+  if (requirements.floor) rows.push({ label: '层数', value: String(requirements.floor) });
+  if (requirements.family) rows.push({ label: '家庭需求', value: String(requirements.family) });
+  if (requirements.styleCode) rows.push({ label: '风格偏好', value: style[requirements.styleCode] || requirements.styleCode });
+  if (requirements.note) rows.push({ label: '补充需求', value: String(requirements.note) });
+  if (requirements.prompt) rows.push({ label: '设计描述', value: String(requirements.prompt) });
+  return rows;
+}
 protectedPage({
-  data: { title: '方案记录', loading: false, error: '', fields: [], versions: [], projectId: '', versionId: '', loaded: false, canResubmit: false, resubmitNote: '', submitting: false, submitError: '' },
+  data: { title: '方案记录', loading: false, error: '', fields: [], versions: [], projectId: '', versionId: '', loaded: false, canResubmit: false, resubmitNote: '', submitting: false, submitError: '',
+    requirementRows: [], candidates: [], nextLabel: '', jobView: null },
   onLoad(options) {
     this._type = ['projects', 'submissions'].includes(options.type) ? options.type : null;
     this._id = view.id(options.id);
@@ -17,13 +35,15 @@ protectedPage({
     if (seq !== this._seq) return false;
     if (this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) return true;
     this._resubmitCommand = null;
-    this.setData({ fields: [], versions: [], projectId: '', versionId: '', loaded: false, loading: false, canResubmit: false, resubmitNote: '', submitting: false, error: '登录身份已变化，请重新进入' });
+    this.setData({ fields: [], versions: [], projectId: '', versionId: '', loaded: false, loading: false, canResubmit: false, resubmitNote: '', submitting: false, error: '登录身份已变化，请重新进入',
+      requirementRows: [], candidates: [], nextLabel: '', jobView: null, canResume: false });
     return false;
   },
   load() {
     if (this.data.submitting) return;
     const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
-    this.setData({ loading: false, error: '', fields: [], versions: [], projectId: '', versionId: '', loaded: false, canResubmit: false, canResume: false });
+    this.setData({ loading: false, error: '', fields: [], versions: [], projectId: '', versionId: '', loaded: false, canResubmit: false, canResume: false,
+      requirementRows: [], candidates: [], nextLabel: '', jobView: null });
     if (!this._type || !this._id) { this.setData({ error: '记录编号无效，请从「我的」重新进入' }); return; }
     if (!this._token) { this.setData({ error: '请重新登录后读取记录' }); return; }
     this.setData({ loading: true });
@@ -37,11 +57,15 @@ protectedPage({
           if (!view.id(item.versionId)) throw Error('方案版本编号无效');
           return { id: item.versionId, title: '方案 v' + item.version, hint: item.superseded ? '历史版本 · 只读回看' : '当前版本', time: format.shortTime(item.createdAt) };
         });
-        this.setData({ projectId: project.projectId, versions,
-          canResume: ['POLL_JOB', 'SELECT_FLAT', 'SELECT_ELEVATION', 'CREATE_ELEVATION_JOB', 'CREATE_FLAT_JOB'].includes(project.resumeAction), fields: [
-          { label: '项目编号', value: project.projectId }, { label: '进度', value: versions.length ? '已形成 ' + versions.length + ' 个方案版本' : (project.stage === 'ELEVATION' ? '立面阶段，尚未选定最终方案' : '平面阶段，尚未形成最终方案') },
-          { label: '来源', value: project.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计' }
-        ] });
+    this.setData({ projectId: project.projectId, versions,
+      canResume: ['POLL_JOB', 'SELECT_FLAT', 'SELECT_ELEVATION', 'CREATE_ELEVATION_JOB', 'CREATE_FLAT_JOB', 'VIEW_RESULT'].includes(project.resumeAction),
+      nextLabel: NEXT_LABEL[project.resumeAction] || '继续设计',
+      requirementRows: requirementRows(project.requirements), fields: [
+      { label: '项目编号', value: project.projectId }, { label: '进度', value: versions.length ? '已形成 ' + versions.length + ' 个方案版本' : (project.stage === 'ELEVATION' ? '立面阶段，尚未选定最终方案' : '平面阶段，尚未形成最终方案') },
+      { label: '来源', value: project.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计' }
+    ] });
+      this.loadCandidates(project);
+      if (project.resumeAction === 'POLL_JOB' && view.id(project.jobId)) this.loadJobView(project.jobId);
       } else {
         if (!response || response.submissionId !== this._id || !view.id(response.projectId) || !view.id(response.resultVersionId)) throw Error('投稿记录不完整');
         this.setData({ projectId: response.projectId, versionId: response.resultVersionId,
@@ -55,6 +79,37 @@ protectedPage({
       }
       this.setData({ loaded: true, loading: false });
     }).catch(error => { if (this.current(seq)) this.setData({ error: view.errorText(error), loading: false }); });
+  },
+  // 已完成任务的候选直出（后端按 jobId 拉式晋升后下发），配合"下一步"按钮即可续接选择流程
+  loadCandidates(project) {
+    const self = this;
+    if (!view.id(project.jobId) || !['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(project.jobStatus)) return;
+    api.getProject(this._id, project.jobId).then(detail => {
+      if (!self.current(self._seq)) return;
+      const list = (detail && detail.candidates) || [];
+      const cards = list.map(item => ({ candidateId: item.candidateId, assetId: item.assetId, slotNo: item.slotNo, url: '' }));
+      self.setData({ candidates: cards,
+        candidateHint: cards.length && project.resumeAction === 'SELECT_FLAT'
+          ? '点击下方「下一步」进入选择，选定平面后可继续立面设计'
+          : (cards.length ? '以下为该任务已通过校验的方案' : '') });
+      cards.forEach((card, index) => {
+        assets.fetchAssetDataUrl(card.assetId).then(url => {
+          if (!self.current(self._seq)) return;
+          const target = self.data.candidates[index];
+          if (target && target.assetId === card.assetId && !target.url) {
+            self.setData({ ['candidates[' + index + '].url']: url });
+          }
+        }).catch(function () { /* 单图失败不影响其余候选 */ });
+      });
+    }).catch(function () { /* 候选读取失败不打断详情 */ });
+  },
+  loadJobView(jobId) {
+    const self = this;
+    api.getAiJob(jobId).then(job => {
+      if (!self.current(self._seq)) return;
+      self.setData({ jobView: { statusText: JOB_TEXT[job.status] || job.status,
+        progress: Math.max(0, Math.min(100, Number(job.progress) || 0)) } });
+    }).catch(function () { /* 任务信息读取失败不打断详情 */ });
   },
   editResubmitNote(event) {
     if (this.data.submitting || !this.current(this._seq)) return;

@@ -3,6 +3,7 @@ const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const http = require('../../utils/request');
 const view = require('../../utils/record-view');
+const assets = require('../../utils/assets');
 
 protectedPage({
   data: { title: '我的记录', rows: [], loading: false, error: '', hasMore: false, emptyText: '' },
@@ -44,7 +45,22 @@ protectedPage({
       if (more && rows.length === this.data.rows.length) throw Error('分页未返回新的记录，请刷新');
       this._cursor = response.nextCursor || null; this._page = pageNo + 1;
       this.setData({ rows, hasMore: more, loading: false });
+      if (type === 'projects') this.loadCovers(rows);
     }).catch(error => { if (this.current(seq)) this.setData({ loading: false, error: view.errorText(error) }); });
+  },
+  // 封面缩略图：逐行经下载票据换 data URL；行序以 id 定位，避免并发回写错位
+  loadCovers(rows) {
+    const seq = this._seq;
+    rows.forEach((row, index) => {
+      if (!row.coverAssetId || row.coverUrl) return;
+      assets.fetchAssetDataUrl(row.coverAssetId).then(url => {
+        if (seq !== this._seq) return;
+        const target = this.data.rows.find(item => item.id === row.id);
+        if (target && target.coverAssetId === row.coverAssetId && !target.coverUrl) {
+          this.setData({ ['rows[' + this.data.rows.indexOf(target) + '].coverUrl']: url });
+        }
+      }).catch(function () { /* 封面失败不阻断列表，行保持无图布局 */ });
+    });
   },
   more() { if (this.data.hasMore) return this.load(); },
   retry() { return (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken()) ? this.load() : this.reload(); },

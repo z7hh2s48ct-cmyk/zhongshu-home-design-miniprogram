@@ -1,3 +1,14 @@
 @import './records.scss';
 
 .resubmit-note { box-sizing: border-box; width: 100%; min-height: 180rpx; margin: 20rpx 0; padding: 20rpx; background: #faf6f0; border-radius: 12rpx; font-size: 28rpx; }
+/* UX 整改：下一步引导 + 需求参数 + 候选图直出 */
+.next-button { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #fff; background: linear-gradient(100deg, #8b4818, #a86a35); border-radius: 14rpx; margin-bottom: 24rpx; }
+.record-fields.req { margin-top: 18rpx; }
+.record-fields.req > view { padding: 10rpx 0; border-bottom: 1rpx solid #f0eae2; }
+.record-fields.req > view:last-child { border-bottom: 0; }
+.record-fields.req .label { display: block; color: #817367; font-size: 22rpx; }
+.record-fields.req > view > text:last-child { display: block; margin-top: 4rpx; font-size: 26rpx; line-height: 1.55; overflow-wrap: anywhere; }
+.progress { height: 12rpx; margin-top: 16rpx; border-radius: 10rpx; background: #eee9e2; overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: 10rpx; background: linear-gradient(90deg, #8b4818, #a86a35); transition: width .5s ease; }
+.candidate-grid { margin-top: 18rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; }
+.candidate-img { width: 100%; height: 260rpx; border-radius: 12rpx; border: 1rpx solid #e8e0d5; background: #f3eee7; }

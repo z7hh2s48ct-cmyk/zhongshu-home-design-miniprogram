@@ -16,6 +16,13 @@ function payment(order) {
   return ({ CREATED: '待支付', PENDING: '待支付', FAILED: '支付失败', CLOSED: '订单已关闭', CANCELLED: '已取消', UNKNOWN: '支付结果确认中', REFUNDED: '已退款' })[order.paymentState] || '状态待确认';
 }
 function amount(cents) { return Number.isSafeInteger(cents) && cents >= 0 ? (cents / 100).toFixed(2) : '—'; }
+/** 项目列表状态：进行中任务优先，其次按阶段/结果给出下一步提示（UX 整改：列表不再只有编号时间） */
+function projectState(raw) {
+  const job = ({ QUEUED: '排队中', RUNNING: '生成中', VALIDATING: '结果校验中', CANCEL_REQUESTED: '取消处理中' })[raw.jobStatus];
+  if (job) return job;
+  if (raw.hasResult) return '方案已完成';
+  return raw.stage === 'ELEVATION' ? '待选择立面方案' : '待选择平面方案';
+}
 function row(type, raw) {
   const key = { projects: 'projectId', submissions: 'submissionId', favorites: 'caseId', orders: 'orderId' }[type];
   const keyId = raw && id(raw[key]);
@@ -23,8 +30,11 @@ function row(type, raw) {
   let title, hint, state, time, url;
   if (type === 'projects') {
     title = '设计方案 · ' + keyId.slice(-6); hint = raw.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计';
-    state = status(raw.status); time = raw.createdAt;
+    state = projectState(raw); time = raw.createdAt;
     url = '/pages/profile/record?type=projects&id=' + keyId;
+    return { id: keyId, title, hint, status: state, time: format.shortTime(time), url,
+      stage: raw.stage || 'FLAT', jobStatus: raw.jobStatus || '', hasResult: !!raw.hasResult,
+      coverAssetId: raw.coverAssetId || '', coverUrl: '' };
   } else if (type === 'submissions') {
     title = '投稿 · ' + keyId.slice(-6); hint = '第 ' + (raw.currentRound || 1) + ' 轮审核';
     state = raw.publicationStatus === 'PUBLISHED' ? '已发布到户型库' : status(raw.status); time = raw.submittedAt;

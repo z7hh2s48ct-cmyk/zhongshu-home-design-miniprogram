@@ -18,7 +18,9 @@ class BudgetInputsT10ContractTest {
         assertThat(saved).containsEntry("prompt", "保留原设计要求");
         assertThat(saved.get("budgetInputs")).isEqualTo(Map.of("footprintArea", "120", "floorCount", 2));
         assertThat(request.get("budgetInputs")).isEqualTo(Map.of("footprintArea", "120.0000", "floorCount", 2));
-        assertThat(BudgetInputs.validateRequirementInputs(Map.of("legacyField", "kept"))).containsEntry("legacyField", "kept");
+        // T15 起 requirementInputs 收敛为设计键白名单：未知键拒绝（原"透传保留"契约已废弃，见 DesignRequirementInputsT15ContractTest）
+        assertThatThrownBy(() -> BudgetInputs.validateRequirementInputs(Map.of("legacyField", "kept")))
+                .isInstanceOfSatisfying(ServiceException.class, e -> assertThat(e.getCode()).isEqualTo(1_071_000_005));
     }
 
     @Test

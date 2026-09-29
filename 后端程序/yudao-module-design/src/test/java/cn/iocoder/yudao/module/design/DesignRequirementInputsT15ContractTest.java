@@ -252,6 +252,55 @@ class DesignRequirementInputsT15ContractTest {
         assertThat(snapshot).containsEntry("note", "老人房在一楼");
     }
 
+    @Test
+    void listProjectsEnrichesCoverJobStatusAndResultFlag() {
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null,
+                Map.of("floorCount", 2, "note", "老人房在一楼"));
+        // 无任务/无选择：空封面、空任务状态、无结果
+        var empty = projects.listProjects(USER_A, null, 20).list().get(0);
+        assertThat(empty.coverAssetId()).isNull();
+        assertThat(empty.jobStatus()).isNull();
+        assertThat(empty.hasResult()).isFalse();
+
+        // 手工落一条 RUNNING 任务 + 平面选择候选 + 资产与结果版本，验证列表富化
+        long assetId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        jdbc.update("INSERT INTO asset (id, object_key, owner_user_id, asset_type, source_type, sha256, "
+                + "declared_mime, size_bytes, upload_status, security_scan_status, moderation_status) "
+                + "VALUES (?,?,?,'AI_OUTPUT','AI','seed','image/png',10,'ACCEPTED','PASSED','PASSED')",
+                assetId, "ai/" + assetId + ".png", USER_A);
+        long candidateId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        long resultId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        long selectionId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        long jobId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        jdbc.update("INSERT INTO design_candidate (id, project_id, job_id, slot_no, asset_id, ai_result_id) VALUES (?,?,?,1,?,?)",
+                candidateId, projectId, jobId, assetId, resultId);
+        jdbc.update("INSERT INTO ai_job (id, project_ref, user_id, phase, status, requested_count, output_prefix) "
+                + "VALUES (?, ?, ?, 'FLAT', 'RUNNING', 1, ?)", jobId, String.valueOf(projectId), USER_A, "ai-quarantine/" + projectId);
+        jdbc.update("INSERT INTO design_selection (id, project_id, stage, candidate_id, selected_by) "
+                + "VALUES (?, ?, 'FLAT', ?, ?)", selectionId, projectId, candidateId, USER_A);
+        jdbc.update("INSERT INTO design_result_version (id, project_id, version, flat_selection_id, flat_candidate_ids) "
+                + "VALUES (?, ?, 1, ?, CAST(? AS jsonb))", com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), projectId, selectionId, "[1]");
+
+        var enriched = projects.listProjects(USER_A, null, 20).list().get(0);
+        assertThat(enriched.coverAssetId()).isEqualTo(String.valueOf(assetId));
+        assertThat(enriched.jobStatus()).isEqualTo("RUNNING");
+        assertThat(enriched.hasResult()).isTrue();
+    }
+
+    @Test
+    void latestDesignInputsReturnsDesignKeysAndHidesBudget() {
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null,
+                Map.of("faceWidthM", 12.6, "floor", "两层", "note", "老人房在一楼",
+                        "budgetInputs", Map.of("regionCode", "VAR1")));
+        var inputs = projects.latestDesignInputs(projectId);
+        assertThat(inputs)
+                .containsEntry("faceWidthM", "12.6")
+                .containsEntry("floor", "两层")
+                .containsEntry("note", "老人房在一楼");
+        assertThat(inputs).doesNotContainKey("budgetInputs");
+        assertThat(projects.latestDesignInputs(com.baomidou.mybatisplus.core.toolkit.IdWorker.getId())).isEmpty();
+    }
+
     /** 发布带 2 张平面图的公司案例（含生成参考授权），faceWidth/depth 可指定 */
     private long seedPublishedCase(Integer faceWidth, Integer depth, int floorCount) {
         long caseId = catalog.createCompanyCase(ADMIN, "参考案例", null, "MODERN", floorCount, 100,

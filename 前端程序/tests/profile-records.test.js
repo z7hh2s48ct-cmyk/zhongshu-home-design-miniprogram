@@ -218,3 +218,14 @@ test('投稿不信任空成功响应，身份变化后不跳转到旧账号记�
   e.state.token = 'B'; resolve({ submissionId: '123' }); await pending;
   assert.equal(e.state.calls.filter(c => c[0] === 'redirectTo').length, 0);
 });
+
+test('项目行状态：进行中任务优先，其次阶段/结果（UX 整改）', () => {
+  const base = { projectId: '123', sourceType: 'SELF_UPLOAD', createdAt: '2026-09-29T05:00:00Z' };
+  assert.equal(view.row('projects', { ...base, jobStatus: 'RUNNING' }).status, '生成中');
+  assert.equal(view.row('projects', { ...base, jobStatus: 'QUEUED' }).status, '排队中');
+  assert.equal(view.row('projects', { ...base, stage: 'FLAT' }).status, '待选择平面方案');
+  assert.equal(view.row('projects', { ...base, stage: 'ELEVATION' }).status, '待选择立面方案');
+  assert.equal(view.row('projects', { ...base, hasResult: true }).status, '方案已完成');
+  const row = view.row('projects', { ...base, coverAssetId: '456' });
+  assert.equal(row.coverAssetId, '456'); assert.equal(row.coverUrl, '');
+});

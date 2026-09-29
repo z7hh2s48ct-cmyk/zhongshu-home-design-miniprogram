@@ -4,7 +4,24 @@
     <view wx:if="{{loading}}" class="record-empty"><v12-state status="loading" text="正在读取…" card="{{false}}" /></view>
     <view wx:elif="{{error}}" class="v12-card record-empty"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="load" card="{{false}}" /></view>
     <block wx:elif="{{loaded}}">
-      <button wx:if="{{canResume}}" class="record-button" bindtap="resumeDesign">继续设计</button>
+      <button wx:if="{{canResume}}" class="record-button next-button" bindtap="resumeDesign">{{nextLabel || '继续设计'}}</button>
+      <view wx:if="{{requirementRows.length}}" class="v12-card record-card">
+        <text class="record-title">设计需求</text>
+        <view class="record-fields req"><view wx:for="{{requirementRows}}" wx:key="label"><text class="label">{{item.label}}</text><text>{{item.value}}</text></view></view>
+      </view>
+      <view wx:if="{{jobView}}" class="v12-card record-card">
+        <text class="record-title">生成任务</text>
+        <text class="record-hint">{{jobView.statusText}} · 进度 {{jobView.progress}}%</text>
+        <view class="progress"><i style="width: {{jobView.progress}}%;"></i></view>
+      </view>
+      <view wx:if="{{candidates.length}}" class="v12-card record-card">
+        <text class="record-title">已生成候选（{{candidates.length}}）</text>
+        <text wx:if="{{candidateHint}}" class="record-hint">{{candidateHint}}</text>
+        <view class="candidate-grid">
+          <image wx:for="{{candidates}}" wx:key="candidateId" class="candidate-img" src="{{item.url}}" mode="aspectFill" lazy-load
+            aria-label="候选方案 {{item.slotNo}}" />
+        </view>
+      </view>
       <view class="v12-card record-card record-fields"><view wx:for="{{fields}}" wx:key="label"><text class="label">{{item.label}}</text><text>{{item.value}}</text></view></view>
       <view wx:if="{{canResubmit}}" class="v12-card record-card">
         <text class="record-title">修改后重新提交</text>
