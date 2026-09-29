@@ -15,7 +15,7 @@ function page(file, api, price) {
       '../../utils/generation-price': price
     }[name]; }, getApp: () => ({ globalData: state.global }),
     wx: Object.fromEntries(['redirectTo', 'navigateBack', 'navigateTo', 'showToast', 'showModal'].map(key => [key, value => state.calls.push([key, value])])),
-    setTimeout: callback => { state.timers.push(callback); return state.timers.length; }, clearTimeout() {}
+    setTimeout: callback => { state.timers.push(callback); return state.timers.length; }, clearTimeout() {}, setInterval: () => 0, clearInterval() {}
   });
   return { state, page: { ...definition, data: structuredClone(definition.data), setData(patch) { Object.assign(this.data, patch); } } };
 }

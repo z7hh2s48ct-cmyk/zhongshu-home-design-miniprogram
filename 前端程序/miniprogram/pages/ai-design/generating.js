@@ -2,25 +2,59 @@
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const http = require('../../utils/request');
-const STATUS_TEXT = { QUEUED: '等待生成', RUNNING: '方案生成中', VALIDATING: '结果审核中', SETTLING: '正在结算', CANCEL_REQUESTED: '取消处理中', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案生成成功', FAILED: '生成失败', CANCELLED: '任务已取消' };
+const STATUS_TEXT = { QUEUED: '排队等待中', RUNNING: 'AI 正在绘制方案', VALIDATING: '正在校验生成结果', CANCEL_REQUESTED: '正在取消任务', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案已生成', FAILED: '生成失败', CANCELLED: '任务已取消' };
+const STEP_ORDER = ['QUEUED', 'RUNNING', 'VALIDATING'];
 
 protectedPage({
   data: { stage: 'plane', count: 2, progress: 0, status: 'QUEUED',
-          statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '' },
+          statusText: '正在读取任务', acceptedCount: 0, canCancel: false, cancelling: false, finished: false, pollError: '',
+          stepIndex: 0, elapsedText: '00:00' },
   onLoad(query) {
     this._token = http.getToken();
     this._jobId = getApp().globalData.jobId;
+    this._pageStart = Date.now();
+    this._statusAt = {};
     const stage = query.stage === 'elevation' ? 'elevation' : 'plane';
     const count = Number(query.count) || 2;
     this.setData({ stage: stage, count: count,
       tipTitle: stage === 'plane' ? '平面方案生成中' : '立面方案生成中',
-      tipSubtitle: '共' + count + '个方案',
-      jobId: this._jobId || '' });
+      tipSubtitle: '共' + count + '个方案' });
+    this.startTicker();
     this.poll();
   },
   onUnload() {
     this._stopped = true;
     if (this._timer) clearTimeout(this._timer);
+    if (this._uiTimer) clearInterval(this._uiTimer);
+  },
+  startTicker() {
+    const self = this;
+    this._uiTimer = setInterval(function () {
+      if (self._stopped) return;
+      self.setData({ progress: self.computeProgress(), elapsedText: self.elapsedText() });
+    }, 500);
+  },
+  elapsedText() {
+    const total = Math.max(0, Math.floor((Date.now() - this._pageStart) / 1000));
+    const mm = String(Math.floor(total / 60)).padStart(2, '0'), ss = String(total % 60).padStart(2, '0');
+    return mm + ':' + ss;
+  },
+  // 平滑进度：后端仅在单张图完成时回报一次进度，直接展示会长期停在 0%。
+  // 参照主流生图产品，前端按阶段推进平滑进度（渐近上限），后端回报值只用来抬高、不用来回落。
+  computeProgress() {
+    const self = this;
+    const status = this.data.status;
+    if (['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(status)) return 100;
+    if (status === 'FAILED' || status === 'CANCELLED') return this.data.progress;
+    const now = Date.now();
+    const since = function (key) { return (now - (self._statusAt[key] || self._pageStart)) / 1000; };
+    let target;
+    if (status === 'VALIDATING') target = 90 + Math.min(8, since('VALIDATING') / 2);
+    else if (status === 'RUNNING') target = 14 + 76 * (1 - Math.exp(-since('RUNNING') / 45));
+    else if (status === 'CANCEL_REQUESTED') target = this.data.progress;
+    else target = Math.min(12, since('QUEUED') * 0.8);
+    const server = Number(this._serverProgress) || 0;
+    return Math.round(Math.max(Math.min(target, 98), Math.min(server, 96), 0));
   },
   poll() {
     if (this._stopped) return;
@@ -30,17 +64,30 @@ protectedPage({
     return api.getAiJob(jobId).then(function (job) {
       if (self._stopped || !http.isSameSession(self._token)) return;
       if (!job || String(job.jobId) !== String(jobId)) throw Error('任务信息不一致');
+      if (!self._statusAt[job.status]) self._statusAt[job.status] = Date.now();
+      self._serverProgress = Number(job.progress) || 0;
       self._projectId = job.projectId;
-      self.setData({ progress: Math.max(0, Math.min(100, Number(job.progress) || 0)), status: job.status,
+      const stepIndex = Math.max(0, STEP_ORDER.indexOf(job.status));
+      const finished = ['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(job.status);
+      self.setData({ status: job.status,
         stage: job.phase === 'ELEVATION' ? 'elevation' : 'plane', count: job.requestedCount,
         acceptedCount: job.acceptedCount || 0, statusText: STATUS_TEXT[job.status] || '状态待确认',
         canCancel: (job.allowedActions || []).includes('CANCEL'),
-        finished: ['SUCCEEDED', 'PARTIALLY_SUCCEEDED'].includes(job.status), pollError: '' });
+        stepIndex: finished ? 3 : stepIndex,
+        finished: finished, pollError: '' });
       if (job.status === 'SUCCEEDED' || job.status === 'PARTIALLY_SUCCEEDED') {
-        self.toCandidatePage();
+        // 先让进度走满、再进选择页，避免 100% 一闪而过
+        if (!self._redirecting) {
+          self._redirecting = true;
+          self.setData({ progress: 100 });
+          setTimeout(function () { self.toCandidatePage(); }, 600);
+        }
       } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
         wx.showToast({ title: job.status === 'CANCELLED' ? '任务已取消' : '生成失败，点数将退回', icon: 'none' });
-        self._timer = setTimeout(function () { wx.navigateBack(); }, 2000);
+        if (!self._redirecting) {
+          self._redirecting = true;
+          self._timer = setTimeout(function () { wx.navigateBack(); }, 2000);
+        }
       } else {
         self._timer = setTimeout(function () { self.poll(); }, 2000);
       }

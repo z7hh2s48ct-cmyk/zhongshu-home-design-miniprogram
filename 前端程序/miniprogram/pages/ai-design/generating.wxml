@@ -1,14 +1,29 @@
 <view class="v12-page generating-page" wx:if="{{accessReady}}">
   <v12-navbar title="{{stage === 'plane' ? '平面方案生成' : '立面方案生成'}}" show-back show-brand="{{false}}" />
-  <view class="v12-card generate-card">
-    <text class="generate-title">{{statusText}}</text>
-    <text class="generating-copy">任务 {{jobId}} · 请求 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案</text>
-    <text class="percent">{{progress}}%</text>
-    <view class="progress"><i style="width: {{progress}}%;"></i></view>
-    <text class="generating-copy">审核通过 {{acceptedCount}} 个。候选将在任务结算后开放查看。</text>
-    <text wx:if="{{pollError}}" class="generating-copy">{{pollError}}</text>
+  <view class="v12-card hero-card">
+    <view class="orb"><view class="orb-ring"></view><view class="orb-core">AI</view></view>
+    <text class="hero-title">{{statusText}}</text>
+    <text class="hero-sub">为您生成 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案 · 预计 1~2 分钟</text>
+    <view class="progress"><i class="shine" style="width: {{progress}}%;"></i></view>
+    <view class="meter"><text class="percent">{{progress}}%</text><text class="elapsed">已用时 {{elapsedText}}</text></view>
   </view>
-  <view class="stage-tip"><t-icon name="info-circle" size="28px" color="#c78217" /><view><text>进度以任务服务返回为准</text><text>生成失败或数量不足时，按有效方案数量结算，退款可在点数记录查看。</text></view></view>
+
+  <view class="v12-card step-card">
+    <view class="flow">
+      <view class="fstep {{stepIndex >= 0 ? 'on' : ''}}{{stepIndex > 0 ? 'done' : ''}}"><i>1</i><text>排队</text></view>
+      <em class="line {{stepIndex >= 1 ? 'on' : ''}}"></em>
+      <view class="fstep {{stepIndex >= 1 ? 'on' : ''}}{{stepIndex > 1 ? 'done' : ''}}"><i>2</i><text>生成</text></view>
+      <em class="line {{stepIndex >= 2 ? 'on' : ''}}"></em>
+      <view class="fstep {{stepIndex >= 2 ? 'on' : ''}}{{stepIndex > 2 ? 'done' : ''}}"><i>3</i><text>校验</text></view>
+      <em class="line {{stepIndex >= 3 ? 'on' : ''}}"></em>
+      <view class="fstep {{stepIndex >= 3 ? 'on' : ''}}"><i>4</i><text>完成</text></view>
+    </view>
+    <text wx:if="{{acceptedCount > 0}}" class="accepted">已通过审核 {{acceptedCount}} 个方案</text>
+    <text wx:elif="{{pollError}}" class="accepted warn">{{pollError}}</text>
+  </view>
+
+  <view class="stage-tip"><t-icon name="info-circle" size="26px" color="#c78217" /><text>生成失败或数量不足时按有效方案结算，退点自动到账</text></view>
+
   <view class="generate-actions"><view class="v12-primary-button" bindtap="continueLater">后台继续</view><view wx:if="{{canCancel}}" class="v12-secondary-button" bindtap="cancel">{{cancelling ? '取消处理中' : '取消生成'}}</view></view>
   <view wx:if="{{finished}}" class="preview-link" bindtap="previewResult">查看已生成方案</view>
 </view>
