@@ -3,3 +3,5 @@ project.private.config.json
 .DS_Store
 .gstack/
 .omc/
+# 发布构建产物（build-release.js 输出目录），不入库
+release/

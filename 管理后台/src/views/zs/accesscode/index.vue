@@ -48,6 +48,14 @@
         </el-form-item>
       </el-form>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="授权码列表加载失败，请重试后再执行批量操作"
+        style="margin-bottom: 12px"
+      />
+
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column type="selection" width="44" />
         <el-table-column label="授权码" prop="codeMask" width="180" />
@@ -107,6 +115,8 @@ const message = useMessage()
 
 const activeTab = ref('ALL')
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: '', codeMask: '', pageNo: 1, pageSize: 10 })
@@ -145,13 +155,16 @@ const search = () => {
 const load = async () => {
   query.status = activeTab.value === 'ALL' ? '' : activeTab.value
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getAccessCodePage({ ...query, codeMask: query.codeMask || undefined })
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 加载失败必须与"没有访问码"区分，避免误判为可重新批量生成
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

@@ -1,6 +1,5 @@
 import { useCache, CACHE_KEY } from '@/hooks/web/useCache'
 import { TokenType } from '@/api/login/types'
-import { decrypt, encrypt } from '@/utils/jsencrypt'
 
 const { wsCache } = useCache()
 
@@ -50,17 +49,23 @@ export type LoginFormType = {
   rememberMe: boolean
 }
 
-export const getLoginForm = () => {
-  const loginForm: LoginFormType = wsCache.get(CACHE_KEY.LoginForm)
-  if (loginForm) {
-    loginForm.password = decrypt(loginForm.password) as string
-  }
-  return loginForm
+/**
+ * 「记住我」允许持久化的字段：仅账号与租户，**刻意不含 password**。
+ *
+ * 安全红线：口令不做任何形式的持久化——既不明文，也不用可逆加密后再落 localStorage。
+ * 本文件此前用 RSA 公钥加密口令写入缓存、并以同仓硬编码私钥在本地解密回填；
+ * 私钥随 JS 分发给所有浏览器用户，使该加密形同虚设，且本地缓存可被任意脚本还原为明文口令。
+ * 登录请求本身经 HTTPS 提交口令，与前端持久化无关，故移除后不影响登录链路。
+ */
+export type RememberedLoginFormType = Omit<LoginFormType, 'password'>
+
+export const getLoginForm = (): RememberedLoginFormType | undefined => {
+  return wsCache.get(CACHE_KEY.LoginForm)
 }
 
 export const setLoginForm = (loginForm: LoginFormType) => {
-  loginForm.password = encrypt(loginForm.password) as string
-  wsCache.set(CACHE_KEY.LoginForm, loginForm, { exp: 30 * 24 * 60 * 60 })
+  const { tenantName, username, rememberMe } = loginForm
+  wsCache.set(CACHE_KEY.LoginForm, { tenantName, username, rememberMe }, { exp: 30 * 24 * 60 * 60 })
 }
 
 export const removeLoginForm = () => {

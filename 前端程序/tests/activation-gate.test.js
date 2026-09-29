@@ -349,3 +349,48 @@ test('冷启动直达功能或授权页也先落首页，普通前后台切换�
     assert.equal(env.calls.length, 0);
   }
 });
+
+test('分享/扫码冷启动保留目标页，未激活经分享直达仍被拦回首页', () => {
+  // 已激活：分享卡片直接落业务页，不再被强行弹回首页，且页面正常放行
+  const linked = runtime(true);
+  linked.app.onShow?.({ scene: 1007, path: 'pages/ai-design/index' });
+  assert.equal(linked.calls.length, 0, '分享卡片不应触发回首页');
+  assert.equal(linked.app.deepLinkEntry, true);
+  assert.equal(linked.page('pages/ai-design/index').data.accessReady, true);
+
+  // 扫码/小程序码/订阅消息同样是明确直达意图
+  for (const scene of [1011, 1047, 1014, 1044, 1074]) {
+    const env = runtime(true);
+    env.app.onShow?.({ scene, path: 'pages/ai-design/index' });
+    assert.equal(env.calls.length, 0, `scene ${scene}`);
+    assert.equal(env.page('pages/ai-design/index').data.accessReady, true, `scene ${scene}`);
+  }
+
+  // 未激活：分享直达同样被拦回首页，且不弹激活窗（与普通入口行为一致）
+  const blocked = runtime();
+  blocked.app.onShow?.({ scene: 1007, path: 'pages/ai-design/index' });
+  assert.equal(blocked.calls.length, 0);
+  const page = blocked.page('pages/ai-design/index');
+  assert.equal(page.data.accessReady, false);
+  assert.equal(blocked.calls.filter(([type]) => type === 'switchTab').length, 1);
+  assert.equal(blocked.calls[0][1].url, '/pages/home/index');
+  assert.equal(blocked.calls.filter(([type]) => type === 'modal').length, 0);
+
+  // 未登记场景（含未知新场景）维持原有行为：冷启动先落首页
+  for (const scene of [undefined, 1001, 1089, 9999]) {
+    const env = runtime(true);
+    env.app.onShow?.({ scene, path: 'pages/ai-design/index' });
+    assert.equal(env.calls[0]?.[1].url, '/pages/home/index', `scene ${scene}`);
+    assert.equal(env.app.deepLinkEntry, false, `scene ${scene}`);
+  }
+});
+
+test('入口判定只在本次启动首次 onShow 生效，回前台不打断直达页', () => {
+  const env = runtime(true);
+  env.app.onShow?.({ scene: 1007, path: 'pages/ai-design/index' });
+  env.calls.length = 0;
+  // 从后台回前台：onShow 再次触发，但入口已判定，不得把用户从直达页拉走
+  env.app.onShow?.({ path: 'pages/ai-design/index' });
+  assert.equal(env.calls.length, 0);
+  assert.equal(env.app.deepLinkEntry, true);
+});

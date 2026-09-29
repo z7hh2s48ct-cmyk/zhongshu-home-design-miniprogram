@@ -177,3 +177,32 @@ test('真实组件查询失败显示错误，不将失败伪装为成功空表',
   try { await env.state.load(); assert.equal(env.state.loadError.value, 'forbidden'); assert.equal(env.state.loading.value, false) }
   finally { env.stop() }
 })
+
+test('目录下拉全量拉取有页数上限，超限报错而非静默返回残缺数据', async () => {
+  let regionPages = 0
+  const env = component({ overrides: { getCatalogPage: async (resource) => {
+    if (resource !== 'regions') return { list: [], total: 0 }
+    regionPages++
+    return { list: [{ regionCode: `R${regionPages}` }], total: 1_000_000 }
+  } } })
+  try {
+    await env.state.refresh()
+    assert.equal(regionPages, 50, '总页数应被 50 页上限截停')
+    assert.match(env.state.loadError.value, /上限/)
+    assert.equal(env.state.choices.regions.length, 0, '超限时不得写入残缺下拉数据')
+  } finally { env.stop() }
+})
+
+test('目录总量在页数上限内时正常拉全量并写入下拉', async () => {
+  const env = component({ overrides: { getCatalogPage: async (resource, params) => {
+    if (resource === 'regions') {
+      return { list: params.pageNo <= 2 ? [{ regionCode: `R${params.pageNo}` }] : [], total: 2 }
+    }
+    return { list: [], total: 0 }
+  } } })
+  try {
+    await env.state.refresh()
+    assert.equal(env.state.loadError.value, '')
+    assert.equal(env.state.choices.regions.length, 2)
+  } finally { env.stop() }
+})

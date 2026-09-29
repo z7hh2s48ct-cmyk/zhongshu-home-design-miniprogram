@@ -1,8 +1,20 @@
 {
-  "desc": "众墅之家设计小程序页面索引",
+  "desc": "众墅之家设计小程序页面索引：仅放行对外内容页，内部与资金相关页面不参与微信搜索收录",
   "rules": [
     {
       "action": "allow",
+      "page": "pages/home/index"
+    },
+    {
+      "action": "allow",
+      "page": "pages/library/index"
+    },
+    {
+      "action": "allow",
+      "page": "pages/ai-design/index"
+    },
+    {
+      "action": "disallow",
       "page": "*"
     }
   ]

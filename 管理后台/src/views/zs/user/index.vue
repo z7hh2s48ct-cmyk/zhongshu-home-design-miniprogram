@@ -37,6 +37,14 @@
         </el-form-item>
       </el-form>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="用户列表加载失败，请重试"
+        style="margin-bottom: 12px"
+      />
+
       <el-table :data="list" v-loading="loading" stripe @row-click="openDetail">
         <el-table-column label="用户编号" prop="id" width="200" />
         <el-table-column label="昵称" prop="nickname" min-width="140">
@@ -167,6 +175,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 defineOptions({ name: 'ZsAccount' })
 
 const loading = ref(false)
+/** 接口失败标记：用于把"加载失败"与"确实没有数据"区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ nickname: '', status: '', pageNo: 1, pageSize: 10 })
@@ -183,6 +193,7 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getAccountPage({
       ...query,
@@ -192,8 +203,10 @@ const load = async () => {
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 加载失败必须与"查无数据"区分，否则会被误读为业务上真的没有记录
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

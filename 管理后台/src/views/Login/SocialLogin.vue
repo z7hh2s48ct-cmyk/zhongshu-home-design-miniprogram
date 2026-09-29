@@ -226,14 +226,13 @@ const getTenantId = async () => {
     authUtil.setTenantId(res)
   }
 }
-// 记住我
+// 记住我（仅回填账号与租户；口令从不持久化，需用户每次输入）
 const getCookie = () => {
   const loginForm = authUtil.getLoginForm()
   if (loginForm) {
     loginData.loginForm = {
       ...loginData.loginForm,
       username: loginForm.username ? loginForm.username : loginData.loginForm.username,
-      password: loginForm.password ? loginForm.password : loginData.loginForm.password,
       rememberMe: loginForm.rememberMe ? true : false,
       tenantName: loginForm.tenantName ? loginForm.tenantName : loginData.loginForm.tenantName
     }

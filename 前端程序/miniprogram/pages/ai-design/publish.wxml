@@ -1,6 +1,6 @@
 <view class="v12-page publish-page" wx:if="{{accessReady}}">
   <v12-navbar title="投稿到户型库" show-back show-brand="{{false}}" />
-  <view class="v12-card publish-summary"><image wx:if="{{coverUrl}}" src="{{coverUrl}}" mode="aspectFit" /><view><text>AI设计方案投稿</text><text>{{versionReady ? '结果版本 v' + versionNumber : '结果版本读取中或不可用'}}</text><text>{{materialCount}} 项已选方案图片</text></view></view>
+  <view class="v12-card publish-summary"><image wx:if="{{coverUrl}}" src="{{coverUrl}}" mode="aspectFit" lazy-load /><view><text>AI设计方案投稿</text><text>{{versionReady ? '结果版本 v' + versionNumber : '结果版本读取中或不可用'}}</text><text>{{materialCount}} 项已选方案图片</text></view></view>
   <view class="v12-card audit-card"><view class="audit-title"><text>投稿参数校核</text><span>{{missing ? '尚未通过' : '已通过'}}</span></view>
     <view class="audit-row" wx:for="{{validation.missingFields}}" wx:key="*this"><text>{{item}}</text><span>需要补全</span></view>
     <view class="audit-row"><text>补充说明（选填）</text><span>{{note || '未填写'}}</span><button bindtap="completeDescription">编辑</button></view>

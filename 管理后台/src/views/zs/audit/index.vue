@@ -10,6 +10,14 @@
     </div>
 
     <div class="zs-table-card">
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="审计事件加载失败，请重试（当前列表不代表完整审计记录）"
+        style="margin-bottom: 12px"
+      />
+
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column label="事件号" prop="id" width="200" />
         <el-table-column label="事件类型" width="150">
@@ -74,6 +82,8 @@ const actionText: Record<string, string> = {
 defineOptions({ name: 'ZsAudit' })
 
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ pageNo: 1, pageSize: 20 })
@@ -85,13 +95,16 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getAuditEvents(query)
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 审计事件是取证依据：加载失败必须显式提示，不能被当成"无审计记录"
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

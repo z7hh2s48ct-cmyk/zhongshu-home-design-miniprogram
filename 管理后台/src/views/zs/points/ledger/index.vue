@@ -15,6 +15,14 @@
         <el-tab-pane label="人工调点单" name="adjustment" />
       </el-tabs>
 
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="点数台账加载失败，请重试后再判断账务"
+        style="margin-bottom: 12px"
+      />
+
       <div v-if="activeTab === 'ledger'">
         <el-form inline class="zs-filter">
           <el-form-item label="用户">
@@ -247,6 +255,8 @@ defineOptions({ name: 'ZsPointLedger' })
 
 const activeTab = ref('ledger')
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ userId: '', type: '', pageNo: 1, pageSize: 10 })
@@ -282,6 +292,7 @@ const search = () => {
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     if (activeTab.value === 'adjustment') {
       const res = await ZsApi.getAdjustmentPage({
@@ -301,8 +312,10 @@ const load = async () => {
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
+    // 点数台账属账务数据：加载失败必须显式提示，避免被读成"无流水"
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }

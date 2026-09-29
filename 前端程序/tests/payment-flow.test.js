@@ -210,3 +210,24 @@ test('订单缺有效 orderId 时不跳查单页，提示订单未确认', async
   assert.equal(tag(env.calls, 'navigateTo').length, 0);
   assert.ok(tag(env.calls, 'toast').some(c => /订单未确认/.test(c[1].title)));
 });
+
+// iOS 端虚拟商品（设计点）支付隔离：WXML 隐藏入口之外，pay() 必须再拦一层，
+// 保证误触或缓存期点击也不会建单、不拉 requestPayment。
+test('iOS 端支付被拦截：不建单、不拉 requestPayment，仅提示联系客服', async () => {
+  const env = runtime();
+  const page = env.page();
+  await flush();
+  page.data.iosBlocked = true;
+  page.pay();
+  await flush();
+  assert.equal(tag(env.calls, 'createOrder').length, 0);
+  assert.equal(tag(env.calls, 'requestPayment').length, 0);
+  assert.ok(tag(env.calls, 'toast').some(c => /不支持在线充值/.test(c[1].title)));
+});
+
+test('非 iOS 平台 iosBlocked 保持 false，支付链路不受影响', async () => {
+  const env = runtime();
+  const page = env.page();
+  await flush();
+  assert.equal(page.data.iosBlocked, false);
+});

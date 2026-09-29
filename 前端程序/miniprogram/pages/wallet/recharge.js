@@ -3,6 +3,7 @@
 const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const view = require('../../utils/record-view');
+const platform = require('../../utils/platform');
 
 protectedPage({
   data: {
@@ -10,9 +11,15 @@ protectedPage({
     packages: [],
     loading: true,
     points: '—',
-    paying: false
+    paying: false,
+    // iOS 端隐藏微信支付入口：设计点属虚拟货币，苹果政策禁止 iOS 端以微信支付购买。
+    iosBlocked: false
   },
-  onLoad() { this.loadPlans(); },
+  onLoad() {
+    // 平台判定放最前：先决定支付入口是否可用，再拉方案，避免 iOS 端闪现支付按钮。
+    this.setData({ iosBlocked: platform.isIOS() });
+    this.loadPlans();
+  },
   onShow() { this.refreshPoints(); },
   refreshPoints() {
     const self = this;
@@ -45,6 +52,11 @@ protectedPage({
   selectPackage(event) { this.setData({ selected: Number(event.currentTarget.dataset.index) }); },
   openRecords() { wx.navigateTo({ url: '/pages/profile/records?type=orders' }); },
   pay() {
+    // iOS 端不提供虚拟商品支付入口（双保险：WXML 已隐藏按钮，此处再拦一次防误触）。
+    if (this.data.iosBlocked) {
+      wx.showToast({ title: '苹果设备暂不支持在线充值，请联系客服', icon: 'none' });
+      return;
+    }
     const current = this.data.packages[this.data.selected];
     if (!current || !current.planId) return;
     // 涉及真实下单：点击防重 + 幂等键，快速连点不重复建单

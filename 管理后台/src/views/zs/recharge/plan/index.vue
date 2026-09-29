@@ -13,6 +13,14 @@
     </div>
 
     <div class="zs-table-card">
+      <el-alert
+        v-if="loadError"
+        type="error"
+        :closable="false"
+        title="充值方案加载失败，请重试"
+        style="margin-bottom: 12px"
+      />
+
       <el-table :data="list" v-loading="loading" stripe>
         <el-table-column label="方案" prop="name" min-width="140" />
         <el-table-column label="金额(元)" width="100">
@@ -58,15 +66,20 @@ defineOptions({ name: 'ZsRechargePlan' })
 const message = useMessage()
 
 const loading = ref(false)
+/** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
+const loadError = ref(false)
 const list = ref<any[]>([])
 
 const load = async () => {
   loading.value = true
+  loadError.value = false
   try {
     const res = await ZsApi.getPlanPage({ pageNo: 1, pageSize: 50 })
     list.value = res?.list || res || []
   } catch {
+    // 加载失败必须与"尚未配置方案"区分，避免运营误以为档位被清空
     list.value = []
+    loadError.value = true
   } finally {
     loading.value = false
   }

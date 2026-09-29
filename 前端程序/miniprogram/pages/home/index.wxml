@@ -26,7 +26,7 @@
     </view>
     <view class="section-heading"><text class="v12-section-title">精选户型</text><view bindtap="openLibrary">查看全部 <t-icon name="chevron-right" size="15px" color="#6a3b1b" /></view></view>
     <view class="featured-row">
-      <view class="v12-card featured" wx:for="{{featuredCases}}" wx:key="title" data-id="{{item.id}}" bindtap="openDetail"><image src="{{item.image}}" mode="aspectFill" /><view><view class="featured-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view><t-icon name="chevron-right" size="16px" color="#6a3b1b" /></view></view>
+      <view class="v12-card featured" wx:for="{{featuredCases}}" wx:key="title" data-id="{{item.id}}" bindtap="openDetail"><image src="{{item.image}}" mode="aspectFill" lazy-load /><view><view class="featured-copy"><text>{{item.title}}</text><text>{{item.meta}}</text></view><t-icon name="chevron-right" size="16px" color="#6a3b1b" /></view></view>
     </view>
   </view>
 </view>

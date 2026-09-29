@@ -6,6 +6,9 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "check:release": "node scripts/check-release.js",
-    "build:release": "node scripts/build-release.js"
+    "build:release": "node scripts/build-release.js",
+    "upload:cos": "node scripts/upload-cos.js",
+    "verify:cdn": "node scripts/verify-cdn.js",
+    "prune:cdn": "node scripts/prune-cdn-staging.js"
   }
 }

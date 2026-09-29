@@ -82,7 +82,7 @@
         <jimureport.version>2.5.1</jimureport.version>
         <jimubi.version>2.5.0</jimubi.version>
         <weixin-java.version>4.8.6-20260825.155844</weixin-java.version>
-        <bouncycastle.version>1.84</bouncycastle.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
         <alipay-sdk-java.version>4.40.978.ALL</alipay-sdk-java.version>
     </properties>
 
