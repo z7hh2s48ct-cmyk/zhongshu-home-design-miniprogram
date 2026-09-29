@@ -32,6 +32,10 @@ zhongshu:
     wechat:
       # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B1 真实 code2session
       provider: stub
+      # UX 联调整改：开发者工具每次编译都是新 login code，逐次建号会让重启后丢失激活。
+      # 配置后，非 e2e- 前缀的 code 全部固定到同一开发账号（激活跨重启保留）；
+      # e2e- 前缀仍按 code 独立建号（自动化套件依赖每次全新账号）。生产 stub 被守卫禁止，无此问题。
+      stub-fixed-openid: dev-interactive-stable-openid
       # T13-04 code2session 端点基址：默认微信正式端点；隔离测试将其指向本地 FakeHttpServer（绝不触达真实微信）
       base-url: ${ZS_WX_BASE_URL:https://api.weixin.qq.com}
       # T13-04 有界超时（毫秒）：建连/读取分别限时，微信不可达时不会无限阻塞请求线程
