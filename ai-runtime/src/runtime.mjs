@@ -84,6 +84,9 @@ export function config(env = process.env) {
   };
   const rawQuality = env.ZS_AI_IMAGE_QUALITY?.trim();
   if (rawQuality && !['low', 'medium', 'high', 'auto'].includes(rawQuality)) throw Error('INVALID_IMAGE_QUALITY');
+  // 供应商调用超时可配置：4K/高质量档出图常见 2~4 分钟，默认 180s 不够
+  const requestTimeoutMs = Number(env.ZS_AI_REQUEST_TIMEOUT_MS || '180000');
+  if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 30000 || requestTimeoutMs > 600000) throw Error('INVALID_REQUEST_TIMEOUT');
   return {
     core: origin('CORE_URL', required('ZS_AI_CORE_URL'), true),
     secret: required('ZS_INTERNAL_SECRET'), key: required('ZS_AI_API_KEY'),
@@ -97,6 +100,7 @@ export function config(env = process.env) {
     imageUrlOrigins: env.ZS_AI_IMAGE_URL_ORIGINS?.trim()
       ? env.ZS_AI_IMAGE_URL_ORIGINS.split(',').map(x => origin('IMAGE_URL_ORIGIN', x.trim()))
       : [new URL(aiBase).origin],
+    requestTimeoutMs,
     journalPath: required('ZS_AI_JOURNAL_DIR'), providerCode: 'apilio', workerId: `runtime-${randomUUID()}`
   };
 }
@@ -181,7 +185,7 @@ export class Provider {
     return { bytes, mimeType: input.mimeType };
   }
   async request(path, body, json, signal) {
-    const timeout = AbortSignal.any([signal, AbortSignal.timeout(180000)]);
+    const timeout = AbortSignal.any([signal, AbortSignal.timeout(this.settings.requestTimeoutMs || 180000)]);
     const response = await this.fetch(this.settings.base + path, { method: 'POST', body: json ? JSON.stringify(body) : body,
       redirect: 'error', signal: timeout, headers: { Authorization: `Bearer ${this.settings.key}`, ...(json ? { 'Content-Type': 'application/json' } : {}) } });
     return JSON.parse(await bounded(response, 11 * 1024 * 1024, timeout));
@@ -235,7 +239,7 @@ export class Provider {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password
         || !this.settings.imageUrlOrigins.includes(parsed.origin)) throw Error('PROVIDER_IMAGE_URL_ORIGIN');
-    const timeout = AbortSignal.any([signal, AbortSignal.timeout(180000)]);
+    const timeout = AbortSignal.any([signal, AbortSignal.timeout(this.settings.requestTimeoutMs || 180000)]);
     return bounded(await this.fetch(parsed, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
   }
   async upload(url, image, signal) {
@@ -298,6 +302,9 @@ export async function runJob(job, core, provider, settings, options = {}) {
       // Paid outcome may be unknown. Complete this attempt and settle actual received outputs, never auto-repeat a charge.
       await core.job(job, 'completion-events', {}).catch(() => {});
     }
+    // 失败原因必须可见（静默吞错会让 4K 超时这类问题无从排障）；消息不含密钥
+    console.error(JSON.stringify({ event: 'job_attempt_failed', jobId: job.jobId,
+      reason: signal.aborted ? 'LEASE_LOST' : String(error && error.message || 'unknown').slice(0, 300) }));
     throw new Error(signal.aborted ? 'LEASE_LOST' : 'JOB_ATTEMPT_INCOMPLETE');
   } finally { clearInterval(timer); controller.abort(); options.signal?.removeEventListener('abort', shutdown); }
 }
