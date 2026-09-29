@@ -6,7 +6,7 @@ const unread = require('../utils/unread-count');
 const TABS = [
   { text: '首页', pagePath: '/pages/home/index', icon: 'home', activeIcon: 'home-filled' },
   { text: '户型库', pagePath: '/pages/library/index', icon: 'grid-view', activeIcon: 'grid-view-filled' },
-  { text: 'AI设计', pagePath: '/pages/ai-design/index', glyph: '✦' },
+  { text: 'AI设计', pagePath: '/pages/ai-design/index', icon: 'edit-1', activeIcon: 'edit-1-filled' },
   { text: '我的', pagePath: '/pages/profile/index', icon: 'user', activeIcon: 'user-filled' }
 ];
 

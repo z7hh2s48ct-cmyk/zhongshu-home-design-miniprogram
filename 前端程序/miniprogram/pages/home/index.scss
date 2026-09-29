@@ -4,7 +4,7 @@
 .hero { position: relative; height: 548rpx; overflow: hidden; background: linear-gradient(120deg, $v12-surface 0%, $v12-surface-alt 48%, $v12-surface-alt 100%); }
 .hero-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hero-copy { position: relative; z-index: 1; padding: 122rpx 44rpx 0; box-sizing: border-box; }
-.hero-title { display: block; white-space: pre-line; font-family: "Songti SC", STSong, serif; font-size: $v12-font-hero; line-height: 1.35; font-weight: 600; }
+.hero-title { display: block; white-space: pre-line; font-family: $v12-font-family-serif; font-size: $v12-font-hero; line-height: 1.35; font-weight: 600; }
 .hero-subtitle { display: block; margin-top: 12rpx; color: $v12-deep-coffee; font-size: $v12-font-xs; line-height: 1.45; white-space: nowrap; }
 .hero-actions { width: 214rpx; margin-top: 68rpx; display: grid; gap: 18rpx; }
 .hero-actions > view { height: 64rpx; border-radius: $v12-radius-sm; font-size: $v12-font-md; }

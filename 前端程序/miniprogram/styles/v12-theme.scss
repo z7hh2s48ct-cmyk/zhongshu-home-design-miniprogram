@@ -78,6 +78,11 @@ page {
   box-shadow: none;
 }
 
+.v12-secondary-button[disabled] {
+  color: $v12-text-3;
+  border-color: $v12-disabled;
+}
+
 .v12-primary-button {
   color: $v12-white;
   background: linear-gradient(100deg, $v12-primary-deep, $v12-primary);

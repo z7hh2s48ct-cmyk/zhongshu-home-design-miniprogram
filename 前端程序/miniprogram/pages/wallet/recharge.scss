@@ -16,7 +16,7 @@
 .package > view text { color: $v12-text-2; font-size: $v12-font-sm; }
 .package > view span { margin-top: 5rpx; color: $v12-text-2; font-size: $v12-font-sm; white-space: nowrap; }
 .package > view.bonus text, .package > view.bonus span { color: $v12-gold-deep; }
-.recommend { position: absolute; right: -1rpx; top: -1rpx; padding: 7rpx 14rpx; border-radius: 0 17rpx 0 $v12-radius-md; background: $v12-gold-deep; color: $v12-white; font-size: $v12-font-xs; }
+.recommend { position: absolute; right: -1rpx; top: -1rpx; padding: 7rpx 14rpx; border-radius: 0 $v12-radius-sm 0 $v12-radius-md; background: $v12-gold-deep; color: $v12-white; font-size: $v12-font-xs; }
 .package > i { position: absolute; left: 50%; bottom: 15rpx; transform: translateX(-50%); width: 36rpx; height: 36rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; }
 .pay-title { margin-top: 52rpx; }
 .wechat { height: 108rpx; padding: 0 35rpx; display: flex; align-items: center; gap: 24rpx; font-size: $v12-font-lg; }

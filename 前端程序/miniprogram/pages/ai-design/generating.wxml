@@ -3,7 +3,7 @@
   <view class="v12-card hero-card">
     <view class="orb">
       <view wx:if="{{!finished}}" class="orb-ring"></view>
-      <view class="orb-core {{finished ? 'done' : ''}}">{{finished ? '✓' : 'AI'}}</view>
+      <view class="orb-core {{finished ? 'done' : ''}}"><t-icon wx:if="{{finished}}" name="check" size="32px" /><text wx:else>AI</text></view>
     </view>
     <text class="hero-title">{{statusText}}</text>
     <text class="hero-sub">为您生成 {{count}} 个{{stage === 'plane' ? '平面' : '立面'}}方案 · {{finished ? '点选一个方案继续' : '预计 1~2 分钟'}}</text>
@@ -35,7 +35,9 @@
         <view class="pick {{selectedId === item.candidateId ? 'picked' : ''}}{{selecting ? ' busy' : ''}}"
           wx:if="{{finished}}" bindtap="selectCandidate" data-id="{{item.candidateId}}"
           aria-label="{{item.name}}，{{selectedId === item.candidateId ? '已选定' : '点选此方案'}}">
-          {{selectedId === item.candidateId ? '✓ 已选定' : (selecting ? '提交中…' : '选它')}}
+          <block wx:if="{{selectedId === item.candidateId}}"><t-icon name="check" size="16px" /> 已选定</block>
+          <block wx:elif="{{selecting}}">提交中…</block>
+          <block wx:else>选它</block>
         </view>
         <view wx:else class="pick passed">已通过</view>
       </view>

@@ -2,8 +2,7 @@
   <view class="tabbar">
     <view class="tabbar-item {{current === index ? 'tabbar-item--active' : ''}}" wx:for="{{tabs}}" wx:key="pagePath" bindtap="switchTab" data-index="{{index}}">
       <view class="tabbar-icon">
-        <text wx:if="{{item.glyph}}" class="tabbar-glyph">{{item.glyph}}</text>
-        <t-icon wx:else name="{{current === index ? item.activeIcon : item.icon}}" size="24px" color="{{current === index ? '#7b5532' : '#707070'}}" />
+        <t-icon name="{{current === index ? item.activeIcon : item.icon}}" size="24px" />
         <view wx:if="{{item.pagePath === '/pages/profile/index' && unreadCount > 0}}" class="tabbar-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
       </view>
       <text class="tabbar-label">{{item.text}}</text>

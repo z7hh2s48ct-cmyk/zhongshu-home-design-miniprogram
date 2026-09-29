@@ -1,5 +1,5 @@
 <view class="v12-state {{card ? 'v12-state--card' : ''}}">
-  <t-icon wx:if="{{icon}}" name="{{icon}}" size="32px" color="#786858" class="v12-state__icon" />
+  <t-icon wx:if="{{icon}}" name="{{icon}}" size="32px" class="v12-state__icon" />
   <text class="v12-state__text">{{text || defaults[status]}}</text>
   <text wx:if="{{hint}}" class="v12-state__hint">{{hint}}</text>
   <button wx:if="{{actionText}}" class="v12-state__action" bindtap="onAction">{{actionText}}</button>

@@ -27,7 +27,7 @@
       <block wx:else>
         <text class="form-title">提示词</text>
         <view class="prompt-box"><textarea maxlength="200" value="{{prompt}}" bindinput="onPromptInput" placeholder="宅基地面宽12米、进深14米，二层五居，新中式，一楼老人房和南向客厅" /><span>{{prompt.length}}/200</span></view>
-        <view class="upload-row"><view bindtap="chooseImage" data-kind="sketch"><text>上传手绘草图（选填）</text><t-icon name="image-add" size="46px" color="#a89a8c" /><span>支持JPG/PNG，大小≤10MB</span></view></view>
+        <view class="upload-row"><view bindtap="chooseImage" data-kind="sketch"><text>上传手绘草图（选填）</text><t-icon name="image-add" size="32px" color="#a89a8c" /><span>支持JPG/PNG，大小≤10MB</span></view></view>
         <view wx:if="{{sketchImage}}" class="sketch-preview"><image src="{{sketchImage}}" mode="aspectFit" lazy-load /><text>草图已上传，将随任务提交</text></view>
         <text class="form-title tag-title">需求标签</text>
         <view class="tag-row"><text>二层</text><text>5室</text><text>老人房</text><text>南向客厅</text><text>新中式</text><text>带露台</text></view>

@@ -19,7 +19,7 @@
 .option-card > view { margin-top: 14rpx; display: flex; gap: 22rpx; }
 .option-card > view > text { position: relative; min-width: 128rpx; height: 56rpx; padding: 0 18rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: $v12-text-2; font-size: $v12-font-body; }
 .option-card > view > text.selected { border: 2rpx solid $v12-primary-deep; color: $v12-primary-deep; }
-.option-card i { position: absolute; right: -11rpx; top: -11rpx; width: 30rpx; height: 30rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; font-size: $v12-font-xs; }
+.option-card i { position: absolute; right: -13rpx; top: -13rpx; width: 36rpx; height: 36rpx; border-radius: 50%; background: $v12-primary-deep; color: $v12-white; font-style: normal; display: flex; align-items: center; justify-content: center; }
 .count-card > view > text { flex: 1; }
 .point-cost { margin-top: 14rpx; padding: 18rpx 36rpx; display: grid; grid-template-columns: 1fr 1rpx 1.6fr; gap: 34rpx; align-items: center; }
 .point-cost > i { height: 60rpx; background: $v12-divider; }
