@@ -26,10 +26,30 @@
 |ZS_AI_TEMPERATURE|默认 0.7，范围 0–2。|
 |ZS_AI_IMAGE_MODEL|必填，无默认值；必须先确认购买渠道实际支持的图片模型与同步返回协议。|
 |ZS_AI_STORAGE_ORIGINS|逗号分隔的 HTTPS 私有 COS/CDN origin 白名单；必须包含签名读写 URL 的实际 origin。|
+|ZS_AI_STORAGE_MODE|可选，默认 `https`。`local-fs` 为开发模式：后端 LocalObjectStorageAdapter 签发 `local://` 内网地址，引擎直接读写与后端共享的资产根目录（见下节）；绝不用于生产。|
+|ZS_AI_STORAGE_ROOT|`ZS_AI_STORAGE_MODE=local-fs` 时必填；必须与后端 `zhongshu.design.asset.storage-root` 指向同一目录。|
 |ZS_AI_DAILY_CALL_LIMIT|单个持久日志目录每日最多发起的供应商请求数（含提示词、失败及未知结果），1–10000；不是人民币费用上限。多目录部署需分别分配预算并在供应商账户再设总额度。|
 |ZS_AI_JOURNAL_DIR|直接 Node 启动时必填；Compose 固定为 /data。|
 
 `node src/main.mjs --check` 仅校验配置结构，不发起真实请求。`node --test test/*.test.mjs` 使用本地替身，无真实消费。`docker compose build` 构建镜像，`docker compose up -d` 会启动真实轮询，必须完成下方人工验收前置条件后再执行；本轮未执行此部署命令。
+
+## 本地真跑（local-fs 开发模式，T15 补）
+
+前提：本地后端已按 `local,pg,zsdev` 启动（内部签名密钥用 zsdev 默认值即可），`后端程序/.env` 已注入 `ZS_AI_API_KEY`，并确认供应商支持的图像模型名。在 `ai-runtime/` 下执行：
+
+```bash
+ZS_AI_CORE_URL=http://127.0.0.1:48080 \
+ZS_INTERNAL_SECRET=zsdev-internal-secret-0123456789abcdef \
+ZS_AI_API_KEY=<真实 key> \
+ZS_AI_IMAGE_MODEL=<渠道实际图像模型> \
+ZS_AI_DAILY_CALL_LIMIT=50 \
+ZS_AI_STORAGE_MODE=local-fs \
+ZS_AI_STORAGE_ROOT="$TEMP/zhongshu-assets" \
+ZS_AI_JOURNAL_DIR="$TEMP/zs-ai-journal" \
+node src/main.mjs
+```
+
+引擎每 3 秒领取一次任务；小程序点「生成平面方案」后任务会在数秒内被领取并真实出图。`local-fs` 模式直读/直写与后端共享的资产根目录（含路径越界防护），绕开 `local://` 内网地址无法走 HTTPS 白名单的限制；生产切 COS 后仍走 `https` 白名单模式。
 
 容器以非 root 身份运行，根目录只读，移除 capabilities，并限制内存、进程、CPU。日志卷包含提示词与图片，是业务数据，需要主机磁盘保护、限制访问和留存清理；不能作为公共静态目录。重启时保留日志卷。额度保留记录使用独占创建，多个进程共享同一目录时不会超额预留同一额度。不要通过删除日志或换目录绕过调用限制。
 

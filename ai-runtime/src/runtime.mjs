@@ -1,9 +1,23 @@
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, renameSync, openSync, fsyncSync, closeSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname, resolve as resolvePath, sep as pathSep } from 'node:path';
 export const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const MAX_IMAGE = 7 * 1024 * 1024;
+
+// dev 专用：后端 LocalObjectStorageAdapter 以 local://<objectKey> 签发内网对象地址。
+// local-fs 模式下引擎与后端共享同一资产根目录（ZS_AI_STORAGE_ROOT），直接读写文件；
+// 该模式绝不用于生产（生产走 COS https 源白名单），路径解析含越界防护。
+export function localObjectPath(root, url) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'local:') throw Error('STORAGE_ORIGIN');
+  const relative = decodeURIComponent(`${parsed.host}${parsed.pathname}`).replace(/\\/g, '/');
+  if (!relative || relative.includes('../') || relative.includes('/..') || relative.startsWith('/')) throw Error('STORAGE_ORIGIN');
+  const base = resolvePath(root);
+  const path = resolvePath(base, relative);
+  if (path !== base && !path.startsWith(base + pathSep)) throw Error('STORAGE_ORIGIN');
+  return path;
+}
 
 // T15：把后端需求快照的受控键格式化为中文需求描述，提升生图提示词质量；
 // 未知键原样 JSON 附带（兼容旧快照与后续扩展），budgetInputs 属预算模块不进提示词。
@@ -55,7 +69,10 @@ export function config(env = process.env) {
   };
   const limit = Number(required('ZS_AI_DAILY_CALL_LIMIT'));
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000) throw Error('INVALID_DAILY_CALL_LIMIT');
-  const storageOrigins = required('ZS_AI_STORAGE_ORIGINS').split(',').map(x => origin('STORAGE_ORIGIN', x.trim()));
+  const storageMode = env.ZS_AI_STORAGE_MODE?.trim() === 'local-fs' ? 'local-fs' : 'https';
+  const storageRoot = storageMode === 'local-fs' ? required('ZS_AI_STORAGE_ROOT') : null;
+  const storageOrigins = storageMode === 'local-fs' ? []
+    : required('ZS_AI_STORAGE_ORIGINS').split(',').map(x => origin('STORAGE_ORIGIN', x.trim()));
   if (storageOrigins.some(x => new URL(x).origin !== x)) throw Error('INVALID_STORAGE_ORIGIN');
   const temperature = Number(env.ZS_AI_TEMPERATURE || '0.7');
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw Error('INVALID_TEMPERATURE');
@@ -64,7 +81,7 @@ export function config(env = process.env) {
     secret: required('ZS_INTERNAL_SECRET'), key: required('ZS_AI_API_KEY'),
     base: origin('AI_BASE_URL', env.ZS_AI_BASE_URL || 'https://api.apilio.ai/v1'),
     model: env.ZS_AI_MODEL || 'gpt-5.6-sol', imageModel: required('ZS_AI_IMAGE_MODEL'),
-    temperature, storageOrigins, dailyLimit: limit,
+    temperature, storageMode, storageRoot, storageOrigins, dailyLimit: limit,
     journalPath: required('ZS_AI_JOURNAL_DIR'), providerCode: 'apilio', workerId: `runtime-${randomUUID()}`
   };
 }
@@ -135,11 +152,16 @@ export class Journal {
 export class Provider {
   constructor(settings, journal, fetcher = fetch) { this.settings = settings; this.journal = journal; this.fetch = fetcher; }
   async imageInput(input, signal) {
-    const url = new URL(input.url);
-    if (url.username || url.password || !this.settings.storageOrigins.includes(url.origin)) throw Error('STORAGE_ORIGIN');
+    let bytes;
+    if (this.settings.storageMode === 'local-fs') {
+      bytes = readFileSync(localObjectPath(this.settings.storageRoot, input.url));
+    } else {
+      const url = new URL(input.url);
+      if (url.username || url.password || !this.settings.storageOrigins.includes(url.origin)) throw Error('STORAGE_ORIGIN');
+      const timeout = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
+      bytes = await bounded(await this.fetch(url, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
+    }
     if (!['image/png', 'image/jpeg'].includes(input.mimeType) || input.sizeBytes > MAX_IMAGE) throw Error('INPUT_POLICY');
-    const timeout = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
-    const bytes = await bounded(await this.fetch(url, { redirect: 'error', signal: timeout }), MAX_IMAGE, timeout);
     if (bytes.length !== input.sizeBytes || sha(bytes) !== input.sha256) throw Error('INPUT_DIGEST');
     return { bytes, mimeType: input.mimeType };
   }
@@ -180,6 +202,15 @@ export class Provider {
     });
   }
   async upload(url, image, signal) {
+    if (this.settings.storageMode === 'local-fs') {
+      const path = localObjectPath(this.settings.storageRoot, url);
+      mkdirSync(dirname(path), { recursive: true });
+      const bytes = Buffer.from(image.encoded, 'base64');
+      const temp = path + '.' + randomUUID() + '.tmp';
+      writeFileSync(temp, bytes);
+      renameSync(temp, path);
+      return;
+    }
     const parsed = new URL(url);
     if (parsed.username || parsed.password || !this.settings.storageOrigins.includes(parsed.origin)) throw Error('STORAGE_ORIGIN');
     const timeout = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
