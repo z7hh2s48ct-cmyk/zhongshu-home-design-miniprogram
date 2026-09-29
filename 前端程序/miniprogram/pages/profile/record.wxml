@@ -1,8 +1,8 @@
 <view class="v12-page" wx:if="{{accessReady}}">
   <v12-navbar title="{{title}}" show-back show-brand="{{false}}" />
   <view class="records-content">
-    <view wx:if="{{loading}}" class="record-empty">正在读取…</view>
-    <view wx:elif="{{error}}" class="v12-card record-empty"><text>{{error}}</text><button class="record-button" bindtap="load">重试</button></view>
+    <view wx:if="{{loading}}" class="record-empty"><v12-state status="loading" text="正在读取…" card="{{false}}" /></view>
+    <view wx:elif="{{error}}" class="v12-card record-empty"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="load" card="{{false}}" /></view>
     <block wx:elif="{{loaded}}">
       <button wx:if="{{canResume}}" class="record-button" bindtap="resumeDesign">继续设计</button>
       <view class="v12-card record-card record-fields"><view wx:for="{{fields}}" wx:key="label"><text class="label">{{item.label}}</text><text>{{item.value}}</text></view></view>
@@ -14,7 +14,7 @@
         <button class="record-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="resubmit">重新提交审核</button>
       </view>
       <view wx:for="{{versions}}" wx:key="id" class="v12-card record-card" data-id="{{item.id}}" bindtap="openVersion" role="button" aria-label="{{'查看' + item.title}}"><view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="18px" color="#8d8178" /></view><text class="record-hint">{{item.hint}}</text><text class="record-hint">{{item.time}}</text></view>
-      <view wx:if="{{!versions.length && !versionId}}" class="v12-card record-empty">尚未形成最终方案版本；完成立面选择后可在这里回看。</view>
+      <view wx:if="{{!versions.length && !versionId}}" class="v12-card record-empty"><v12-state status="empty" text="尚未形成最终方案版本；完成立面选择后可在这里回看。" card="{{false}}" /></view>
       <view class="record-actions"><button wx:if="{{versionId}}" class="record-button" bindtap="openVersion">查看投稿方案</button><button class="record-button" bindtap="budgetHistory">查看已保存预算</button><button class="record-button" bindtap="load">刷新状态</button></view>
     </block>
   </view>

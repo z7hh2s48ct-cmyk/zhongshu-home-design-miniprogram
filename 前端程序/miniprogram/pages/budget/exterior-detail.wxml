@@ -1,7 +1,6 @@
 <view class="v12-page budget-page budget-read-page {{category === 'EXTERIOR' ? 'exterior-read' : ''}}" wx:if="{{accessReady}}">
   <v12-navbar title="{{title}}" show-back show-brand="{{false}}" />
-  <view class="budget-card state-card" wx:if="{{loading}}"><text>正在读取预算明细…</text></view>
-  <view class="budget-card state-card" wx:elif="{{error}}"><text>{{error}}</text><button class="text-action" bindtap="load">重试</button></view>
+  <view class="budget-card state-card" wx:if="{{loading || error}}"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在读取预算明细…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{estimate}}">
     <view class="result-hero"><image class="budget-sketch" src="/assets/v12/budget-sketch.png" mode="aspectFit" /><text class="amount-label">{{amountLabel}}</text><view class="hero-amount" bindtap="toggleExact"><text class="amount-number {{exact ? 'exact-number' : ''}}">{{amountText}}</text><text class="amount-unit">{{amountUnit}}</text></view><text class="scheme-name">共{{groups.length}}项</text></view>
     <button class="text-action precision-action" bindtap="toggleExact">{{exact ? '按万元展示' : '查看精确金额'}} · {{exactText}}</button>

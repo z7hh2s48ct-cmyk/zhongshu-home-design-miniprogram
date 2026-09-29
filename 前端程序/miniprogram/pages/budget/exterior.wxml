@@ -1,7 +1,6 @@
 <view class="v12-page budget-page category-page" wx:if="{{accessReady}}">
   <v12-navbar title="{{categoryTitle}}配置" show-back show-brand="{{false}}" />
-  <view wx:if="{{loading}}" class="budget-card state-card">正在加载预算配置…</view>
-  <view wx:elif="{{error}}" class="budget-card state-card"><text>{{error}}</text><button class="text-action" bindtap="load">重试</button></view>
+  <view wx:if="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在加载预算配置…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{draft}}">
     <view class="auto-note"><t-icon name="info-circle-filled" size="16px" color="#b86600" /><text>请选择本项目的{{categoryTitle === '主体类' ? '主体建造' : '外装'}}配置</text><text class="completion-count"><text>{{completeCount}}</text>/{{totalCount}} 已完成</text></view>
     <view wx:if="{{regionMissing}}" class="inline-warning"><text>请先选择已启用的建造地区。</text><button class="text-action" bindtap="parameters">修改参数</button></view>

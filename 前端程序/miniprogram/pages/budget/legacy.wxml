@@ -1,8 +1,7 @@
 <view class="v12-page budget-page" wx:if="{{accessReady}}">
   <v12-navbar title="旧版区间预算" show-back show-brand="{{false}}" />
   <view class="auto-note"><t-icon name="info-circle-filled" size="17px" color="#bf7d0e" /><text>旧版地区参考区间，不是新版分项报价</text></view>
-  <view wx:if="{{loading}}" class="auto-note">正在导入项目参数…</view>
-  <view wx:if="{{error}}" class="auto-note"><text>{{error}}</text><button bindtap="load">重试</button></view>
+  <view wx:if="{{loading || error}}" class="budget-card state-card"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在导入项目参数…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <view class="v12-card budget-form">
     <view class="form-row"><text>建筑面积</text><view><input class="area-input" type="number" value="{{buildingArea}}" bindinput="onAreaInput" /> m²</view></view>
     <view class="form-row" bindtap="chooseStructure"><text>结构形式</text><text>{{structure.label}}</text><t-icon name="chevron-right" size="16px" color="#777" /></view>
