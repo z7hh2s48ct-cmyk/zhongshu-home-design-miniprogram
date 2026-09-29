@@ -89,9 +89,10 @@
     <dependencyManagement>
         <dependencies>
             <!-- RG3: pin patched families ahead of imported framework BOMs; verify actual packaged JAR via SBOM. -->
+            <!-- 2.21.6: CVE-2026-68497(high)/CVE-2026-19032/CVE-2026-83557 的修复版本；注意 2.22.0 反而回退命中，须 2.22.2+。 -->
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId><artifactId>jackson-bom</artifactId>
-                <version>2.21.5</version><type>pom</type><scope>import</scope>
+                <version>2.21.6</version><type>pom</type><scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId><artifactId>log4j-bom</artifactId>
