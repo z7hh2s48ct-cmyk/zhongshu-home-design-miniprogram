@@ -28,6 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -180,6 +181,8 @@ class PointsP4AContractTest {
     void concurrentDebitAndReserveConserveTotalBalance() throws Exception {
         points.credit(4L, "RECHARGE_BASE_CREDIT", 50, "recharge_order", "r4", "k-credit-4", null, null);
         int threads = 10;
+        // 成功扣减的笔数单独计数：reserve 只搬动桶位（总额不变），只有 debit 真正消耗点数。
+        AtomicInteger successfulDebits = new AtomicInteger();
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (int i = 0; i < threads; i++) {
             final int seq = i;
@@ -189,6 +192,8 @@ class PointsP4AContractTest {
                     if (isDebit) {
                         points.debit(4L, "FLAT_GENERATION_DEBIT", 10, "ai_job", "j4-" + seq,
                                 "k-debit-4-" + seq, null, null);
+                        // 事务已提交，效果确定，方可计入
+                        successfulDebits.incrementAndGet();
                     } else {
                         points.reserve(4L, 10, "refund_order", "rf4-" + seq);
                     }
@@ -201,9 +206,33 @@ class PointsP4AContractTest {
         int ok = runConcurrent(threads, tasks);
         assertThat(ok).as("总供给 50，成功笔数不超过 5").isLessThanOrEqualTo(5);
         var acc = points.findAccount(4L).orElseThrow();
+        // 每笔成功 debit 消耗 10 点（available 减少且不回到 reserved），每笔 reserve 只是
+        // available→reserved 搬动（总额不变）。故总余额 = 50 - 10 × 成功扣减笔数，
+        // 与线程竞速无关、恒成立；原先写死 50 只在「零扣减成功」时成立，故为偶发。
         assertThat(acc.availablePoints() + acc.reservedPoints()).as("扣减+预留并发下总余额守恒")
-                .isEqualTo(50);
+                .isEqualTo(50 - 10L * successfulDebits.get());
         assertThat(balanceTotal(4L)).isEqualTo(ledgerSum(4L));
+    }
+
+    /**
+     * 上一条并发用例的结果取决于线程调度：本地常见「预留全胜、零扣减」，CI 上则出现过
+     * 「1 笔扣减胜出、总余额 40」。为把不变量本身钉死（而非依赖跑出来的是哪种结果），
+     * 这里用串行步骤确定性地走一遍「扣减胜出」的路径。
+     */
+    @Test
+    void debitThenReservesConserveTotalBalanceDeterministically() {
+        points.credit(9L, "RECHARGE_BASE_CREDIT", 50, "recharge_order", "r9", "k-credit-9", null, null);
+        points.debit(9L, "FLAT_GENERATION_DEBIT", 10, "ai_job", "j9", "k-debit-9", null, null);
+        points.reserve(9L, 10, "refund_order", "rf9-1");
+        points.reserve(9L, 10, "refund_order", "rf9-2");
+
+        var acc = points.findAccount(9L).orElseThrow();
+        // 50 -（1 笔成功扣减 × 10）= 40；两笔预留只是把 20 从 available 搬到 reserved。
+        assertThat(acc.availablePoints()).isEqualTo(20);
+        assertThat(acc.reservedPoints()).isEqualTo(20);
+        assertThat(acc.availablePoints() + acc.reservedPoints())
+                .as("扣减胜出路径下总余额守恒").isEqualTo(40);
+        assertThat(balanceTotal(9L)).isEqualTo(ledgerSum(9L));
     }
 
     // ========== 4. 幂等键重放（串行 + 并发） ==========
