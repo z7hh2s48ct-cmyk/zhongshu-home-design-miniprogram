@@ -66,9 +66,9 @@ function assetHelper(env, response) {
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../miniprogram/utils/assets.js'), 'utf8'), {
     module,
     require: name => ({ './config': { env, apiBase: 'http://local', tenantId: 1 }, './request': { getToken: () => 'test' },
-      './api': { createDownloadTicket: async id => { calls.push(['ticket', id]); return { ticketId: 'ticket' }; },
+       './api': { assetContentUrl: id => '/assets/' + id + '/content', createDownloadTicket: async id => { calls.push(['ticket', id]); return { ticketId: 'ticket' }; },
         resolveDownload: async (id, ticket) => { calls.push(['resolve', id, ticket]); return response; } } })[name],
-    wx: { request: options => { calls.push(['bytes']); options.success(response); }, arrayBufferToBase64: () => 'image' }
+     wx: { request: options => { calls.push(['bytes', options]); options.success(response); }, arrayBufferToBase64: () => 'image' }
   });
   return { helper: module.exports, calls };
 }
@@ -79,9 +79,42 @@ test('正式环境图片复用票据签名地址，不调用开发专用内容�
   assert.equal(calls.filter(c => c[0] === 'ticket').length, 2);
   assert.equal(calls.filter(c => c[0] === 'bytes').length, 0);
 });
-test('200业务错误JSON不被当作图片缓存，重试重新申请票据', async () => {
-  const { helper, calls } = assetHelper('dev', { statusCode: 200, header: { 'Content-Type': 'application/json' }, data: {} });
-  await assert.rejects(helper.fetchAssetDataUrl('1'));
-  await assert.rejects(helper.fetchAssetDataUrl('1'));
+test('开发环境收到COS签名地址时直接返回，不走字节端点且不缓存签名URL', async () => {
+  const { helper, calls } = assetHelper('dev', { downloadUrl: 'https://storage.example/image?signature=test' });
+  assert.match(await helper.fetchAssetDataUrl('1'), /^https:/);
+  await helper.fetchAssetDataUrl('1');
   assert.equal(calls.filter(c => c[0] === 'ticket').length, 2);
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 0);
+});
+test('正式环境收到local地址时拒绝，不降级到开发内容端点', async () => {
+  const { helper, calls } = assetHelper('prod', { downloadUrl: 'local://asset/1' });
+  await assert.rejects(helper.fetchAssetDataUrl('1'), /图片地址不可用/);
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 0);
+});
+test('开发环境local地址重新领票后读取图片字节并缓存data URL', async () => {
+  const { helper, calls } = assetHelper('dev', { downloadUrl: 'local://asset/1', statusCode: 200, header: { 'Content-Type': 'image/png' }, data: new ArrayBuffer(2) });
+  assert.equal(await helper.fetchAssetDataUrl('1'), 'data:image/png;base64,image');
+  assert.equal(calls.filter(c => c[0] === 'ticket').length, 2);
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 1);
+  assert.equal(await helper.fetchAssetDataUrl('1'), 'data:image/png;base64,image');
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 1);
+  assert.equal(calls.filter(c => c[0] === 'ticket').length, 2);
+});
+test('同一资产并发读取只申请一次票据并共享结果', async () => {
+  const { helper, calls } = assetHelper('prod', { downloadUrl: 'https://storage.example/image?signature=test' });
+  const result = await Promise.all([helper.fetchAssetDataUrl('1'), helper.fetchAssetDataUrl('1')]);
+  assert.deepEqual(result, ['https://storage.example/image?signature=test', 'https://storage.example/image?signature=test']);
+  assert.equal(calls.filter(c => c[0] === 'ticket').length, 1);
+});
+test('未知下载协议直接拒绝且不访问内容端点', async () => {
+  const { helper, calls } = assetHelper('dev', { downloadUrl: 'ftp://storage.example/image' });
+  await assert.rejects(helper.fetchAssetDataUrl('1'), /图片地址不可用/);
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 0);
+});
+test('200业务错误JSON不被当作图片缓存，重试重新申请票据', async () => {
+  const { helper, calls } = assetHelper('dev', { downloadUrl: 'local://asset/1', statusCode: 200, header: { 'Content-Type': 'application/json' }, data: {} });
+  await assert.rejects(helper.fetchAssetDataUrl('1'), error => error.msg === '图片内容不可用，请重试');
+  await assert.rejects(helper.fetchAssetDataUrl('1'), error => error.msg === '图片内容不可用，请重试');
+  assert.equal(calls.filter(c => c[0] === 'ticket').length, 4);
+  assert.equal(calls.filter(c => c[0] === 'bytes').length, 2);
 });
