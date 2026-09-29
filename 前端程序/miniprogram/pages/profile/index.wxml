@@ -7,6 +7,7 @@
       <view class="identity-copy"><text class="name">{{authorized ? (nickname || '筑梦人') : '访客'}}</text><text class="identity-hint">{{authorized ? '编辑头像与昵称' : '激活账号，开启设计'}}</text></view>
       <t-icon name="chevron-right" size="18px" color="#8d8178" />
     </view>
+    <v12-desktop-guide />
     <view class="v12-card profile-section">
       <text class="section-label">我的创作</text>
       <view class="creation-grid">
