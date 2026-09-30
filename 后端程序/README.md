@@ -30,6 +30,10 @@
 | `yudao-module-ai-orchestration` | AI 任务、租约、回调、结果隔离、结算和取消 |
 | `yudao-module-infra` | Outbox、审计、异步导出和一次性交付能力 |
 
+### 授权码管理
+
+`ZS_ACCESS_CODE_ARTIFACT_KEY` 必须配置为 Base64 编码的 32 字节密钥；授权码批次以 AES-GCM 密文保存，便于拥有 `identity:access-code:export` 权限的管理员复制仍未使用、未过期的单码。列表继续只展示掩码。删除只对未兑换码执行逻辑删除并停用，历史兑换事实保留。升级前创建且未保存加密制品的旧批次无法恢复完整码。
+
 ## 环境要求
 
 - JDK 17（`.java-version` 已声明；启动脚本会拒绝其它主版本）

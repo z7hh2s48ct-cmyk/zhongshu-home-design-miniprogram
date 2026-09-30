@@ -28,7 +28,7 @@ public class AdminAccessCodeBatchRespVO {
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
 
-    @Schema(description = "完整码列表：仅 INLINE 创建响应内返回一次；TICKET 模式与已交付后永远为空")
+    @Schema(description = "完整码列表：仅 INLINE 创建响应返回；之后可按权限复制仍未使用的单码")
     private List<String> oneTimeCodes;
 
 }

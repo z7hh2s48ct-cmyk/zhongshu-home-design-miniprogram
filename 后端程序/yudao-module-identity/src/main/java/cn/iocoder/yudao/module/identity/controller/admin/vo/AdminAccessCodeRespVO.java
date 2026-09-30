@@ -21,13 +21,16 @@ public class AdminAccessCodeRespVO {
     @Schema(description = "状态：ACTIVE / CONSUMED / DISABLED（过期由有效期计算）")
     private String status;
 
+    @Schema(description = "是否可复制明文（仅未使用、未过期且存在加密制品）")
+    private Boolean canCopy;
+
     @Schema(description = "发行时间")
     private LocalDateTime issuedAt;
 
     @Schema(description = "兑换时间")
     private LocalDateTime consumedAt;
 
-    @Schema(description = "明文首次交付时间；非空后不得再交付明文或票据")
+    @Schema(description = "明文首次交付时间；完整批次票据仅允许在未交付前签发")
     private LocalDateTime secretExposedAt;
 
     @Schema(description = "有效期至，null 为长期")

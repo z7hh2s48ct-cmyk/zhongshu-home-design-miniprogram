@@ -36,7 +36,7 @@ public class AccessCodeBatchAdminController {
     private AccessCodeService accessCodeService;
 
     @PostMapping
-    @Operation(summary = "创建授权码批次；INLINE 在响应内返回完整码且仅此一次，TICKET 走一次性交付票据")
+    @Operation(summary = "创建授权码批次；INLINE 在响应返回完整码，TICKET 走一次性交付票据")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_MANAGE + "')")
     public CommonResult<AdminAccessCodeBatchRespVO> createBatch(@Valid @RequestBody AdminAccessCodeBatchCreateReqVO reqVO) {
         String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
@@ -53,7 +53,7 @@ public class AccessCodeBatchAdminController {
     }
 
     @PostMapping("/{batchId}/delivery-tickets")
-    @Operation(summary = "生成批次的一次性交付票据（TICKET 模式；明文已暴露即拒绝）")
+    @Operation(summary = "生成批次的一次性交付票据（TICKET 模式；已有明文交付即拒绝）")
     @Parameter(name = "batchId", description = "批次编号", required = true)
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_EXPORT + "')")
     public CommonResult<Map<String, Object>> createDeliveryTicket(@PathVariable("batchId") Long batchId) {
@@ -65,14 +65,14 @@ public class AccessCodeBatchAdminController {
     }
 
     @PostMapping("/{batchId}/delivery-exports")
-    @Operation(summary = "凭一次性票据交付完整明文（先原子消费票据再输出；制品随后销毁，重放必失败）")
+    @Operation(summary = "凭一次性票据交付完整明文（先原子消费票据再输出；票据重放必失败）")
     @Parameter(name = "batchId", description = "批次编号", required = true)
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_EXPORT + "')")
     public CommonResult<Map<String, Object>> exportByTicket(@PathVariable("batchId") Long batchId,
                                                             @RequestBody Map<String, String> body) {
         String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
         List<String> codes = accessCodeService.exportByTicket(batchId, body.get("ticket"), operator);
-        return success(Map.of("codes", codes, "notice", "完整明文仅此一次交付，请立即离线保存"));
+        return success(Map.of("codes", codes, "notice", "批次票据仅可消费一次；未使用单码可在授权码列表复制"));
     }
 
 }

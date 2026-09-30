@@ -52,6 +52,10 @@ export const getAccessCodePage = (params) => request.get({ url: `${BASE}/access-
 export const getAccessCodeStats = () => request.get({ url: `${BASE}/access-codes/stats` })
 export const disableAccessCode = (codeId) =>
   request.patch({ url: `${BASE}/access-codes/${codeId}`, data: { action: 'disable' } })
+export const copyAccessCode = (codeId) =>
+  request.post({ url: `${BASE}/access-codes/${codeId}/copy` })
+export const deleteAccessCode = (codeId) =>
+  request.delete({ url: `${BASE}/access-codes/${codeId}` })
 export const createAccessCodeBatch = (data) =>
   request.post({ url: `${BASE}/access-code-batches`, data })
 export const createDeliveryTicket = (batchId) =>
