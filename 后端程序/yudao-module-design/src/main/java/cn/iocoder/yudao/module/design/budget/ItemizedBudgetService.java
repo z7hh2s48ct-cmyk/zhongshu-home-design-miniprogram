@@ -44,20 +44,30 @@ public class ItemizedBudgetService {
     private final TransactionTemplate tx;
     private final DesignProjectService projects;
     private final AuditPort audit;
+    private final cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricing;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ItemizedBudgetService(DataSource dataSource, PlatformTransactionManager transactionManager,
-                                DesignProjectService projects, AuditPort audit) {
+                                DesignProjectService projects, AuditPort audit,
+                                cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricing) {
         this.jdbc = new JdbcTemplate(dataSource);
         this.tx = new TransactionTemplate(transactionManager);
         this.tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         this.projects = projects;
         this.audit = audit;
+        this.usagePricing = usagePricing;
+    }
+
+    public ItemizedBudgetService(DataSource dataSource, PlatformTransactionManager transactionManager,
+                                DesignProjectService projects, AuditPort audit) {
+        this(dataSource, transactionManager, projects, audit, null);
     }
 
     public record SaveResult(String budgetId, boolean saved) {}
     /** Internal paging references: the controller expands them through the old/new explicit public projections. */
     public record HistoryRef(String budgetId, String model) {}
     private record Request(Long resultVersionId, Map<String, Object> overrides, List<Long> optionIds,
+                           cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation usageConfirmation,
                            List<String> requirementSnapshotIds) {}
     private record FrozenLine(BudgetCalculator.LineInput input, Long priceVersionId, Map<String, Object> pricingSnapshot) {}
     /** T14: the caller's ACTIVE budget_account_price rows, keyed by option id. */
@@ -266,6 +276,12 @@ public class ItemizedBudgetService {
                     result.status(), line.freeReason(), JsonUtils.toJsonString(canonical(source.pricingSnapshot())), sort++, String.valueOf(userId), String.valueOf(userId), measuredAt);
         }
         audit(userId, "CREATE", budgetId, Map.of("revisionId", String.valueOf(revisionId), "completeness", calculated.completeness()));
+        if (usagePricing != null) {
+            var usageSnapshot = usagePricing.quote("BUDGET_ESTIMATE");
+            cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.requireConfirmed(usageSnapshot, request.usageConfirmation());
+            usagePricing.prepareCharge(userId, usageSnapshot, "budget_estimate", String.valueOf(budgetId));
+            usagePricing.chargePrepared(userId, "BUDGET_ESTIMATE", "budget_estimate", String.valueOf(budgetId));
+        }
         return response;
     }
 
@@ -340,7 +356,7 @@ public class ItemizedBudgetService {
     }
 
     private static Request parseRequest(Map<String, Object> body) {
-        if (body == null || !Set.of("resultVersionId", "inputOverrides", "optionIds", "requirementSnapshotIds").containsAll(body.keySet())) throw exception(BUDGET_INPUT_INVALID);
+        if (body == null || !Set.of("resultVersionId", "inputOverrides", "optionIds", "requirementSnapshotIds", "usageConfirmation").containsAll(body.keySet())) throw exception(BUDGET_INPUT_INVALID);
         Long resultVersionId = body.get("resultVersionId") == null ? null : BudgetInputs.positiveId(string(body.get("resultVersionId")));
         Map<String, Object> overrides = body.get("inputOverrides") == null ? Map.of() : object(body.get("inputOverrides"));
         // Validate override whitelist/decimal representation independently from persisted project input.
@@ -358,7 +374,13 @@ public class ItemizedBudgetService {
             for (Object id : supplied) { String value = string(id); BudgetInputs.positiveId(value); snapshotIds.add(value); }
             if (new HashSet<>(snapshotIds).size() != snapshotIds.size()) throw exception(BUDGET_INPUT_INVALID);
         }
-        return new Request(resultVersionId, Collections.unmodifiableMap(overrides), List.copyOf(ids), snapshotIds == null ? null : List.copyOf(snapshotIds));
+        cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation = null;
+        if (body.get("usageConfirmation") instanceof Map<?, ?> raw) {
+            confirmation = new cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation(
+                    string(raw.get("product")), string(raw.get("ruleId")), Long.parseLong(String.valueOf(raw.get("ruleVersion"))));
+        }
+        return new Request(resultVersionId, Collections.unmodifiableMap(overrides), List.copyOf(ids), confirmation,
+                snapshotIds == null ? null : List.copyOf(snapshotIds));
     }
 
     private static String string(Object value) { if (!(value instanceof String text)) throw exception(BUDGET_INPUT_INVALID); return text; }

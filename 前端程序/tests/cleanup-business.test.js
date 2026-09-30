@@ -16,10 +16,12 @@ function load(file, deps, globals = {}) {
 test('生成确认读取最新价格，携带字符串规则 ID 和版本，取消不提交', async () => {
   let total = 26, confirm = true; const prompts = [];
   const price = load('utils/generation-price.js', { './request': { getToken: () => 'owner', isSameSession: () => true }, './api': { getGenerationQuote: async (stage, count, resolution) => ({
-    stage, count, resolution, totalPointCost: total, unitPointCost: total / count, ruleId: '2100000000000000001', ruleVersion: 2
+    stage, count, resolution, totalPointCost: total, unitPointCost: total / count, ruleId: '2100000000000000001', ruleVersion: 2,
+    usageProduct: 'AI_PROMPT', usageRuleId: '2100000000000000002', usageRuleVersion: 5, usagePointCost: 4
   }) } }, { wx: { showModal: options => { prompts.push(options.content); options.success({ confirm }); } } });
   const result = await price.confirm('FLAT', 2);
   assert.equal(result.ruleId, '2100000000000000001'); assert.equal(result.ruleVersion, 2);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.usageConfirmation)), { product: 'AI_PROMPT', ruleId: '2100000000000000002', ruleVersion: 5 });
   assert.match(prompts[0], /26/);
   total = 30; confirm = false;
   await assert.rejects(price.confirm('FLAT', 2), error => error.cancelled === true);
@@ -32,7 +34,8 @@ test('数量快速改变时旧报价不能覆盖新报价', async () => {
     new Promise(resolve => pending.push({ resolve, count, stage, resolution })) } });
   const page = { data: { count: 1, resolution: '2K' }, setData(patch) { Object.assign(this.data, patch); } };
   const old = price.refresh(page, 'FLAT'); page.data.count = 4; const latest = price.refresh(page, 'FLAT');
-  const resolve = i => pending[i].resolve({ count: pending[i].count, stage: 'FLAT', resolution: pending[i].resolution, totalPointCost: pending[i].count * 7, unitPointCost: 7, ruleId: '1' });
+  const resolve = i => pending[i].resolve({ count: pending[i].count, stage: 'FLAT', resolution: pending[i].resolution, totalPointCost: pending[i].count * 7, unitPointCost: 7, ruleId: '1',
+    usageProduct: 'AI_PROMPT', usageRuleId: '2', usageRuleVersion: 1, usagePointCost: 1 });
   resolve(1); await latest; resolve(0); await old;
   assert.match(page.data.priceText, /28/);
 });

@@ -30,6 +30,7 @@ function runtime(changes = {}) {
   let definition;
   let storageUnavailable = false;
   const api = Object.assign({
+    getBudgetPointQuote: async () => ({ product: 'BUDGET_ESTIMATE', ruleId: '9007199254741998', ruleVersion: 1, pointCost: 3 }),
     getProject: async () => ({ projectId, resultVersionId: versionId }),
     getBudgetInputs: async () => inputs(),
     getBudgetRegions: async () => [{ code: 'QZ', name: '泉州' }, { code: 'XM', name: '厦门' }],
@@ -38,7 +39,7 @@ function runtime(changes = {}) {
   const wx = {
     getStorageSync: key => storage[key],
     setStorageSync(key, value) { if (storageUnavailable) throw Error('storage full'); storage[key] = plain(value); },
-    showToast: value => calls.push(['toast', value]), showModal: value => calls.push(['modal', value]),
+    showToast: value => calls.push(['toast', value]), showModal: value => { calls.push(['modal', value]); if (value.title === '确认预算测算') value.success({ confirm: true }); },
     navigateTo: value => calls.push(['navigateTo', value]), redirectTo: value => calls.push(['redirectTo', value]),
     navigateBack: value => calls.push(['navigateBack', value]),
   };
@@ -236,15 +237,19 @@ test('真实生成动作同体失败重试复用键、防双击，成功只凭bu
   const page = env.page('input'); await flush();
   assert.equal(page.data.canGenerate, true);
   assert.equal(page.data.bodyCount, 0);
-  page.generate(); page.generate();
+  page.generate(); page.generate(); await flush();
   assert.equal(requests.length, 1);
   rejectFirst({ msg: 'network timeout' }); await flush();
   assert.match(page.data.generateError, /timeout/);
+  const retryDraft = env.draft.read(projectId, versionId);
+  assert.ok(retryDraft.generationAttempt, JSON.stringify(env.storage));
+  assert.equal(JSON.stringify(env.draft.requestBody(retryDraft)), retryDraft.generationAttempt.signature);
   page.generate(); await flush();
   assert.equal(requests[0].key, requests[1].key);
   assert.equal(requests[0].project, projectId);
   assert.deepEqual(requests[0].body.optionIds, []);
   assert.equal(requests[0].body.resultVersionId, versionId);
+  assert.deepEqual(requests[0].body.usageConfirmation, { product: 'BUDGET_ESTIMATE', ruleId: '9007199254741998', ruleVersion: 1 });
   assert.equal(env.calls.at(-1)[1].url, '/pages/budget/result?budgetId=9007199254742001');
   env.calls.at(-1)[1].success();
   assert.equal(env.draft.read(projectId, versionId).generationAttempt, null);
@@ -262,7 +267,7 @@ test('生成失败后改参数换键，换会话丢弃迟到生成响应；无�
   const page = env.page('input'); await flush(); page.generate(); await flush();
   env.draft.write(env.draft.edit(page.data.draft, 'footprintArea', '130'));
   page.generate(); assert.notEqual(requests[0], requests[1]);
-  env.setToken('account-B-session'); resolveResult({ budgetId: '999' }); await flush();
+  await flush(); env.setToken('account-B-session'); resolveResult({ budgetId: '999' }); await flush();
   assert.equal(page.data.draft, null);
   assert.equal(env.calls.filter(call => call[0] === 'navigateTo').length, 0);
   const missing = runtime({ getBudgetRegions: async () => [] });
@@ -307,8 +312,9 @@ test('参数版本冲突后确认重导入，仅重建当前草稿并使用新�
   assert.equal(page.data.values.footprintArea, '130');
   assert.deepEqual(plain(page.data.draft.requirementSnapshotIds), ['9007199254740997']);
   page.confirmReimport(); page.confirmReimport();
-  assert.equal(env.calls.filter(call => call[0] === 'modal').length, 1);
-  const modal = env.calls.at(-1)[1];
+  const importModals = env.calls.filter(call => call[0] === 'modal' && call[1].title === '重新导入当前参数？');
+  assert.equal(importModals.length, 1);
+  const modal = importModals.at(-1)[1];
   assert.match(modal.content, /清空参数修改和预算配置/);
   assert.match(modal.content, /不会修改设计项目、已存预算或其他草稿/);
   modal.success({ confirm: true }); await flush();
@@ -321,7 +327,8 @@ test('参数版本冲突后确认重导入，仅重建当前草稿并使用新�
   assert.deepEqual(plain(env.storage[otherKey]), otherDraft);
   assert.equal(reads.every(read => read.project === projectId && read.version === versionId), true);
   page.generate(); await flush();
-  assert.deepEqual(requests[1].body, { resultVersionId: versionId, inputOverrides: {}, optionIds: [], requirementSnapshotIds: ['9007199254740999'] });
+  assert.deepEqual(requests[1].body, { resultVersionId: versionId, inputOverrides: {}, optionIds: [], requirementSnapshotIds: ['9007199254740999'],
+    usageConfirmation: { product: 'BUDGET_ESTIMATE', ruleId: '9007199254741998', ruleVersion: 1 } });
   assert.notEqual(requests[0].key, requests[1].key);
   assert.equal(env.calls.at(-1)[1].url, '/pages/budget/result?budgetId=9007199254742001');
 });

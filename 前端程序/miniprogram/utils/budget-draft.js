@@ -83,6 +83,13 @@ function read(projectId, resultVersionId) {
   });
   draft.selections = Array.isArray(saved.selections) ? [...new Set(saved.selections.filter(value => id(value)))] : [];
   draft.selectionResetReason = ['REGION_CHANGED', 'OPTION_UNAVAILABLE'].includes(saved.selectionResetReason) ? saved.selectionResetReason : '';
+  const pricing = saved.usageConfirmation;
+  if (pricing && pricing.product === 'BUDGET_ESTIMATE' && id(pricing.ruleId)
+      && Number.isSafeInteger(pricing.ruleVersion) && pricing.ruleVersion > 0
+      && Number.isSafeInteger(saved.usagePointCost) && saved.usagePointCost > 0) {
+    draft.usageConfirmation = { product: pricing.product, ruleId: pricing.ruleId, ruleVersion: pricing.ruleVersion };
+    draft.usagePointCost = saved.usagePointCost;
+  }
   if (saved.generationAttempt && typeof saved.generationAttempt.signature === 'string'
       && saved.generationAttempt.signature === JSON.stringify(requestBody(draft))
       && /^[A-Za-z0-9_-]{1,64}$/.test(saved.generationAttempt.key || '')) {
@@ -119,9 +126,11 @@ function requestBody(draft) {
   EDITABLE.forEach(function (key) {
     if (Object.prototype.hasOwnProperty.call(draft.overrides || {}, key)) inputOverrides[key] = draft.overrides[key];
   });
-  return { resultVersionId: draft.resultVersionId, inputOverrides,
+  const body = { resultVersionId: draft.resultVersionId, inputOverrides,
     optionIds: [...new Set((Array.isArray(draft.selections) ? draft.selections : []).filter(value => id(value)))].sort(),
     requirementSnapshotIds: draft.requirementSnapshotIds.slice() };
+  if (draft.usageConfirmation) body.usageConfirmation = draft.usageConfirmation;
+  return body;
 }
 
 function prepareGeneration(draft) {

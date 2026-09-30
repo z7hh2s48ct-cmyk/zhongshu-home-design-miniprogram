@@ -5,7 +5,9 @@ package cn.iocoder.yudao.module.infra.zhongshu.api;
  */
 public interface PricingPort {
 
-    record PriceConfirmation(String ruleId, long ruleVersion) { }
+    record PriceConfirmation(String ruleId, long ruleVersion, UsagePricingPort.Confirmation usageConfirmation) {
+        public PriceConfirmation(String ruleId, long ruleVersion) { this(ruleId, ruleVersion, null); }
+    }
 
     static void requireConfirmed(PriceSnapshot snapshot, PriceConfirmation confirmation) {
         if (confirmation == null || !String.valueOf(snapshot.ruleId()).equals(confirmation.ruleId())

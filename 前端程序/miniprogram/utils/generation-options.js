@@ -13,7 +13,7 @@ const PIXELS = {
 };
 
 function defaults(stage) {
-  return { resolution: '2K', orientation: stage === 'FLAT' ? 'PORTRAIT' : 'LANDSCAPE' };
+  return { resolution: '4K', orientation: 'LANDSCAPE' };
 }
 
 function selection(stage, value) {

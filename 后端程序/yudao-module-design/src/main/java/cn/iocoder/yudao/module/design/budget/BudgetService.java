@@ -32,10 +32,24 @@ public class BudgetService {
 
     private final JdbcTemplate jdbcTemplate;
     private final DesignProjectService projectService;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+    private final cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricing;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public BudgetService(DataSource dataSource, DesignProjectService projectService,
+                         org.springframework.transaction.PlatformTransactionManager transactionManager,
+                         cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricing) {
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.projectService = projectService;
+        this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        this.usagePricing = usagePricing;
+    }
 
     public BudgetService(DataSource dataSource, DesignProjectService projectService) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.projectService = projectService;
+        this.transactionTemplate = null;
+        this.usagePricing = null;
     }
 
     public long createRuleVersion(String regionCode, String structureType, String materialGrade,
@@ -53,6 +67,22 @@ public class BudgetService {
     public Estimate createEstimate(long userId, long projectId, String regionCode,
                                    String structureType, String materialGrade, int buildingArea,
                                    Long resultVersionId) {
+        return createEstimate(userId, projectId, regionCode, structureType, materialGrade, buildingArea, resultVersionId, null);
+    }
+
+    public Estimate createEstimate(long userId, long projectId, String regionCode,
+                                   String structureType, String materialGrade, int buildingArea,
+                                   Long resultVersionId,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation) {
+        if (transactionTemplate != null) return transactionTemplate.execute(status -> createEstimateInside(
+                userId, projectId, regionCode, structureType, materialGrade, buildingArea, resultVersionId, confirmation));
+        return createEstimateInside(userId, projectId, regionCode, structureType, materialGrade, buildingArea, resultVersionId, confirmation);
+    }
+
+    private Estimate createEstimateInside(long userId, long projectId, String regionCode,
+                                   String structureType, String materialGrade, int buildingArea,
+                                   Long resultVersionId,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation) {
         // Reuse the project domain's ownership check before looking up prices or writing a budget.
         projectService.getProject(projectId, userId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
         if (resultVersionId != null && !Boolean.TRUE.equals(jdbcTemplate.queryForObject(
@@ -84,6 +114,12 @@ public class BudgetService {
                         + "input_snapshot, total_low_cents, total_high_cents) "
                         + "VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?)",
                 id, projectId, userId, ruleId, resultVersionId, toJson(input), low, high);
+        if (usagePricing != null) {
+            var snapshot = usagePricing.quote("BUDGET_ESTIMATE");
+            cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.requireConfirmed(snapshot, confirmation);
+            usagePricing.prepareCharge(userId, snapshot, "budget_estimate", String.valueOf(id));
+            usagePricing.chargePrepared(userId, "BUDGET_ESTIMATE", "budget_estimate", String.valueOf(id));
+        }
         return new Estimate(id, projectId, String.valueOf(ruleId), low, high, input, DISCLAIMER, Instant.now());
     }
 

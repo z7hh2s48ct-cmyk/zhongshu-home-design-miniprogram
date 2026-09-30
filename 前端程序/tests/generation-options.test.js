@@ -66,8 +66,35 @@ test('规格映射给出横竖准确像素，非法历史值回落到阶段默�
   assert.equal(options.selection('FLAT', { resolution: '4K', orientation: 'PORTRAIT' }).outputPixels, '2160 × 3840');
   assert.equal(options.selection('ELEVATION', { resolution: '4K', orientation: 'LANDSCAPE' }).outputPixels, '3840 × 2160');
   assert.deepEqual(options.selection('FLAT', { resolution: '8K', orientation: 'SQUARE' }), {
-    resolution: '2K', orientation: 'PORTRAIT', outputPixels: '1152 × 2048'
+    resolution: '4K', orientation: 'LANDSCAPE', outputPixels: '3840 × 2160'
   });
+});
+
+test('平面和立面规格默认均为4K横屏', () => {
+  const options = require('../miniprogram/utils/generation-options');
+  for (const stage of ['FLAT', 'ELEVATION']) {
+    assert.deepEqual(options.defaults(stage), { resolution: '4K', orientation: 'LANDSCAPE' });
+    assert.deepEqual(options.selection(stage, {}).outputPixels, '3840 × 2160');
+  }
+  for (const file of ['index.js', 'elevation-setup.js']) {
+    const page = loadCreatePage(file, { refresh: async () => {}, confirm: async () => ({}) }).page;
+    assert.equal(page.data.resolution, '4K');
+    assert.equal(page.data.orientation, 'LANDSCAPE');
+    assert.equal(page.data.outputPixels, '3840 × 2160');
+  }
+});
+
+test('补充需求下拉项追加到右下方输入框内容且选择后收起', () => {
+  const runtime = loadCreatePage('index.js', { refresh: async () => {} });
+  const page = runtime.page;
+  page.toggleNoteSuggestions();
+  assert.equal(page.data.showNoteSuggestions, true);
+  page.selectNoteSuggestion({ currentTarget: { dataset: { index: 0 } } });
+  assert.equal(page.data.note, '老人房设在一楼');
+  assert.equal(page.data.showNoteSuggestions, false);
+  page.toggleNoteSuggestions();
+  page.selectNoteSuggestion({ currentTarget: { dataset: { index: 3 } } });
+  assert.equal(page.data.note, '老人房设在一楼，保留露台');
 });
 
 test('报价响应必须与请求档位一致，错误后保持生成禁用并允许重试', async () => {
@@ -75,7 +102,7 @@ test('报价响应必须与请求档位一致，错误后保持生成禁用并�
   const price = loadModule('utils/generation-price.js', {
     './api': { getGenerationQuote: async (stage, count, resolution) => ({
       stage, count, resolution: valid ? resolution : '2K', totalPointCost: 80, unitPointCost: 40,
-      ruleId: '1', ruleVersion: 1
+      ruleId: '1', ruleVersion: 1, usageProduct: 'AI_PROMPT', usageRuleId: '2', usageRuleVersion: 1, usagePointCost: 1
     }) }
   });
   const page = { data: { count: 2, resolution: '4K' }, setData(patch) { Object.assign(this.data, patch); } };

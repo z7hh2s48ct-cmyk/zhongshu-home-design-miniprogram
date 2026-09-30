@@ -5,10 +5,11 @@ const http = require('../../utils/request');
 const assets = require('../../utils/assets');
 const view = require('../../utils/record-view');
 const generationOptions = require('../../utils/generation-options');
+const resultDefaults = generationOptions.selection('ELEVATION');
 
 protectedPage({
   data: { tab: 0, versions: [], latest: null, versionLabel: '', imageUrl: '', flatImageUrl: '', loading: false, error: '', imageError: '', readOnly: false,
-    resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152', optionsReady: false, optionsError: false },
+    resolution: resultDefaults.resolution, orientation: resultDefaults.orientation, outputPixels: resultDefaults.outputPixels, optionsReady: false, optionsError: false },
   onLoad(options) {
     this._projectId = view.id(options.projectId || getApp().globalData.projectId);
     this._versionId = options.resultVersionId == null ? null : view.id(options.resultVersionId);
@@ -26,7 +27,7 @@ protectedPage({
   loadVersions() {
     const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
     this.setData({ loading: false, error: '', latest: null, versions: [], imageUrl: '', flatImageUrl: '', imageError: '',
-      resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152', optionsReady: false, optionsError: false });
+      resolution: resultDefaults.resolution, orientation: resultDefaults.orientation, outputPixels: resultDefaults.outputPixels, optionsReady: false, optionsError: false });
     if (!this._projectId || this._invalidVersion || !this._token) { this.setData({ error: '方案信息无效，请从「我的方案」重新进入' }); return; }
     this.setData({ loading: true });
     return api.getResultVersions(this._projectId).then(page => {

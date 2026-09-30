@@ -6,6 +6,8 @@ const config = require('../../utils/config');
 const sha256 = require('../../utils/sha256');
 const designInputs = require('../../utils/design-inputs');
 const generationOptions = require('../../utils/generation-options');
+const flatDefaults = generationOptions.selection('FLAT');
+const NOTE_SUGGESTIONS = ['老人房设在一楼', '客餐厅朝南', '厨房设在一楼', '保留露台', '增加储物空间'];
 
 const SKETCH_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -25,9 +27,10 @@ protectedPage({
     floorIndex: designInputs.indexOfFloor('两层'),
     familyIndex: designInputs.indexOfFamily('5室3厅2卫'),
     points: '—', creating: false, quoteReady: false, quoteLoading: false, quoteError: '',
-    refCase: null, refCaseText: '', note: '', prompt: '',
-    sketchAssetId: null, sketchImage: '', resolution: '2K', orientation: 'PORTRAIT', outputPixels: '1152 × 2048',
-    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations('2K')
+    refCase: null, refCaseText: '', note: '', prompt: '', showNoteSuggestions: false,
+    noteSuggestions: NOTE_SUGGESTIONS,
+    sketchAssetId: null, sketchImage: '', resolution: flatDefaults.resolution, orientation: flatDefaults.orientation, outputPixels: flatDefaults.outputPixels,
+    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations(flatDefaults.resolution)
   },
   onLoad(options) {
     if (options && options.caseId) return; // 由 onShow 统一读全局参考案例
@@ -75,6 +78,14 @@ protectedPage({
   chooseReference() { wx.switchTab({ url: '/pages/library/index' }); },
   clearReference() { getApp().globalData.refCase = null; this.setData({ refCase: null, refCaseText: '' }); },
   onNoteInput(e) { this.setData({ note: e.detail.value }); },
+  toggleNoteSuggestions() { this.setData({ showNoteSuggestions: !this.data.showNoteSuggestions }); },
+  selectNoteSuggestion(e) {
+    const suggestion = this.data.noteSuggestions[Number(e.currentTarget.dataset.index)];
+    if (!suggestion) return;
+    const current = this.data.note.trim();
+    const next = current ? current + (/[，。；;]$/.test(current) ? '' : '，') + suggestion : suggestion;
+    this.setData({ note: next.slice(0, 200), showNoteSuggestions: false });
+  },
   onPromptInput(e) { this.setData({ prompt: e.detail.value }); },
   onFaceWidthInput(e) { this.setData({ faceWidth: e.detail.value }); },
   onDepthInput(e) { this.setData({ depth: e.detail.value }); },

@@ -29,12 +29,19 @@
 .form-row view { margin-left: auto; display: flex; align-items: center; gap: 12rpx; }
 .textarea-row { margin: 0 -20rpx; padding: 16rpx 20rpx; }
 .textarea-row > text { display: block; font-size: $v12-font-lg; }
-.textarea-row textarea, .prompt-box { box-sizing: border-box; width: 100%; height: 92rpx; margin-top: 12rpx; padding: 16rpx 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; font-size: $v12-font-body; line-height: 1.5; }
+.note-field { margin-top: 12rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; background: $v12-surface; }
+.note-field textarea { display: block; box-sizing: border-box; width: 100%; min-height: 76rpx; padding: 16rpx 20rpx 8rpx; font-size: $v12-font-body; line-height: 1.5; }
 .textarea-row, .prompt-box { position: relative; }
-.textarea-row span, .prompt-box span { position: absolute; right: 40rpx; bottom: 25rpx; color: $v12-text-3; font-size: $v12-font-xs; }
+.prompt-box span { position: absolute; right: 18rpx; bottom: 15rpx; color: $v12-text-3; font-size: $v12-font-xs; }
+.note-tools { padding: 0 18rpx 12rpx; display: flex; align-items: center; justify-content: flex-end; gap: 20rpx; }
+.note-dropdown { display: flex; align-items: center; gap: 4rpx; color: $v12-primary-deep; font-size: $v12-font-xs; }
+.note-dropdown.open { font-weight: 600; }
+.note-count { color: $v12-text-3; font-size: $v12-font-xs; }
+.note-suggestions { margin-top: 12rpx; padding: 8rpx 20rpx; border: 1rpx solid $v12-divider; border-radius: $v12-radius-sm; background: $v12-surface; }
+.note-suggestions > view { min-height: 64rpx; display: flex; align-items: center; justify-content: space-between; color: $v12-text-2; font-size: $v12-font-sm; }
+.note-suggestions > view + view { border-top: 1rpx solid $v12-divider; }
 .prompt-box { height: 190rpx; }
 .prompt-box textarea { width: 100%; height: 134rpx; font-size: $v12-font-md; line-height: 1.55; }
-.prompt-box span { right: 18rpx; bottom: 15rpx; }
 .upload-row { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
 .upload-row > view { height: 224rpx; border: 1rpx dashed $v12-disabled; border-radius: $v12-radius-sm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20rpx; }
 .upload-row text { font-size: $v12-font-body; }

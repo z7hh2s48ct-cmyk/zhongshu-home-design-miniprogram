@@ -217,19 +217,44 @@ protectedPage({
   },
   generate() {
     if (!this.currentSession() || !this.data.draft || this.data.creating || this.data.loading || this.data.catalogLoading || this.data.reimporting || this._confirmingImport) return;
-    let attempt;
+    let current;
     try {
-      const current = draftStore.read(this.data.draft.projectId, this.data.draft.resultVersionId) || this.data.draft;
+      current = draftStore.read(this.data.draft.projectId, this.data.draft.resultVersionId) || this.data.draft;
       this.renderDraft(current);
       if (!this.data.canGenerate) { this.setData({ generateError: '请检查地区、基础参数和配置加载状态' }); return; }
-      attempt = draftStore.prepareGeneration(current);
-      // Persist the operation key before sending; ambiguous failures reuse this exact request.
-      draftStore.write(attempt.draft);
     } catch (error) { this.setData({ generateError: '本机草稿无法保存，尚未发起预算，请重试' }); return; }
     const scope = this._sessionScope;
     const generationId = this._generationId = (this._generationId || 0) + 1;
-    this.setData({ draft: attempt.draft, creating: true, generateError: '' });
-    api.createItemizedBudget(attempt.draft.projectId, attempt.body, attempt.key).then(response => {
+    this.setData({ draft: current, creating: true, generateError: '' });
+    const pendingBody = draftStore.requestBody(current);
+    const samePendingRequest = current.generationAttempt
+      && JSON.stringify(pendingBody) === current.generationAttempt.signature
+      && current.usageConfirmation && Number.isSafeInteger(Number(current.usagePointCost));
+    const quoteRequest = samePendingRequest
+      ? Promise.resolve({ product: current.usageConfirmation.product, ruleId: current.usageConfirmation.ruleId,
+        ruleVersion: current.usageConfirmation.ruleVersion, pointCost: current.usagePointCost })
+      : api.getBudgetPointQuote().then(quote => {
+        if (!quote || quote.product !== 'BUDGET_ESTIMATE' || !quote.ruleId
+          || !Number.isSafeInteger(Number(quote.ruleVersion)) || Number(quote.ruleVersion) < 1
+          || !Number.isSafeInteger(Number(quote.pointCost)) || Number(quote.pointCost) < 1) throw Error('预算积分报价不可用');
+        return new Promise((resolve, reject) => wx.showModal({ title: '确认预算测算',
+          content: '本次成功测算将扣除 ' + quote.pointCost + ' 设计点。',
+          success: result => result.confirm ? resolve(quote) : reject({ cancelled: true }), fail: reject }));
+      });
+    quoteRequest.then(quote => {
+      if (generationId !== this._generationId || scope !== draftStore.sessionScope()) throw { cancelled: true };
+      const body = draftStore.requestBody(current);
+      body.usageConfirmation = { product: quote.product, ruleId: String(quote.ruleId), ruleVersion: quote.ruleVersion };
+      const draftWithQuote = Object.assign({}, current, { usageConfirmation: body.usageConfirmation, usagePointCost: Number(quote.pointCost) });
+      const attempt = draftStore.prepareGeneration(draftWithQuote);
+      attempt.body.usageConfirmation = body.usageConfirmation;
+      attempt.draft.usageConfirmation = body.usageConfirmation;
+      attempt.draft.usagePointCost = Number(quote.pointCost);
+      draftStore.write(attempt.draft);
+      this._activeAttempt = attempt;
+      return api.createItemizedBudget(attempt.draft.projectId, attempt.body, attempt.key);
+    }).then(response => {
+      const attempt = this._activeAttempt;
       if (generationId !== this._generationId) return;
       if (scope !== draftStore.sessionScope()) { this.invalidateSession(); return; }
       if (!response || !draftStore.id(response.budgetId)) throw Error('预算响应无有效编号，请重试');
@@ -253,7 +278,7 @@ protectedPage({
     }).catch(error => {
       if (generationId !== this._generationId) return;
       if (scope !== draftStore.sessionScope()) { this.invalidateSession(); return; }
-      this.setData({ creating: false, generateError: (error && (error.msg || error.message)) || '预算生成失败，请重试',
+      this.setData({ creating: false, generateError: error && error.cancelled ? '' : (error && (error.msg || error.message)) || '预算生成失败，请重试',
         importConflict: !!error && String(error.code) === '1099000001' });
     });
   }

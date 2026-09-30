@@ -62,6 +62,8 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
     }
 
     private void initializeSeed() {
+        seedUsagePrices();
+        seedHighResolutionPrices();
         Integer seeded = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM recharge_plan WHERE deleted = FALSE", Integer.class);
         if (seeded != null && seeded > 0) {
@@ -81,6 +83,20 @@ public class DevDataSeeder implements org.springframework.beans.factory.Initiali
         seedDemoCase();
         seedAccessCode();
         log.warn("[DevDataSeeder][开发种子数据写入完成——生产环境严禁开启 zhongshu.design.seed-dev-data]");
+    }
+
+    private void seedUsagePrices() {
+        // Development-only demo pricing; production stays unconfigured until an administrator sets real rates.
+        jdbcTemplate.update("INSERT INTO service_usage_price_rule (id, product, point_cost, effective_at) "
+                        + "VALUES (900003, 'BUDGET_ESTIMATE', 1, now()), (900004, 'AI_PROMPT', 1, now()) "
+                        + "ON CONFLICT (id) DO NOTHING");
+    }
+
+    private void seedHighResolutionPrices() {
+        // Sample 4K rates are deliberately development-only and higher than the 2K demo rates.
+        jdbcTemplate.update("INSERT INTO generation_price_rule (id, stage, resolution, unit_point_cost, min_count, max_count, effective_at) "
+                        + "VALUES (900005, 'FLAT', '4K', 20, 1, 4, now()), (900006, 'ELEVATION', '4K', 30, 1, 4, now()) "
+                        + "ON CONFLICT (id) DO NOTHING");
     }
 
     private void seedDemoCase() {

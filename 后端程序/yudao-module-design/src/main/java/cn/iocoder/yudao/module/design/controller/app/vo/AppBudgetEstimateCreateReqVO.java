@@ -39,4 +39,7 @@ public class AppBudgetEstimateCreateReqVO {
     @Schema(description = "关联的设计结果版本编号（可选，合同 §6.8）")
     private Long resultVersionId;
 
+    @jakarta.validation.constraints.NotNull(message = "请先确认预算测算价格")
+    private cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation usageConfirmation;
+
 }

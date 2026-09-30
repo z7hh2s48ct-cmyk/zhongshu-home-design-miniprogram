@@ -364,6 +364,7 @@ export async function runJob(job, core, provider, settings, options = {}) {
     const generationOptions = Object.hasOwn(input, 'imageOptions') ? imageOptions(input.imageOptions) : undefined;
     const images = [];
     for (const image of input.images) images.push(await provider.imageInput(image, signal));
+    await core.job(job, 'prompt-calls', {}, signal);
     const prompt = await provider.plan(job, input, images, signal);
     for (let slot = 1; slot <= job.payload.requestedCount; slot++) {
       signal.throwIfAborted();

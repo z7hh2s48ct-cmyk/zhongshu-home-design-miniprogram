@@ -4,6 +4,7 @@ const api = require('../../utils/api');
 const http = require('../../utils/request');
 const assets = require('../../utils/assets');
 const generationOptions = require('../../utils/generation-options');
+const flatDefaults = generationOptions.selection('FLAT');
 const STATUS_TEXT = { QUEUED: '排队等待中', RUNNING: 'AI 正在绘制方案', VALIDATING: '正在校验生成结果', CANCEL_REQUESTED: '正在取消任务', SUCCEEDED: '生成完成', PARTIALLY_SUCCEEDED: '部分方案已生成', FAILED: '生成失败', CANCELLED: '任务已取消' };
 const STEP_ORDER = ['QUEUED', 'RUNNING', 'VALIDATING'];
 const NEXT = {
@@ -17,7 +18,7 @@ protectedPage({
           stepIndex: 0, elapsedText: '00:00',
           candidates: [], pendingSlots: 0, candidatesError: '',
           selectedId: '', selectDone: false, selecting: false, nextLabel: '', regenerating: false,
-          resolution: '2K', orientation: 'PORTRAIT', outputPixels: '1152 × 2048' },
+          resolution: flatDefaults.resolution, orientation: flatDefaults.orientation, outputPixels: flatDefaults.outputPixels },
   onLoad(query) {
     this._token = http.getToken();
     this._jobId = getApp().globalData.jobId;
@@ -212,8 +213,9 @@ protectedPage({
     this._regenerating = true;
     const self = this;
     const count = this.data.count || 2;
-    const resolution = this.data.resolution || '2K';
-    const orientation = this.data.orientation || (stage === 'plane' ? 'PORTRAIT' : 'LANDSCAPE');
+    const fallback = generationOptions.defaults(stage === 'plane' ? 'FLAT' : 'ELEVATION');
+    const resolution = this.data.resolution || fallback.resolution;
+    const orientation = this.data.orientation || fallback.orientation;
     const idemKey = stage + '-regen-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     this.setData({ regenerating: true });
     return require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count, '', { resolution: resolution }).then(function (price) {

@@ -16,9 +16,11 @@ import java.time.Instant;
 public class AppGenerationPriceController {
     @Resource private PriceRuleService priceRuleService;
     @Resource private IdentitySessionPort identitySessionPort;
+    @Resource private cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricingPort;
 
     public record Quote(String stage, String resolution, int count, long unitPointCost, long totalPointCost,
-                        String ruleId, long ruleVersion, String validUntil) { }
+                        String ruleId, long ruleVersion, String validUntil, String usageProduct,
+                        String usageRuleId, long usageRuleVersion, long usagePointCost) { }
 
     @GetMapping
     public CommonResult<Quote> quote(@RequestParam("stage") String stage, @RequestParam("count") int count,
@@ -39,7 +41,9 @@ public class AppGenerationPriceController {
         if (count < rule.minCount() || count > rule.maxCount()) throw new ServiceException(400, "数量超出当前计价规则范围");
         Instant until = now.plusSeconds(300);
         if (rule.expiresAt() != null && rule.expiresAt().isBefore(until)) until = rule.expiresAt();
+        var usage = usagePricingPort.quote("AI_PROMPT");
         return CommonResult.success(new Quote(stage, resolution, count, rule.unitPointCost(), Math.multiplyExact(rule.unitPointCost(), count),
-                String.valueOf(rule.id()), rule.version(), until.toString()));
+                String.valueOf(rule.id()), rule.version(), until.toString(), usage.product(),
+                String.valueOf(usage.ruleId()), usage.ruleVersion(), usage.pointCost()));
     }
 }

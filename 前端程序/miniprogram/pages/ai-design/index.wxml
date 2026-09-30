@@ -22,7 +22,23 @@
         <picker mode="selector" range="{{familyLabels}}" value="{{familyIndex}}" bindchange="onFamilyChange">
           <view class="form-row"><text>家庭需求</text><view>{{familyLabels[familyIndex]}} <t-icon name="chevron-right" size="16px" color="#2f2925" /></view></view>
         </picker>
-        <view class="textarea-row"><text>补充需求</text><textarea maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" /><span>{{note.length}}/200</span></view>
+        <view class="textarea-row">
+          <text>补充需求</text>
+          <view class="note-field">
+            <textarea auto-height maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" />
+            <view class="note-tools">
+              <view class="note-dropdown {{showNoteSuggestions ? 'open' : ''}}" bindtap="toggleNoteSuggestions">
+                <text>常用需求</text><t-icon name="chevron-down" size="14px" />
+              </view>
+              <text class="note-count">{{note.length}}/200</text>
+            </view>
+          </view>
+          <view wx:if="{{showNoteSuggestions}}" class="note-suggestions">
+            <view wx:for="{{noteSuggestions}}" wx:key="*this" data-index="{{index}}" bindtap="selectNoteSuggestion">
+              <text>{{item}}</text><t-icon name="add" size="14px" />
+            </view>
+          </view>
+        </view>
       </block>
       <block wx:else>
         <text class="form-title">提示词</text>

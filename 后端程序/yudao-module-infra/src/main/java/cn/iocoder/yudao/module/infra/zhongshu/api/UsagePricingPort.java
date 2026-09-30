@@ -1,0 +1,25 @@
+package cn.iocoder.yudao.module.infra.zhongshu.api;
+
+/** 可独立计价的业务调用；commerce 实现价格快照和幂等扣点。 */
+public interface UsagePricingPort {
+
+    record Confirmation(String product, String ruleId, long ruleVersion) { }
+
+    record Snapshot(String product, long ruleId, long ruleVersion, long pointCost) { }
+
+    static void requireConfirmed(Snapshot snapshot, Confirmation confirmation) {
+        if (confirmation == null || !snapshot.product().equals(confirmation.product())
+                || !String.valueOf(snapshot.ruleId()).equals(confirmation.ruleId())
+                || snapshot.ruleVersion() != confirmation.ruleVersion()) {
+            throw new cn.iocoder.yudao.framework.common.exception.ServiceException(
+                    1_072_000_001, "计价规则已更新，请确认新价格后重试");
+        }
+    }
+
+    Snapshot quote(String product);
+
+    void prepareCharge(long userId, Snapshot snapshot, String bizType, String bizId);
+
+    /** 锁定待扣记录并原子扣点；同业务键重复调用只返回 false，不重复扣款。 */
+    boolean chargePrepared(long userId, String product, String bizType, String bizId);
+}

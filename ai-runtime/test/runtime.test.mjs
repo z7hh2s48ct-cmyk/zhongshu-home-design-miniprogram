@@ -35,6 +35,15 @@ test('completion follows all slots; replay uses identical event ID and payload',
   assert.deepEqual(events[0], events[1]); assert.equal(events.length, 3);
   assert.equal(s.calls.at(-1)[0], 'completion-events');
 });
+test('提示词扣点端点在实际 plan 调用前只请求一次', async () => {
+  const s = scenario(); const order = [];
+  const originalJob = s.core.job;
+  s.core.job = async (task, endpoint, payload) => { order.push(endpoint); return originalJob(task, endpoint, payload); };
+  s.provider.plan = async () => { order.push('provider-plan'); return 'plan'; };
+  await runJob(job, s.core, s.provider, { providerCode: 'apilio' });
+  assert.equal(order.filter(value => value === 'prompt-calls').length, 1);
+  assert.ok(order.indexOf('prompt-calls') < order.indexOf('provider-plan'));
+});
 test('partial provider failure sends a completion barrier without regenerating a paid slot', async () => {
   const s = scenario('second'); await assert.rejects(runJob(job, s.core, s.provider, { providerCode: 'apilio' }), /INCOMPLETE/);
   assert.equal(s.calls.filter(x => x[0] === 'result-events').length, 1);

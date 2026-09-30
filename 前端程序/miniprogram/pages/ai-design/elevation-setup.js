@@ -3,6 +3,7 @@ const { protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
 const generationOptions = require('../../utils/generation-options');
 const assets = require('../../utils/assets');
+const elevationDefaults = generationOptions.selection('ELEVATION');
 
 // 立面参数以稳定编码入库（配置快照可复算），中文标签仅作展示
 const STYLE_OPTIONS = [
@@ -32,8 +33,8 @@ protectedPage({
     wallOptions: WALL_OPTIONS, accentOptions: ACCENT_OPTIONS,
     style: 'NEW_CHINESE', roof: 'GABLE_ROOF', wall: 'WHITE_STUCCO', accent: 'DEEP_WOOD',
     count: 2, creating: false, points: '—', quoteReady: false, quoteLoading: false, quoteError: '',
-    resolution: '2K', orientation: 'LANDSCAPE', outputPixels: '2048 × 1152',
-    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations('2K'),
+    resolution: elevationDefaults.resolution, orientation: elevationDefaults.orientation, outputPixels: elevationDefaults.outputPixels,
+    resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations(elevationDefaults.resolution),
     flatLabel: '', flatImageUrl: ''
   },
   onShow() {
