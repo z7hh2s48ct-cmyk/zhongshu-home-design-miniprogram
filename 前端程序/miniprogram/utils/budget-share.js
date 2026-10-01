@@ -2,8 +2,8 @@
 
 // 预算图导出（2026-09-29 决策 3-B）：Canvas 2D 绘制完整预算摘要卡并保存到相册。
 // 口径：仅完整预算（COMPLETE）允许导出；金额一律按万元；
-// 码位读取 assets/v12/miniprogram-qr.png——上线前用公众平台下载的真实小程序码替换该文件，
-// 资源缺失时画品牌徽标兜底，绝不绘制假码。
+// 码位读取 assets/v12/miniprogram-qr.png——2026-10-02 已投放公众平台下载的真实小程序码（344×344），
+// 资源缺失时仍画品牌徽标兜底，绝不绘制假码。
 const view = require('./budget-view');
 
 const QR_PATH = '/assets/v12/miniprogram-qr.png';
