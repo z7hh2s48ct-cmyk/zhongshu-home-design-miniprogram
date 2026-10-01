@@ -22,7 +22,8 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'dashboard',
         component: () => import('@/views/zs/dashboard/index.vue'),
         name: 'ZsDashboard',
-        meta: { title: '工作台', icon: 'ep:home-filled', noCache: false }
+        // 与首页 / 指向同一视图，仅作 URL 兜底；工作台入口由 remainingRouter 的 / 承载。
+        meta: { title: '工作台', icon: 'ep:home-filled', noCache: false, hidden: true }
       },
       {
         path: 'case',

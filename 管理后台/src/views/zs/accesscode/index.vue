@@ -32,22 +32,6 @@
         <el-tab-pane label="已停用" name="DISABLED" />
       </el-tabs>
 
-      <el-form inline class="zs-filter">
-        <el-form-item label="授权码/用户">
-          <el-input
-            v-model="query.codeMask"
-            placeholder="搜索掩码"
-            clearable
-            style="width: 200px"
-            @keyup.enter="search"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button class="zs-btn-primary" @click="search">查询</el-button>
-          <el-button @click="reset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
       <el-alert
         v-if="loadError"
         type="error"
@@ -131,7 +115,9 @@ const loading = ref(false)
 const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
-const query = reactive({ status: '', codeMask: '', pageNo: 1, pageSize: 10 })
+// 掩码搜索入口已暂时移除：后端 AccessCodeAdminController 声明了 codeMask 但未实现过滤（P3B 与查询索引一起补），
+// 输入不生效属误导性 UI；待后端过滤落地后再恢复搜索框。
+const query = reactive({ status: '', pageNo: 1, pageSize: 10 })
 
 const stats = ref([
   { label: '未使用', value: 0, icon: 'ep:ticket', color: '#2d68c4' },
@@ -169,7 +155,7 @@ const load = async () => {
   loading.value = true
   loadError.value = false
   try {
-    const res = await ZsApi.getAccessCodePage({ ...query, codeMask: query.codeMask || undefined })
+    const res = await ZsApi.getAccessCodePage({ ...query })
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {
@@ -181,11 +167,6 @@ const load = async () => {
     loading.value = false
   }
   loadStats()
-}
-const reset = () => {
-  query.pageNo = 1
-  query.codeMask = ''
-  load()
 }
 const doDisable = async (row: any) => {
   await ZsApi.disableAccessCode(row.id)
@@ -229,10 +210,6 @@ onMounted(load)
 </script>
 
 <style lang="scss" scoped>
-.zs-filter {
-  margin-bottom: 6px;
-}
-
 .zs-footnote {
   padding: 12px 16px;
   margin-top: 16px;

@@ -99,25 +99,6 @@ public class AppBudgetController {
         return success(toVo(estimate));
     }
 
-    // Retain the original Java entry point for old callers/tests; the mapped HTTP method below adds model-aware history.
-    public CommonResult<List<AppBudgetEstimateRespVO>> getEstimates(
-            @PathVariable("projectId") String projectId,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        long userId = requireAccountId(authorization);
-        return success(budgetService.listByProject(userId, Long.parseLong(projectId)).stream()
-                .map(this::toVo).toList());
-    }
-
-    // Original Java signature remains a strictly legacy projection; no new fields are squeezed into the range VO.
-    public CommonResult<AppBudgetEstimateRespVO> getEstimate(
-            @PathVariable("estimateId") String estimateId,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        long userId = requireAccountId(authorization);
-        var estimate = budgetService.getEstimate(userId, Long.parseLong(estimateId))
-                .orElseThrow(() -> new AccessDeniedException("测算不存在或无权访问"));
-        return success(toVo(estimate));
-    }
-
     @PostMapping("/design-projects/{projectId}/budget-estimates/itemized")
     @Operation(summary = "创建并持久化分项预算；服务端查价，缺项结果保留待补状态")
     public CommonResult<AppItemizedBudgetRespVO> createItemizedEstimate(
