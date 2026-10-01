@@ -15,6 +15,9 @@
       </view>
     </view>
     <text class="settings-label">画面方向</text>
+    <!-- P1-B（报告 15）：立面出图方向跟随已选平面（参考图方向决定输出），此处选择仅用于展示，
+         服务端创建任务时会自动对齐平面方向，避免方向不一致导致生成失败 -->
+    <text class="settings-hint">方向将自动与已选平面保持一致，确保生成立面可正常出图</text>
     <view class="orientation-grid">
       <view wx:for="{{orientations}}" wx:key="value" class="orientation-option {{orientation === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectOrientation">
         <view class="orientation-frame {{item.value === 'PORTRAIT' ? 'portrait' : 'landscape'}}"><i></i></view>

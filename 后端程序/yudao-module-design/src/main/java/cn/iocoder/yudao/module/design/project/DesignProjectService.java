@@ -451,9 +451,22 @@ public class DesignProjectService {
         if (flatSelection == null) {
             throw exception(DESIGN_STAGE_CONFLICT); // 未选定平面不得生成立面
         }
+        // P1-B（报告 15）：供应商出图方向跟随输入参考图，立面输出的实际方向与已选平面一致；
+        // 引擎却按任务 imageOptions 的期望尺寸强校验，方向不一致时必然 PROVIDER_IMAGE_SIZE_MISMATCH。
+        // 默认值组合（平面竖版 + 立面横版）恰好踩中，故此处一律以平面任务的方向为准对齐。
+        String flatOrientation = jdbcTemplate.queryForObject(
+                "SELECT input_snapshot -> 'imageOptions' ->> 'orientation' FROM ai_job "
+                        + "WHERE project_ref = ? AND phase = 'FLAT' AND deleted = FALSE "
+                        + "ORDER BY create_time DESC LIMIT 1", String.class, String.valueOf(projectId));
+        final cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions alignedOptions =
+                flatOrientation != null && !flatOrientation.isBlank()
+                        && !flatOrientation.equalsIgnoreCase(options.orientation())
+                ? cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions.normalize(
+                        "ELEVATION", options.resolution(), flatOrientation)
+                : options;
         Map<String, Object> validatedConfig = BudgetInputs.validateRequirementInputs(elevationConfig);
-        long jobId = aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation, options);
-        if (!aiJobPort.freezeInput(jobId,runtimeInput(project,"ELEVATION",validatedConfig, options, count))) return new FlatJobCreated(jobId,false);
+        long jobId = aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation, alignedOptions);
+        if (!aiJobPort.freezeInput(jobId,runtimeInput(project,"ELEVATION",validatedConfig, alignedOptions, count))) return new FlatJobCreated(jobId,false);
         jdbcTemplate.update(
                 "INSERT INTO design_requirement_snapshot (id, project_id, input_version, inputs) "
                         + "SELECT ?, ?, COALESCE(MAX(input_version), 0) + 1, CAST(? AS jsonb) "

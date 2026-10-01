@@ -27,6 +27,7 @@
 .settings-head span { margin-top: 8rpx; color: $v12-text-3; font-size: $v12-font-sm; }
 .settings-head b { padding: 12rpx 16rpx; border-radius: $v12-radius-xs; color: $v12-primary-deep; background: $v12-gold-bg; font-size: $v12-font-sm; font-weight: 600; }
 .settings-label { display: block; margin-top: 28rpx; color: $v12-text-2; font-size: $v12-font-md; font-weight: 500; }
+.settings-hint { display: block; margin-top: 8rpx; color: $v12-text-3; font-size: $v12-font-sm; }
 .resolution-grid, .orientation-grid { margin-top: 16rpx; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; }
 .resolution-option { position: relative; min-height: 92rpx; padding: 20rpx 24rpx; border: 2rpx solid $v12-divider; border-radius: $v12-radius-md; box-sizing: border-box; }
 .resolution-option text, .resolution-option span { display: block; }

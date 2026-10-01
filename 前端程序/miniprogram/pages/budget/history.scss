@@ -8,3 +8,6 @@
 .history-amount { margin: 28rpx 0; font-size: $v12-font-hero; color: $v12-primary-deep; }
 .history-meta { color: $v12-text-3; font-size: $v12-font-sm; }
 .history-footer { text-align: center; padding: 20rpx; }
+/* P3-8 引导空态的双按钮行（与全站空态节奏一致） */
+.empty-actions { display: flex; gap: 24rpx; margin-top: 28rpx; }
+.empty-actions .budget-secondary, .empty-actions .budget-primary { flex: 1; width: auto; }

@@ -392,6 +392,11 @@ public class SubmissionReviewService {
      * 用户被授予的生成参考许可落为案例平面图资产的 GENERATION_REFERENCE 授权（不随审核自动获得）。
      */
     public long publishApprovedAsCase(long submissionId, String operator) {
+        return publishApprovedAsCase(submissionId, operator, null);
+    }
+
+    /** P1-A（报告 15）：投稿版本面积为小数时不接受静默截断，必须由管理员核定整数面积（confirmedBuildingArea）后发布，核定事实留痕入案例描述。 */
+    public long publishApprovedAsCase(long submissionId, String operator, Integer confirmedBuildingArea) {
         return txTemplate.execute(status -> {
             // Account before submission: a queued admin action cannot republish a closed account.
             var owners = jdbcTemplate.queryForList("SELECT user_id FROM case_submission WHERE id=? AND deleted=FALSE", Long.class, submissionId);
@@ -416,10 +421,20 @@ public class SubmissionReviewService {
             long resultVersionId = ((Number) submission.get("result_version_id")).longValue();
             var parameters = publicationParameters(resultVersionId);
             String styleCode = parameters.get("styleCode").toString();
-            // 案例目录的既有面积字段为整数平方米。不能静默截断小数或填假值。
+            // 案例目录的既有面积字段为整数平方米。不能静默截断小数或填假值；
+            // 小数面积必须由管理员核定（confirmedBuildingArea），核定事实写入案例描述留痕。
             int buildingArea;
-            try { buildingArea = new java.math.BigDecimal(parameters.get("buildingArea").toString()).intValueExact(); }
-            catch (ArithmeticException e) { throw new ServiceException(1_071_000_002, "案例目录暂仅支持整数平方米，请先核定投稿版本面积"); }
+            String areaConfirmationNote = null;
+            java.math.BigDecimal snapshotArea = new java.math.BigDecimal(parameters.get("buildingArea").toString());
+            try { buildingArea = snapshotArea.intValueExact(); }
+            catch (ArithmeticException e) {
+                if (confirmedBuildingArea == null || confirmedBuildingArea <= 0) {
+                    throw new ServiceException(1_071_000_002, "案例目录暂仅支持整数平方米，请先核定投稿版本面积");
+                }
+                buildingArea = confirmedBuildingArea;
+                areaConfirmationNote = "；建筑面积经管理员核定 " + snapshotArea.stripTrailingZeros().toPlainString()
+                        + "㎡ → " + buildingArea + "㎡";
+            }
             int floorCount = ((Number) parameters.get("floorCount")).intValue();
             var selected = previewAssets(resultVersionId);
             if (selected.size() != 2 || selected.stream().map(PreviewAsset::role).distinct().count() != 2) {
@@ -439,8 +454,10 @@ public class SubmissionReviewService {
             jdbcTemplate.update(
                     "INSERT INTO design_case_version (id, case_id, version, title, description, style_code, "
                             + "floor_count, building_area) VALUES (?, ?, 1, ?, ?, ?, ?, ?)",
-                    versionId, caseId, "AI 案例 · 投稿 " + submissionId,
-                    "用户投稿（结果版本 " + resultVersionId + "）", styleCode, floorCount, buildingArea);
+                    versionId, caseId, aiCaseTitle(styleCode, buildingArea, submissionId),
+                    "用户投稿（结果版本 " + resultVersionId + "）"
+                            + (areaConfirmationNote == null ? "" : areaConfirmationNote),
+                    styleCode, floorCount, buildingArea);
             jdbcTemplate.update(
                     "INSERT INTO case_publication (id, case_id, action, published_version_id, operator_id) "
                             + "VALUES (?, ?, 'PUBLISH', ?, ?)",
@@ -478,6 +495,16 @@ public class SubmissionReviewService {
             log.info("[publishApprovedAsCase][submission={} → AI 案例 {}]", submissionId, caseId);
             return caseId;
         });
+    }
+
+    /** P3-D（报告 15）：图库可读标题——风格 + 核定面积 + 投稿短码，替代不可读的「AI 案例 · 投稿 <ID 串>」。 */
+    private String aiCaseTitle(String styleCode, int buildingArea, long submissionId) {
+        var labels = java.util.Map.of(
+                "NEW_CHINESE", "新中式", "MODERN", "现代简约", "CHINESE", "中式", "EUROPEAN", "欧式");
+        String style = labels.getOrDefault(styleCode, styleCode);
+        String shortCode = String.valueOf(submissionId);
+        shortCode = shortCode.length() <= 6 ? shortCode : shortCode.substring(shortCode.length() - 6);
+        return "AI 案例 · " + style + " · " + buildingArea + "㎡ · #" + shortCode;
     }
 
 }

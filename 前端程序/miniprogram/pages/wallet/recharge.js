@@ -88,22 +88,38 @@ protectedPage({
       fail: function (res) {
         self.setData({ paying: false });
         const errMsg = (res && res.errMsg) || '';
-        // 用户主动取消：允许继续支付（重领 payParams）
-        if (errMsg.indexOf('cancel') !== -1) {
-          self.offerResumePayment(order);
-          return;
-        }
-        // 签名失效 / 支付参数过期：允许继续支付（重领 payParams）
-        if (errMsg.indexOf('sign') !== -1 || errMsg.indexOf('signature') !== -1
-            || errMsg.indexOf('过期') !== -1 || errMsg.indexOf('失效') !== -1) {
-          wx.showToast({ title: '支付参数已过期，请重新发起', icon: 'none' });
-          self.offerResumePayment(order);
-          return;
-        }
-        // 网络错误 / 其他：提示重试，不自动重领（避免循环）
-        wx.showToast({ title: '支付未完成，请从充值记录继续', icon: 'none' });
+        // P3-9（报告 15）：弹窗取消/异常不代表未扣款（模拟通道自动确认扣款后仍回 cancel）——
+        // 一切 fail 分支先查单对齐真实状态，已到账直接进成功页，杜绝「提示未完成却已扣费」。
+        api.getRechargeOrder(order.orderId).then(function (fresh) {
+          if (fresh && (fresh.fulfillmentState === 'CREDITED' || fresh.paymentState === 'SUCCEEDED')) {
+            self.toSuccessPage(fresh);
+            return;
+          }
+          self.handlePaymentFailure(order, errMsg);
+        }).catch(function () {
+          // 查单失败：退回原分支语义，不阻塞用户
+          self.handlePaymentFailure(order, errMsg);
+        });
       }
     }));
+  },
+  /** T13-24 fail 分支的原始语义（P3-9 后仅在查单确认未到账时进入） */
+  handlePaymentFailure(order, errMsg) {
+    const self = this;
+    // 用户主动取消：允许继续支付（重领 payParams）
+    if (errMsg.indexOf('cancel') !== -1) {
+      self.offerResumePayment(order);
+      return;
+    }
+    // 签名失效 / 支付参数过期：允许继续支付（重领 payParams）
+    if (errMsg.indexOf('sign') !== -1 || errMsg.indexOf('signature') !== -1
+        || errMsg.indexOf('过期') !== -1 || errMsg.indexOf('失效') !== -1) {
+      wx.showToast({ title: '支付参数已过期，请重新发起', icon: 'none' });
+      self.offerResumePayment(order);
+      return;
+    }
+    // 网络错误 / 其他：提示重试，不自动重领（避免循环）
+    wx.showToast({ title: '支付未完成，请从充值记录继续', icon: 'none' });
   },
   /**
    * T13-24：恢复流程——弹窗询问是否继续支付，确认后重领 payParams 再次拉起。
