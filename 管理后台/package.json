@@ -51,7 +51,7 @@
     "dayjs": "^1.11.20",
     "dhtmlx-gantt": "^9.1.1",
     "diagram-js": "^15.14.0",
-    "dompurify": "3.4.15",
+    "dompurify": "3.4.16",
     "driver.js": "^1.4.0",
     "echarts": "^6.0.0",
     "echarts-wordcloud": "^2.1.0",

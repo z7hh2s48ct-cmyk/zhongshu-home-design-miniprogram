@@ -1,6 +1,6 @@
 DO $$
 BEGIN
-  IF to_regclass('public.system_menu') IS NULL OR to_regclass('public.system_role_menu') IS NULL THEN
+  IF to_regclass('public.system_menu') IS NULL OR to_regclass('public.system_role_menu') IS NULL OR to_regclass('public.system_role') IS NULL THEN
     RAISE NOTICE 'system_menu/system_role_menu 不存在，跳过业务积分价格菜单种子';
     RETURN;
   END IF;
