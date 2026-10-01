@@ -1,5 +1,6 @@
 @import './shared.scss';
-.budget-read-page { padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); }
+/* 纵向弹性布局：内容不足一屏时把 .result-actions 压到页面底部（UX 整改：按钮太靠上） */
+.budget-read-page { padding-bottom: calc(40rpx + env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
 .result-hero { position: relative; margin-top: 20rpx; min-height: 265rpx; padding: 32rpx; overflow: hidden; border-radius: $v12-radius-lg; background: $v12-warning-bg; box-sizing: border-box; }
 .budget-sketch { position: absolute; right: 0; bottom: 5rpx; width: 305rpx; height: 225rpx; }
 .amount-label, .scheme-name, .hero-amount { position: relative; z-index: 1; }
@@ -25,7 +26,7 @@
 .result-cell > text { display: block; color: $v12-text-2; font-size: $v12-font-body; }
 .result-cell > text + text { margin-top: 16rpx; font-size: $v12-font-lg; color: $v12-text-1; word-break: break-all; }
 .result-note { margin-top: 24rpx; line-height: 1.55; }
-.result-actions { margin: 40rpx 12rpx 0; text-align: center; }
+.result-actions { margin: auto 12rpx 0; padding-top: 40rpx; text-align: center; }
 .result-actions > .text-action { display: block; margin: 24rpx auto 0; }
 .result-actions > .history-link { margin-top: 12rpx; font-size: $v12-font-sm; }
 .save-error { display: block; padding-bottom: 16rpx; font-size: $v12-font-body; color: $v12-error; }

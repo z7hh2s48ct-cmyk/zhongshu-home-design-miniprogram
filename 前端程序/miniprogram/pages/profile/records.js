@@ -68,5 +68,10 @@ protectedPage({
     if (!this.current(this._seq)) { this.setData({ rows: [], hasMore: false, error: '登录身份已变化，请重新进入' }); return; }
     const row = this.data.rows.find(item => item.id === event.currentTarget.dataset.id);
     if (row) wx.navigateTo({ url: row.url, fail: () => wx.showToast({ title: '打开失败，请重试', icon: 'none' }) });
+  },
+  // 封面缩略图点击放大（catchtap 阻断卡片打开）
+  previewCover(event) {
+    const url = event.currentTarget.dataset.url;
+    if (url) assets.previewImages([url], url);
   }
 });

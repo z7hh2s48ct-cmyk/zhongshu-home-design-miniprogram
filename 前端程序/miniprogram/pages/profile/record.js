@@ -148,5 +148,11 @@ protectedPage({
       .catch(error => { if (!error.cancelled) wx.showToast({ title: view.errorText(error), icon: 'none' }); })
       .finally(() => { this._resuming = false; });
   },
-  navigate(url) { wx.navigateTo({ url, fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) }); }
+  navigate(url) { wx.navigateTo({ url, fail: () => wx.showToast({ title: '页面打开失败，请重试', icon: 'none' }) }); },
+  // 候选图点击放大（加载未完成的格子忽略；catchtap 不触发页面其他点击）
+  previewCandidate(event) {
+    const url = event.currentTarget.dataset.url;
+    if (!url) return;
+    assets.previewImages(this.data.candidates.map(item => item.url).filter(Boolean), url);
+  }
 });

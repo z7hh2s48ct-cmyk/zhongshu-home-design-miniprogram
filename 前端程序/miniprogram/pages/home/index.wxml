@@ -2,10 +2,10 @@
   <v12-navbar />
   <view class="v12-content v12-content--tab home-content">
     <view class="v12-card hero">
-      <image class="hero-art" src="/assets/v12/home-hero-scene.png" mode="aspectFill" />
+      <image class="hero-art" src="/assets/v12/home-hero-scene.jpg" mode="aspectFill" />
       <view class="hero-copy">
         <text class="hero-title">一句话，\n生成你的乡墅方案</text>
-        <text class="hero-subtitle">从家庭需求到平面、立面与预算参考</text>
+        <text class="hero-subtitle">从需求到平面、立面与预算参考</text>
         <view class="hero-actions">
           <view class="v12-primary-button" bindtap="openAi">开始AI设计</view>
           <view class="v12-secondary-button" bindtap="openLibrary">浏览户型库</view>

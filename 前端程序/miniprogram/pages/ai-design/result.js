@@ -66,6 +66,12 @@ protectedPage({
     }));
   },
   selectTab(event) { this.setData({ tab: Number(event.currentTarget.dataset.index) === 1 ? 1 : 0 }); },
+  // 点击方案图放大预览（立面/平面按当前页签取图）
+  previewCurrentImage(event) {
+    const url = event.currentTarget.dataset.url
+      || (this.data.tab === 0 ? this.data.imageUrl : this.data.flatImageUrl);
+    if (url) assets.previewImages([url], url);
+  },
   budget() {
     if (this.current(this._seq) && this.data.latest) wx.navigateTo({ url: '/pages/budget/input?projectId=' + this._projectId + '&resultVersionId=' + this.data.latest.versionId });
   },

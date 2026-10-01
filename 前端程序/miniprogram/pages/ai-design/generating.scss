@@ -1,7 +1,9 @@
 @import '../../styles/v12-theme.scss';
 
-.generating-page { padding: 32rpx 32rpx 44rpx; }
+/* 纵向弹性布局：内容不足一屏时把动作区压到页面底部（UX 整改：按钮太靠上） */
+.generating-page { padding: 32rpx 32rpx 44rpx; display: flex; flex-direction: column; }
 .generating-page > v12-navbar { margin: -32rpx -32rpx 0; }
+.actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
 
 /* Hero：脉冲圆环 + 阶段标题 + 平滑进度 */
 .hero-card { padding: 48rpx 32rpx 40rpx; display: flex; flex-direction: column; align-items: center; }
@@ -38,7 +40,7 @@
 .accepted.warn { color: $v12-gold-deep; }
 
 /* 提示与动作 */
-.stage-tip { margin-top: 24rpx; padding: 20rpx 24rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-md; background: $v12-surface-alt; display: flex; align-items: center; gap: 16rpx; }
+.stage-tip { margin-top: 24rpx; margin-bottom: 32rpx; padding: 20rpx 24rpx; border: 1rpx solid $v12-gold-bg; border-radius: $v12-radius-md; background: $v12-surface-alt; display: flex; align-items: center; gap: 16rpx; }
 .stage-tip text { color: $v12-gold; font-size: $v12-font-sm; }
 .generate-actions { margin-top: 28rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
 .preview-link { margin-top: 20rpx; text-align: center; color: $v12-secondary-text; font-size: $v12-font-sm; }
@@ -58,7 +60,7 @@
 .cand .pick.busy { opacity: .6; }
 .cand.selected { border-color: $v12-primary-deep; box-shadow: 0 0 0 5rpx rgba(139, 72, 24, .15); }
 .cand.pending .cand-loading { height: 392rpx; }
-.btn-next { min-height: $v12-control-lg; margin-top: 32rpx; border-radius: $v12-radius-md; display: flex; align-items: center; justify-content: center; font-size: $v12-font-xl; font-weight: 500; color: $v12-white; background: linear-gradient(100deg, $v12-primary-deep, $v12-primary); box-shadow: $v12-shadow-primary; }
+.btn-next { min-height: $v12-control-lg; margin-top: auto; border-radius: $v12-radius-md; display: flex; align-items: center; justify-content: center; font-size: $v12-font-xl; font-weight: 500; color: $v12-white; background: linear-gradient(100deg, $v12-primary-deep, $v12-primary); box-shadow: $v12-shadow-primary; }
 .poll-error { margin-top: 28rpx; text-align: center; color: $v12-gold-deep; font-size: $v12-font-sm; }
 .empty-actions { margin-top: 24rpx; display: flex; gap: 24rpx; }
 .empty-actions .v12-primary-button, .empty-actions .v12-secondary-button { flex: 1; }

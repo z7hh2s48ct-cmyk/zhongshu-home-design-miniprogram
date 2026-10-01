@@ -1,6 +1,8 @@
 @import '../../styles/v12-theme.scss';
 
-.payment-page { padding: 30rpx 32rpx calc(70rpx + env(safe-area-inset-bottom)); }
+/* 纵向弹性布局：内容不足一屏时把按钮组压到页面底部（UX 整改：按钮太靠上） */
+.payment-page { padding: 30rpx 32rpx calc(70rpx + env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
+.success-spacer { flex: 1 1 auto; }
 .payment-page > v12-navbar { margin: -32rpx -36rpx 0; }
 .success-mark { padding: 64rpx 0 56rpx; text-align: center; }
 .success-mark text { display: block; margin-top: 36rpx; font-size: 51rpx; font-weight: 500; }

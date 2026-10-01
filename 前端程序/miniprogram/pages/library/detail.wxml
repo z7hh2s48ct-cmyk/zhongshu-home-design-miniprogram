@@ -2,7 +2,7 @@
   <v12-navbar title="户型详情" show-back show-brand="{{false}}" />
   <view wx:if="{{detailError}}" class="image-state"><text>案例加载失败</text><button size="mini" bindtap="retryDetail">重新加载</button></view>
   <block wx:elif="{{caseDetail}}">
-  <image wx:if="{{hero.status === 'ready'}}" class="detail-hero" src="{{hero.url}}" mode="aspectFit" data-index="hero" binderror="imageError" />
+  <image wx:if="{{hero.status === 'ready'}}" class="detail-hero" src="{{hero.url}}" mode="aspectFit" data-index="hero" binderror="imageError" catchtap="previewLibraryImage" data-kind="hero" />
   <view wx:else class="detail-hero image-state"><text>{{hero.status === 'loading' ? '封面加载中…' : hero.status === 'error' ? '封面加载失败' : '暂无封面图'}}</text><button wx:if="{{hero.status === 'error'}}" size="mini" data-index="hero" bindtap="retryImage">重试</button></view>
   <view class="detail-summary">
     <text class="detail-title">{{caseDetail.title || '加载中…'}}</text>
@@ -11,7 +11,7 @@
   </view>
   <scroll-view scroll-x class="detail-tabs"><view wx:for="{{drawings}}" wx:key="label" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item.label}}</view></scroll-view>
   <view class="plan-card">
-    <image wx:if="{{drawings[tab].status === 'ready'}}" class="floor-plan" src="{{drawings[tab].url}}" mode="aspectFit" lazy-load data-index="{{tab}}" binderror="imageError" />
+    <image wx:if="{{drawings[tab].status === 'ready'}}" class="floor-plan" src="{{drawings[tab].url}}" mode="aspectFit" lazy-load data-index="{{tab}}" binderror="imageError" catchtap="previewLibraryImage" data-kind="plan" />
     <view wx:else class="image-state"><text>{{drawings[tab].status === 'loading' ? '图纸加载中…' : drawings[tab].status === 'error' ? '图纸加载失败' : '暂无该图纸'}}</text><button wx:if="{{drawings[tab].status === 'error'}}" size="mini" data-index="{{tab}}" bindtap="retryImage">重试加载</button></view>
     <view wx:if="{{tab === 0}}" class="design-copy"><text>设计说明</text><text>{{caseDetail.description || '该方案暂无设计说明。'}}</text></view>
   </view>

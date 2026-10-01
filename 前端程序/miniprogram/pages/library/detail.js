@@ -111,6 +111,12 @@ protectedPage({
     }).catch(function () { if (self.current()) self.setData({ favoriteLoading: false, favoriteError: true }); });
   },
   selectTab(e) { this.setData({ tab: Number(e.currentTarget.dataset.index) }); },
+  // 封面/图纸点击放大（数据 URL 在 utils/assets 内落盘后预览）
+  previewLibraryImage(e) {
+    const kind = e.currentTarget.dataset.kind;
+    const url = kind === 'hero' ? this.data.hero && this.data.hero.url : this.data.drawings && this.data.drawings[this.data.tab] && this.data.drawings[this.data.tab].url;
+    if (url) assets.previewImages([url], url);
+  },
   toggleFavorite() {
     const detail = this.data.caseDetail;
     if (!this.current() || !detail || this.data.favoriteLoading || this.data.favoriteSaving) return;

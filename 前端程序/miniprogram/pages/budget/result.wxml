@@ -3,7 +3,7 @@
   <view class="budget-card state-card" wx:if="{{loading || error}}"><v12-state status="{{loading ? 'loading' : 'error'}}" text="{{loading ? '正在读取预算…' : error}}" action-text="{{loading ? '' : '重试'}}" bind:action="load" card="{{false}}" /></view>
   <block wx:elif="{{estimate}}">
     <view class="result-hero">
-      <image class="budget-sketch" src="/assets/v12/budget-sketch.png" mode="aspectFit" />
+      <image class="budget-sketch" src="/assets/v12/budget-sketch.jpg" mode="aspectFit" />
       <text class="amount-label">{{amountLabel}}</text>
       <view class="hero-amount" bindtap="toggleExact"><text class="amount-number {{exact ? 'exact-number' : ''}}">{{amountText}}</text><text class="amount-unit">{{amountUnit}}</text></view>
       <text class="scheme-name">{{estimate.projectName}}{{estimate.schemeName ? ' · ' + estimate.schemeName : ''}}</text>

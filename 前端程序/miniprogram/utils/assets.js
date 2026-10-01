@@ -56,8 +56,47 @@ function fetchProfileAvatar(assetId) {
   return fetchAssetDataUrl(assetId);
 }
 
+// —— 图片预览（wx.previewImage）——
+// 生产环境图片是短期签名 https URL，可直接预览；开发环境 assets.js 给页面的是
+// data URL，previewImage 不认，需先 base64 落盘为临时文件。同一 data URL 只落盘一次。
+var tempPreviewFiles = {};  // data URL -> 临时文件路径
+var tempFileSeq = 0;
+
+function dataUrlExt(mime) {
+  var m = /^data:image\/(jpeg|jpg|png|webp|gif)[;,]/.exec(mime || '');
+  return m ? (m[1] === 'jpeg' ? 'jpg' : m[1]) : 'jpg';
+}
+
+function toPreviewable(url) {
+  if (!/^data:/.test(url)) return Promise.resolve(url);
+  if (tempPreviewFiles[url]) return Promise.resolve(tempPreviewFiles[url]);
+  return new Promise(function (resolve, reject) {
+    var marker = url.indexOf(';base64,');
+    if (marker < 0) { reject(new Error('图片格式不支持预览')); return; }
+    var filePath = wx.env.USER_DATA_PATH + '/preview-' + Date.now() + '-' + (tempFileSeq++) + '.' + dataUrlExt(url);
+    wx.getFileSystemManager().writeFile({
+      filePath: filePath,
+      data: url.slice(marker + ';base64,'.length),
+      encoding: 'base64',
+      success: function () { tempPreviewFiles[url] = filePath; resolve(filePath); },
+      fail: function () { reject(new Error('图片预览准备失败')); }
+    });
+  });
+}
+
+// urls: 图片地址数组（https / data URL 混合均可）；current: 当前图的原始地址（可选）。
+function previewImages(urls, current) {
+  var list = [].concat(urls || []).filter(function (u) { return !!u; });
+  if (!list.length) return;
+  Promise.all(list.map(toPreviewable)).then(function (paths) {
+    var index = current ? list.indexOf(current) : -1;
+    wx.previewImage({ urls: paths, current: index >= 0 ? paths[index] : paths[0] });
+  }).catch(function () { /* 预览失败不打断页面 */ });
+}
+
 module.exports = {
   fetchAssetDataUrl: fetchAssetDataUrl,
   cachedAssetDataUrl: cachedAssetDataUrl,
-  fetchProfileAvatar: fetchProfileAvatar
+  fetchProfileAvatar: fetchProfileAvatar,
+  previewImages: previewImages
 };

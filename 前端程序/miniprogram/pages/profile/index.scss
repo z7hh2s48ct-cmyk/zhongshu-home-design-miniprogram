@@ -12,6 +12,10 @@
 .creation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 28rpx; gap: 12rpx; }
 .creation-grid > view { min-height: 44px; display: flex; flex-direction: column; align-items: center; padding: 8rpx 0; font-size: $v12-font-md; }
 .creation-icon { width: 72rpx; height: 72rpx; background: $v12-surface-alt; border-radius: $v12-radius-lg; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
+/* 三个入口按语义分色：方案=品牌金底、投稿=功能绿底、收藏=琥珀底（图标色值取自 token 规范表） */
+.creation-item--projects .creation-icon { background: $v12-gold-bg; }
+.creation-item--submissions .creation-icon { background: $v12-success-bg; }
+.creation-item--favorites .creation-icon { background: $v12-warning-bg; }
 .creation-grid .creation-hint { font-size: $v12-font-sm; color: $v12-text-3; margin-top: 8rpx; text-align: center; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12rpx; }
 .record-link { min-height: 44px; display: flex; align-items: center; gap: 4rpx; color: $v12-text-3; font-size: $v12-font-body; }
@@ -21,9 +25,10 @@
 .balance-unit { margin-left: 12rpx; font-size: $v12-font-sm; font-weight: 400; color: $v12-text-3; }
 .balance-hint { display: block; margin-top: 8rpx; font-size: $v12-font-sm; color: $v12-text-3; }
 .recharge { min-height: 44px; min-width: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; padding: 12rpx 36rpx; border-radius: $v12-radius-full; color: $v12-white; background: $v12-primary; font-size: $v12-font-md; flex-shrink: 0; }
-.service-section { padding-bottom: 4rpx; }
-.menu-card > view { min-height: 44px; padding: 20rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
+.service-section { padding-bottom: 12rpx; }
+/* UX 整改：行距与行高拉大 */
+.menu-card > view { min-height: 44px; padding: 32rpx 0; box-sizing: border-box; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
 .menu-card > view:last-child { border: 0; }
-.menu-card text { flex: 1; font-size: $v12-font-lg; }
+.menu-card text { flex: 1; font-size: $v12-font-lg; line-height: 1.6; }
 .menu-card .message-count { flex: none; padding: 4rpx 12rpx; border-radius: $v12-radius-lg; background: $v12-error-bg; color: $v12-error; font-size: $v12-font-sm; }
 @media (max-width: 350px) { .profile-section { padding-left: 24rpx; padding-right: 24rpx; } .creation-grid { gap: 8rpx; } }

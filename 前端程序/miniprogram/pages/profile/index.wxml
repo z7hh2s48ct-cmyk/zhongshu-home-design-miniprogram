@@ -11,9 +11,9 @@
     <view class="v12-card profile-section">
       <text class="section-label">我的创作</text>
       <view class="creation-grid">
-        <view bindtap="openRecords" data-type="projects" role="button"><view class="creation-icon"><t-icon name="file" size="24px" color="#7b5532" /></view><text>我的方案</text><text class="creation-hint">{{authorized ? projectCount + ' 个记录' : '生成记录'}}</text></view>
-        <view bindtap="openRecords" data-type="submissions" role="button"><view class="creation-icon"><t-icon name="upload" size="24px" color="#7b5532" /></view><text>户型投稿</text><text class="creation-hint">{{authorized ? publishedCount + ' 个已发布' : '分享作品'}}</text></view>
-        <view bindtap="openRecords" data-type="favorites" role="button"><view class="creation-icon"><t-icon name="star" size="24px" color="#7b5532" /></view><text>收藏户型</text><text class="creation-hint">收藏灵感</text></view>
+        <view class="creation-item creation-item--projects" bindtap="openRecords" data-type="projects" role="button" aria-label="我的方案"><view class="creation-icon"><t-icon name="file" size="24px" color="#7b5532" /></view><text>我的方案</text><text class="creation-hint">{{authorized ? projectCount + ' 个记录' : '生成记录'}}</text></view>
+        <view class="creation-item creation-item--submissions" bindtap="openRecords" data-type="submissions" role="button" aria-label="户型投稿"><view class="creation-icon"><t-icon name="upload" size="24px" color="#49745c" /></view><text>户型投稿</text><text class="creation-hint">{{authorized ? publishedCount + ' 个已发布' : '分享作品'}}</text></view>
+        <view class="creation-item creation-item--favorites" bindtap="openRecords" data-type="favorites" role="button" aria-label="收藏户型"><view class="creation-icon"><t-icon name="star" size="24px" color="#b9690b" /></view><text>收藏户型</text><text class="creation-hint">收藏灵感</text></view>
       </view>
     </view>
     <view class="v12-card profile-section account-section">

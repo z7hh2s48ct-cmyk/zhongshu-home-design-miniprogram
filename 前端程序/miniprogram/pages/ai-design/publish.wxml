@@ -9,5 +9,6 @@
   <view class="review-note">提交后进入后台审核，审核通过后仍需运营发布才会在户型库公开展示。</view>
   <view class="v12-card reference-switch"><text>同意公开展示本次方案</text><switch checked="{{allowPublicDisplay}}" color="#7b5532" bindchange="togglePublicDisplay" /></view>
   <view class="v12-card reference-switch"><text>允许作为生成参考（可选）</text><switch checked="{{allowReference}}" color="#7b5532" bindchange="toggleReference" /></view>
-  <view class="{{missing || !versionReady || submitting ? 'v12-disabled-button' : 'v12-primary-button'}}" bindtap="submit">{{submitting ? '正在提交' : missing || !versionReady ? '请补全后提交' : '提交审核'}}</view>
+  <view class="publish-spacer" />
+  <view class="publish-submit {{missing || !versionReady || submitting ? 'v12-disabled-button' : 'v12-primary-button'}}" bindtap="submit">{{submitting ? '正在提交' : missing || !versionReady ? '请补全后提交' : '提交审核'}}</view>
 </view>

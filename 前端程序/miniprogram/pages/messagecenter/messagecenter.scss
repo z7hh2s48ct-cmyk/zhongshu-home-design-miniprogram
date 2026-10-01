@@ -1,10 +1,11 @@
 @import '../../styles/v12-theme.scss';
 
 .message-page .v12-content { padding-top: 28rpx; }
-.message { margin-bottom: 24rpx; padding: 28rpx; display: flex; gap: 24rpx; }
+/* UX 整改：卡片间距/内边距与行高拉大 */
+.message { margin-bottom: 28rpx; padding: 32rpx; display: flex; gap: 24rpx; }
 .message-icon { width: 64rpx; height: 64rpx; flex: 0 0 64rpx; border-radius: 50%; background: $v12-surface-alt; display: flex; align-items: center; justify-content: center; }
 .message > view:nth-child(2) { flex: 1; }
-.message text { display: block; font-size: $v12-font-lg; }
-.message text + text { margin-top: 12rpx; color: $v12-secondary-text; font-size: $v12-font-body; }
-.message span { color: $v12-text-3; font-size: $v12-font-xs; }
+.message text { display: block; font-size: $v12-font-lg; line-height: 1.6; }
+.message text + text { margin-top: 16rpx; color: $v12-secondary-text; font-size: $v12-font-body; line-height: 1.7; }
+.message span { color: $v12-text-3; font-size: $v12-font-xs; line-height: 1.6; }
 .message.unread > view > text:first-child { font-weight: 600; }

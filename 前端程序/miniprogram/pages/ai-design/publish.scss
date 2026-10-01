@@ -1,6 +1,9 @@
 @import '../../styles/v12-theme.scss';
 
-.publish-page { padding: 36rpx 32rpx 60rpx; }
+/* 纵向弹性布局：内容不足一屏时把提交按钮压到页面底部（UX 整改：按钮太靠上） */
+.publish-page { padding: 36rpx 32rpx 60rpx; display: flex; flex-direction: column; }
+.publish-spacer { flex: 1 1 auto; }
+.publish-submit { margin-top: 28rpx; }
 .publish-page > v12-navbar { margin: -36rpx -36rpx 0; }
 .publish-summary { margin-top: 20rpx; padding: 24rpx; display: grid; grid-template-columns: 230rpx 1fr; gap: 32rpx; align-items: center; }
 .publish-summary image { width: 230rpx; height: 170rpx; border-radius: $v12-radius-sm; }

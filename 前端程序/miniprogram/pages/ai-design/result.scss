@@ -1,6 +1,7 @@
 @import '../../styles/v12-theme.scss';
 
-.result-page { padding: 28rpx 32rpx 44rpx; }
+/* 纵向弹性布局：内容不足一屏时把动作区压到页面底部（UX 整改：按钮太靠上） */
+.result-page { padding: 28rpx 32rpx 44rpx; display: flex; flex-direction: column; }
 .result-page > v12-navbar { margin: -28rpx -32rpx 0; }
 .success-banner { height: 102rpx; margin-top: 20rpx; padding: 0 28rpx; display: flex; align-items: center; gap: 20rpx; }
 .success-banner text { font-size: $v12-font-xl; }
@@ -13,6 +14,7 @@
 .image-wrap { position: relative; }
 .image-wrap image { width: 100%; height: 466rpx; display: block; }
 .image-wrap text { position: absolute; right: 18rpx; top: 18rpx; padding: 8rpx 16rpx; border-radius: $v12-radius-xs; background: rgba(50,50,50,.55); color: $v12-white; font-size: $v12-font-sm; }
+.image-wrap .image-zoom-hint { right: auto; top: auto; bottom: 16rpx; left: 16rpx; background: rgba(50,50,50,.38); font-size: $v12-font-xs; }
 .result-copy { padding: 28rpx 40rpx; }
 .result-copy text { display: block; font-size: $v12-font-lg; }
 .result-copy text + text { margin-top: 12rpx; color: $v12-secondary-text; font-size: $v12-font-body; }
@@ -21,7 +23,7 @@
 .files > view { height: 68rpx; display: flex; align-items: center; gap: 24rpx; border-bottom: 1rpx solid $v12-divider; }
 .files > view:last-child { border: 0; }
 .files > view text { flex: 1; font-size: $v12-font-md; }
-.result-actions { margin-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
+.result-actions { margin: auto 0 0; padding-top: 24rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 28rpx; }
 .result-actions .disabled { opacity: .45; }
 .tool-row { margin-top: 20rpx; display: grid; gap: 16rpx; }
 .tool-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
