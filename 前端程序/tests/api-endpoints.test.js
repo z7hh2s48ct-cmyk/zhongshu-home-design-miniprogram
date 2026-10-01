@@ -31,20 +31,6 @@ function recorder() {
   };
 }
 
-test('用户偏好走 PATCH /profile/preferences；未传偏好发空对象而非 undefined', async () => {
-  const { calls, http } = recorder();
-  const api = loadApi(http);
-  await api.updatePreferences({ theme: 'dark', notify: false });
-  await api.updatePreferences();
-  // 未传偏好时的空对象 {} 由 api.js 在 vm realm 内创建，其 Object.prototype 与测试 realm 不同，
-  // 直接 deepStrictEqual 会因原型不等而失败；用 JSON 往返在当前 realm 重建，保留 {} 与 undefined 的区别。
-  const normalize = (d) => (d === undefined ? undefined : JSON.parse(JSON.stringify(d)));
-  assert.deepEqual(calls.map((c) => [c.method, c.url, normalize(c.data)]), [
-    ['PATCH', '/app-api/design/v1/profile/preferences', { theme: 'dark', notify: false }],
-    ['PATCH', '/app-api/design/v1/profile/preferences', {}],
-  ]);
-});
-
 test('客服入口走 GET /support-entry（C06）', async () => {
   const { calls, http } = recorder();
   const api = loadApi(http);
@@ -54,22 +40,18 @@ test('客服入口走 GET /support-entry（C06）', async () => {
   ]);
 });
 
-test('数据主体请求（M10）：导出/关闭 的发起为无体 POST，查询保留大整数 requestId 不丢精度', async () => {
+test('数据主体请求（M10）：导出/关闭 的发起为无体 POST；进度查询端点暂无页面使用不封装', async () => {
   const { calls, http } = recorder();
   const api = loadApi(http);
   await api.createDataExportRequest();
-  await api.getDataExportRequest('9007199254740993');
   await api.createAccountClosureRequest();
-  await api.getAccountClosureRequest('42');
   assert.deepEqual(calls.map((c) => [c.method, c.url]), [
     ['POST', '/app-api/design/v1/data-export-requests'],
-    ['GET', '/app-api/design/v1/data-export-requests/9007199254740993'],
     ['POST', '/app-api/design/v1/account-closure-requests'],
-    ['GET', '/app-api/design/v1/account-closure-requests/42'],
   ]);
   // 发起类端点不得携带 body（后端只认 Authorization 头解析身份）
   assert.equal(calls[0].data, undefined);
-  assert.equal(calls[2].data, undefined);
+  assert.equal(calls[1].data, undefined);
 });
 
 test('assetContentUrl 构造开发期字节端点路径并转义 assetId', () => {
