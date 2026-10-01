@@ -54,6 +54,10 @@ module.exports = {
   listProjects: function (cursor, limit) {
     return http.get(BASE + '/design-projects?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
   },
+  // 删除我的设计项目（后端软删；最新任务进行中会返回 1_071_000_006）
+  deleteProject: function (projectId) {
+    return http.del(BASE + '/design-projects/' + encodeURIComponent(projectId));
+  },
   listSubmissions: function (cursor, limit) {
     return http.get(BASE + '/submissions?limit=' + (limit || 20) + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
   },

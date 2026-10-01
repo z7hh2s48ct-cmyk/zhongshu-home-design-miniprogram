@@ -31,6 +31,10 @@ protectedPage({
   },
   onShow() { this.load(); },
   onUnload() { this._seq = (this._seq || 0) + 1; this._token = null; },
+  // 下拉刷新（UX 2026-10：替代原「刷新状态」按钮）
+  onPullDownRefresh() {
+    Promise.resolve(this.load()).catch(() => {}).then(() => wx.stopPullDownRefresh());
+  },
   current(seq) {
     if (seq !== this._seq) return false;
     if (this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) return true;

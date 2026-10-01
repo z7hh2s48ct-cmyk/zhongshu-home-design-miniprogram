@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.RESOURCE_FORBIDDEN;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.DESIGN_PROJECT_DELETE_CONFLICT;
 import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.DESIGN_STAGE_CONFLICT;
 import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.GENERATION_REFERENCE_NOT_AUTHORIZED;
 
@@ -852,6 +853,31 @@ public class DesignProjectService {
     private void requireOwner(long userId, long projectId) {
         getProject(projectId).filter(p -> p.userId() == userId)
                 .orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+    }
+
+    /**
+     * 删除我的设计项目（软删，UX 2026-10：我的方案列表滑动/长按删除）。
+     * 归属校验后拦截最新任务仍在进行中的项目——结算与退点依赖任务归属，删除会造成悬挂引用；
+     * 终态（SUCCEEDED/PARTIALLY_SUCCEEDED/FAILED/CANCELLED）或无任务的项目才允许删除。
+     * 已扣设计点与生成产物不做回收，删除仅令项目在列表与读取接口中不可见。
+     */
+    public void deleteProject(long userId, long projectId) {
+        requireOwner(userId, projectId);
+        List<String> statuses = jdbcTemplate.queryForList(
+                "SELECT status FROM ai_job WHERE deleted = FALSE AND project_ref = ? ORDER BY id DESC LIMIT 1",
+                String.class, String.valueOf(projectId));
+        boolean jobInFlight = !statuses.isEmpty()
+                && java.util.Set.of("QUEUED", "RUNNING", "VALIDATING", "CANCEL_REQUESTED").contains(statuses.get(0));
+        if (jobInFlight) {
+            throw exception(DESIGN_PROJECT_DELETE_CONFLICT);
+        }
+        int updated = jdbcTemplate.update(
+                "UPDATE design_project SET deleted = TRUE, update_time = now() WHERE id = ? AND deleted = FALSE",
+                projectId);
+        if (updated == 0) {
+            throw exception(RESOURCE_FORBIDDEN);
+        }
+        log.info("[deleteProject][project={} user={}]", projectId, userId);
     }
 
     private String latestConfig(long projectId) {

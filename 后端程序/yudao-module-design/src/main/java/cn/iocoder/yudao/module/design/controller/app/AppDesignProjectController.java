@@ -19,6 +19,7 @@ import jakarta.annotation.Resource;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -92,6 +93,16 @@ public class AppDesignProjectController {
             return vo;
         }).toList();
         return success(new CursorPageResult<>(list, page.nextCursor()));
+    }
+
+    @DeleteMapping("/{projectId}")
+    @Operation(summary = "删除我的设计项目（软删；最新生成任务仍在进行中时拒绝）")
+    public CommonResult<Boolean> deleteProject(
+            @PathVariable("projectId") String projectId,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        long userId = requireAccountId(authorization);
+        designProjectService.deleteProject(userId, Long.parseLong(projectId));
+        return success(Boolean.TRUE);
     }
 
     @GetMapping("/{projectId}")

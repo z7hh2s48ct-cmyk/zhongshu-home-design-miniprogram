@@ -34,7 +34,7 @@
       </view>
       <view wx:for="{{versions}}" wx:key="id" class="v12-card record-card" data-id="{{item.id}}" bindtap="openVersion" role="button" aria-label="{{'查看' + item.title}}"><view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="20px" color="#a89a8c" /></view><text class="record-hint">{{item.hint}}</text><text class="record-hint">{{item.time}}</text></view>
       <view wx:if="{{!versions.length && !versionId}}" class="v12-card record-empty"><v12-state status="empty" text="尚未形成最终方案版本；完成立面选择后可在这里回看。" card="{{false}}" /></view>
-      <view class="record-actions"><button wx:if="{{versionId}}" class="record-button" bindtap="openVersion">查看投稿方案</button><button class="record-button" bindtap="budgetHistory">查看已保存预算</button><button class="record-button" bindtap="load">刷新状态</button></view>
+      <view class="record-actions"><button wx:if="{{versionId}}" class="record-button" bindtap="openVersion">查看投稿方案</button><button class="record-button" bindtap="budgetHistory">查看已保存预算</button></view>
     </block>
   </view>
 </view>

@@ -15,6 +15,7 @@ public interface ErrorCodeConstants {
     ErrorCode GENERATION_REFERENCE_NOT_AUTHORIZED = new ErrorCode(1_071_000_003, "该案例未授权用作生成参考");
     ErrorCode SUBMISSION_STATE_CONFLICT = new ErrorCode(1_071_000_004, "投稿状态不允许该操作");
     ErrorCode DESIGN_REQUIREMENT_INPUT_INVALID = new ErrorCode(1_071_000_005, "设计需求输入不符合字段、取值或长度要求");
+    ErrorCode DESIGN_PROJECT_DELETE_CONFLICT = new ErrorCode(1_071_000_006, "方案有生成任务进行中，暂不能删除");
 
     ErrorCode BUDGET_INPUT_INVALID = new ErrorCode(1_071_000_100, "预算输入不符合字段、单位或精度要求");
     ErrorCode BUDGET_INCOMPLETE = new ErrorCode(1_071_000_101, "预算存在待补或待复核项，不能形成完整报价");

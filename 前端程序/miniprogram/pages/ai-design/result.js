@@ -18,6 +18,10 @@ protectedPage({
   },
   onUnload() { this._seq = (this._seq || 0) + 1; this._token = null; },
   onShow() { if (!(http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) this.loadVersions(); },
+  // 下拉刷新（UX 2026-10）
+  onPullDownRefresh() {
+    Promise.resolve(this.loadVersions()).catch(() => {}).then(() => wx.stopPullDownRefresh());
+  },
   current(seq) {
     if (seq !== this._seq) return false;
     if (this._token && (http.isSameSession ? http.isSameSession(this._token) : this._token === http.getToken())) return true;

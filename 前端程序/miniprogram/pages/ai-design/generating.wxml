@@ -45,7 +45,6 @@
       <view wx:for="{{pendingSlots}}" wx:key="*this" wx:for-index="pi" class="cand pending">
         <span class="slot">候选 {{candidates.length + pi + 1}}</span>
         <view class="cand-img cand-loading"><text>AI 绘制中…</text></view>
-        <view class="pick passed">—</view>
       </view>
     </view>
   </view>

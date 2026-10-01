@@ -426,4 +426,32 @@ class DesignProjectP5ContractTest {
         var row=rows.get(0);
         return new cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation(String.valueOf(row.get("id")),((Number)row.get("version")).longValue());
     }
+
+    @Test
+    void deleteProjectSoftDeletesAndHidesFromList() {
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
+        assertThat(projects.getProject(projectId, USER_A)).isPresent();
+        projects.deleteProject(USER_A, projectId);
+        assertThat(projects.getProject(projectId, USER_A)).isEmpty();
+        assertThat(projects.listProjects(USER_A, null, 20).list())
+                .noneMatch(item -> item.projectId() == projectId);
+        // 他人删除他人的项目 = 权限错误（归属校验先于一切）
+        assertThatThrownBy(() -> projects.deleteProject(USER_B, projectId))
+                .isInstanceOf(cn.iocoder.yudao.framework.common.exception.ServiceException.class);
+    }
+
+    @Test
+    void deleteProjectRejectedWhileLatestJobStillActive() {
+        points.credit(USER_A, "RECHARGE_BASE_CREDIT", 100, "recharge_order", "seed", "seed-del-" + System.nanoTime(), null, null);
+        long projectId = projects.createProject(USER_A, "SELF_UPLOAD", null, null, null);
+        long job = projects.createFlatJob(USER_A, projectId, 2, "del-job-" + projectId, confirmed("FLAT")).jobId();
+        jdbc.update("UPDATE ai_job SET status='RUNNING' WHERE id=?", job);
+        assertThatThrownBy(() -> projects.deleteProject(USER_A, projectId))
+                .isInstanceOfSatisfying(cn.iocoder.yudao.framework.common.exception.ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_071_000_006));
+        assertThat(projects.getProject(projectId, USER_A)).isPresent();
+        jdbc.update("UPDATE ai_job SET status='CANCELLED' WHERE id=?", job);
+        projects.deleteProject(USER_A, projectId);
+        assertThat(projects.getProject(projectId, USER_A)).isEmpty();
+    }
 }

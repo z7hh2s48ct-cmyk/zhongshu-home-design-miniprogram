@@ -11,6 +11,10 @@ protectedPage({
   onShow() { this.load(); },
   onUnload() { this._seq = (this._seq || 0) + 1; },
   onReachBottom() { this.loadMore(); },
+  // 下拉刷新（UX 2026-10）
+  onPullDownRefresh() {
+    Promise.resolve(this.load()).catch(() => {}).then(() => wx.stopPullDownRefresh());
+  },
   load() {
     const self = this;
     this._seq = (this._seq || 0) + 1;
