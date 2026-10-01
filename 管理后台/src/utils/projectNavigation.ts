@@ -14,7 +14,11 @@ const businessPermissions: Record<string, string> = {
   audit: 'design:audit:query',
   // 此前遗漏该键，导致「隐私申请」页因 permission 恒为 falsy 而永不出现在菜单（只能手输 URL）。
   // 权限码与后端 PrivacyAdminController 类级 @PreAuthorize 保持一致。
-  privacy: 'identity:privacy:manage'
+  privacy: 'identity:privacy:manage',
+  // 「生成价格」「业务积分价格」同属此类遗漏：页面与后端菜单种子（V20260929.006 / V20260930.008）
+  // 均已就位，缺键导致两页永不进菜单，只能手输 URL。权限码与后端两个价格 AdminController 一致。
+  'generation-pricing': 'commerce:generation-price:query',
+  'usage-pricing': 'commerce:usage-price:query'
 }
 
 const supportPaths = new Set([
