@@ -23,6 +23,8 @@ function runtime(initial = {}) {
     createError: initial.createError || null,
     resumeParams: initial.resumeParams !== undefined ? initial.resumeParams : payParams,
     resumeError: initial.resumeError || null,
+    orderError: initial.orderError || null,
+    freshOrder: initial.freshOrder !== undefined ? initial.freshOrder : null,
   };
   const api = {
     getPointAccount: async () => ({ availablePoints: 500 }),
@@ -36,6 +38,11 @@ function runtime(initial = {}) {
       calls.push(['getPayParams', id]);
       if (state.resumeError) throw state.resumeError;
       return state.resumeParams;
+    },
+    getRechargeOrder: async (id) => {
+      calls.push(['getRechargeOrder', id]);
+      if (state.orderError) throw state.orderError;
+      return state.freshOrder || state.order;
     },
   };
   const wx = {
@@ -168,6 +175,16 @@ test('继续支付弹窗选择稍后再说则不重领 payParams', async () => {
   tag(env.calls, 'modal')[0][1].success({ confirm: false });
   await flush();
   assert.equal(tag(env.calls, 'getPayParams').length, 0);
+});
+
+test('支付弹窗取消但订单已到账时直接进成功页，不再弹继续支付（P3-9）', async () => {
+  const env = runtime({ order: { orderId, payParams }, freshOrder: { orderId, paymentState: 'SUCCEEDED', fulfillmentState: 'CREDITED' } });
+  const page = await paidPage(env);
+  tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
+  await flush();
+  assert.deepEqual(tag(env.calls, 'getRechargeOrder').map(c => c[1]), [orderId]);
+  assert.equal(tag(env.calls, 'modal').length, 0);
+  assert.ok(tag(env.calls, 'navigateTo').some(c => c[1].url.includes('payment/success')));
 });
 
 test('重领 payParams 失败时提示订单状态已变更并复位 paying', async () => {
