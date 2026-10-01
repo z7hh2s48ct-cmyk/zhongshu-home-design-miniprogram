@@ -37,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 class ZhongshuFlywayPostgresContractTest {
 
-    /** 全部 location 的迁移执行总数（新增迁移时同步更新；2026-10-01 实测 8：platform 4 + 其余 location 4，含 007 授权码导出权限/008 积分价格菜单） */
-    private static final int MIGRATION_COUNT = 8;
+    /** 全部 location 的迁移执行总数（新增迁移时同步更新；2026-10-02 实测 9：platform 5 + 其余 location 4，009 业务权限种子入 platform） */
+    private static final int MIGRATION_COUNT = 9;
 
     @Container
     static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>(
@@ -258,6 +258,21 @@ class ZhongshuFlywayPostgresContractTest {
             rs.next();
             assertThat(rs.getInt(1)).as("超级管理员应绑定全部业务菜单").isEqualTo(11);
         }
+        // 009 业务权限种子：独立 ID 段 9520-9549，页面行携带查询权限码 + 按钮行承载操作权限码
+        try (Connection c = newConnection();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery(
+                     "SELECT count(*) FROM system_menu WHERE id BETWEEN 9520 AND 9549 AND deleted = 0")) {
+            rs.next();
+            assertThat(rs.getInt(1)).as("业务权限种子（9520-9549）应完整种入").isEqualTo(28);
+        }
+        try (Connection c = newConnection();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery(
+                     "SELECT count(*) FROM system_role_menu WHERE role_id = 1 AND menu_id BETWEEN 9520 AND 9549 AND deleted = 0")) {
+            rs.next();
+            assertThat(rs.getInt(1)).as("超级管理员应绑定全部业务权限种子").isEqualTo(28);
+        }
 
         // 种子可重复执行（DELETE + INSERT 幂等）：重放迁移不会产生重复行
         // Later platform migrations now exist. Replay only the menu script to test its idempotency;
@@ -268,6 +283,12 @@ class ZhongshuFlywayPostgresContractTest {
              ResultSet rs = st.executeQuery("SELECT count(*) FROM system_menu WHERE id BETWEEN 9500 AND 9519")) {
             rs.next();
             assertThat(rs.getInt(1)).as("V004 重放后仅恢复自身种子（9512-9514 由 007/008 管理，Flyway 单次执行不受重放影响）").isEqualTo(9);
+        }
+        try (Connection c = newConnection();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT count(*) FROM system_menu WHERE id BETWEEN 9520 AND 9549 AND deleted = 0")) {
+            rs.next();
+            assertThat(rs.getInt(1)).as("V004 重放不得波及 009 权限种子的独立 ID 段").isEqualTo(28);
         }
     }
 
