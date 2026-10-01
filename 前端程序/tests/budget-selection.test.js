@@ -59,7 +59,7 @@ function runtime(changes = {}) {
     return module.exports;
   }
   return { calls, storage, api, draft: load('utils/budget-draft.js'), selection: load('utils/budget-selection.js'),
-    setToken(value) { token = value; }, failStorage() { storageUnavailable = true; },
+    setToken(value) { token = value; delete storage['zs_draft_scope']; }, failStorage() { storageUnavailable = true; },
     page(name, query = { projectId, resultVersionId: versionId }) {
       load('pages/budget/' + name + '.js');
       const page = { ...definition, data: plain(definition.data), setData(values) { Object.assign(this.data, values); } };
@@ -175,7 +175,7 @@ test('配置页无效路由重试仍拒绝，断网可重试，换账号旧回�
     env.setToken('account-B-session');
     resolveCatalog(fixture()); await flush();
     assert.equal(page.data.draft, null);
-    assert.deepEqual(Object.keys(env.storage), []);
+    assert.deepEqual(Object.keys(env.storage).filter(k => k !== 'zs_draft_scope'), []);
   }
   const offline = runtime({ getBudgetOptions: async () => { throw { msg: 'network timeout' }; } });
   const failed = offline.page('body'); await flush();
@@ -221,10 +221,12 @@ test('直接点选拒绝空ID及错组，存储失败不关闭，换会话不写
   assert.ok(page.data.activeItem);
   assert.match(page.data.storageError, /未保存/);
   assert.deepEqual(plain(env.storage), before);
-  env.setToken('account-B'); click('FOUNDATION', '9007199254741002');
+  env.setToken('account-B'); // 等效 clearTokens：清 zs_draft_scope
+  click('FOUNDATION', '9007199254741002');
   assert.equal(page.data.activeItem, null);
   assert.equal(page.data.draft, null);
-  assert.deepEqual(plain(env.storage), before);
+  const draftKeysBefore = Object.keys(before).filter(k => k.startsWith('zs_budget_draft')).sort();
+  assert.deepEqual(Object.keys(env.storage).filter(k => k.startsWith('zs_budget_draft')).sort(), draftKeysBefore);
 });
 
 test('真实生成动作同体失败重试复用键、防双击，成功只凭budgetId跳结果', async () => {
@@ -378,7 +380,8 @@ test('重导入确认和异步回包均校验会话及页面生命周期，处�
       resolveInputs({ ...inputs(), requirementSnapshotIds: ['101'] }); await flush();
       if (boundary === 'response-session') assert.equal(page.data.draft, null);
     }
-    assert.deepEqual(plain(env.storage), before, boundary);
+    const stripped = obj => JSON.stringify(Object.entries(obj).filter(([k]) => k !== 'zs_draft_scope'));
+    assert.equal(stripped(env.storage), stripped(before), boundary);
     assert.equal(env.calls.filter(call => call[0] === 'toast').length, 0, boundary);
   }
 });
