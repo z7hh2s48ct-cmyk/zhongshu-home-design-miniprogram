@@ -21,9 +21,9 @@ export function hasPermi(app: App<Element>) {
 }
 
 /** 判断权限的方法 function */
-const userStore = useUserStore()
 const all_permission = '*:*:*'
 export const hasPermission = (permission: string[]) => {
+  const userStore = useUserStore()
   return (
     // 与后端 PermissionServiceImpl 的超级管理员规则保持一致。
     userStore.roles.includes('super_admin') ||

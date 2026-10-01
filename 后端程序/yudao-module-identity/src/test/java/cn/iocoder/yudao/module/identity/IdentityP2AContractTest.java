@@ -186,6 +186,7 @@ class IdentityP2AContractTest {
         List<String> codes = createInlineBatch(5);
         assertThat(codes).hasSize(5);
         assertThat(count("design_access_code", "secret_exposed_at IS NOT NULL")).isEqualTo(5);
+        assertThat(count("design_access_code_batch", "encrypted_artifact IS NOT NULL")).isEqualTo(1);
 
         long batchId = jdbc.queryForObject(
                 "SELECT id FROM design_access_code_batch ORDER BY id DESC LIMIT 1", Long.class);
@@ -200,16 +201,50 @@ class IdentityP2AContractTest {
         }
     }
 
-    // ========== 3. TICKET：单次消费、重放必败、制品销毁 ==========
+    @Test
+    void unusedCodeCanBeCopiedAgainButConsumedOrDeletedCodeCannot() {
+        List<String> codes = createInlineBatch(2);
+        List<Long> ids = jdbc.queryForList(
+                "SELECT id FROM design_access_code ORDER BY id", Long.class);
+
+        assertThat(accessCodeService.copyActiveCode(ids.get(0), "admin-7")).isEqualTo(codes.get(0));
+        assertThat(accessCodeService.deleteUnusedCode(ids.get(1), "admin-7")).isTrue();
+        assertThatThrownBy(() -> accessCodeService.copyActiveCode(ids.get(1), "admin-7"))
+                .isInstanceOfSatisfying(ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_070_000_000));
+        assertThat(count("design_access_code", "id = " + ids.get(1) + " AND deleted = TRUE AND status = 'DISABLED'"))
+                .isEqualTo(1);
+    }
 
     @Test
-    void ticketDeliveryIsExactlyOnceAndArtifactDestroyed() throws Exception {
+    void copiedCodeMustBeUnusedAndNotExpired() {
+        List<String> codes = createInlineBatch(2);
+        List<Long> ids = jdbc.queryForList(
+                "SELECT id FROM design_access_code ORDER BY id", Long.class);
+        redemptionService.redeem(APPID, "openid-copy-used", null, codes.get(0));
+
+        assertThatThrownBy(() -> accessCodeService.copyActiveCode(ids.get(0), "admin-7"))
+                .isInstanceOfSatisfying(ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_070_000_000));
+
+        jdbc.update("UPDATE design_access_code SET expires_at = now() - interval '1 second' WHERE id = ?", ids.get(1));
+        assertThatThrownBy(() -> accessCodeService.copyActiveCode(ids.get(1), "admin-7"))
+                .isInstanceOfSatisfying(ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_070_000_001));
+    }
+
+    // ========== 3. TICKET：票据单次消费、重放必败，授权码密文供未使用码复制 ==========
+
+    @Test
+    void ticketDeliveryIsExactlyOnceAndCodeArtifactRemainsEncrypted() throws Exception {
         AccessCodeService.BatchCreateResult batch = accessCodeService.createBatch(
                 5, "TICKET", null, "ticket-test", "tester");
         assertThat(batch.oneTimeCodes()).isEmpty();
 
         var ticket = accessCodeService.issueDeliveryTicket(batch.batchId(), "tester");
         assertThat(ticket.getToken()).isNotBlank();
+        var secondTicket = accessCodeService.issueDeliveryTicket(batch.batchId(), "tester");
+        assertThat(secondTicket.getToken()).isNotBlank();
 
         // 并发消费同一票据：恰好一次成功交付
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -236,9 +271,12 @@ class IdentityP2AContractTest {
         assertThat(success).as("同一票据并发消费只有一次交付").isEqualTo(1);
         assertThat(delivered).hasSize(5);
 
-        // 制品已销毁，重放被拒
-        assertThat(count("design_access_code_batch", "encrypted_artifact IS NULL")).isEqualTo(1);
+        // 票据已消费，整批重放被拒；服务端密文保留以支持之后复制仍未使用的单码
+        assertThat(count("design_access_code_batch", "encrypted_artifact IS NOT NULL")).isEqualTo(1);
         assertThatThrownBy(() -> accessCodeService.exportByTicket(batch.batchId(), ticket.getToken(), "op"))
+                .isInstanceOfSatisfying(ServiceException.class,
+                        e -> assertThat(e.getCode()).isEqualTo(1_070_000_004));
+        assertThatThrownBy(() -> accessCodeService.exportByTicket(batch.batchId(), secondTicket.getToken(), "op"))
                 .isInstanceOfSatisfying(ServiceException.class,
                         e -> assertThat(e.getCode()).isEqualTo(1_070_000_004));
 

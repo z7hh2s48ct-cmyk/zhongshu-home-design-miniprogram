@@ -6,7 +6,11 @@
     <view class="history-amount"><text>{{item.amountText}}</text><text class="row-description">{{item.legacy ? '历史区间测算' : item.incomplete ? '已计价小计 · 待补齐' : '参考预算'}}</text></view>
     <view class="history-meta"><text>{{item.time}}</text><text>{{item.legacy ? '历史记录' : item.saved ? '已保存' : '未保存'}}</text></view>
   </view>
-  <view class="budget-card state-card" wx:if="{{error}}"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="retry" card="{{false}}" /></view>
+  <view class="budget-card state-card" wx:if="{{noProject}}">
+    <v12-state status="empty" text="还没有关联的设计方案" hint="预算历史按方案记录：先从已有方案进入，或新建一个 AI 方案。" card="{{false}}" />
+    <view class="empty-actions"><button class="budget-secondary" bindtap="goMyProjects">从我的方案选择</button><button class="budget-primary" bindtap="goAiDesign">前往 AI 设计</button></view>
+  </view>
+  <view class="budget-card state-card" wx:elif="{{error}}"><v12-state status="error" text="{{error}}" action-text="重试" bind:action="retry" card="{{false}}" /></view>
   <view class="budget-card state-card" wx:elif="{{!loading && !rows.length}}"><v12-state status="empty" text="{{savedOnly ? '暂无已保存预算' : '暂无预算记录'}}" hint="生成预算后，点击“保存预算单”即可在此查看。" card="{{false}}" /></view>
   <view class="history-footer"><text class="row-description" wx:if="{{loading}}">正在读取…</text><button wx:elif="{{nextCursor}}" class="text-action" bindtap="more">加载更多</button><text class="row-description" wx:elif="{{rows.length && !error}}">已显示全部记录</text></view>
 </view>

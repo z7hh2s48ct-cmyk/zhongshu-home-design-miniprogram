@@ -6,12 +6,15 @@ const format = require('../../utils/format');
 const { protectedPage } = require('../../utils/access');
 
 protectedPage({
-  data: { rows: [], loading: false, error: '', savedOnly: true, nextCursor: null },
+  data: { rows: [], loading: false, error: '', savedOnly: true, nextCursor: null, noProject: false },
   onLoad(options) {
     this._projectId = draft.id(options.projectId);
-    if (!this._projectId) { this.setData({ error: '项目编号无效，请从预算配置页重新进入' }); return; }
+    // P3-8（报告 15）：无项目上下文直达时不再显示无法自愈的报错，改为引导空态
+    if (!this._projectId) { this.setData({ noProject: true }); return; }
     this.reload();
   },
+  goMyProjects() { wx.navigateTo({ url: '/pages/profile/records?type=projects', fail: () => wx.switchTab({ url: '/pages/profile/index' }) }); },
+  goAiDesign() { wx.switchTab({ url: '/pages/ai-design/index' }); },
   onShow() { if (this._shown || (this._scope && this._scope !== draft.sessionScope())) this.reload(); this._shown = true; },
   onUnload() { this._sequence = (this._sequence || 0) + 1; this._scope = null; },
   reload() {

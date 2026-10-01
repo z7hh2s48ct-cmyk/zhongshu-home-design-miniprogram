@@ -186,11 +186,11 @@ for (const match of customTabData.matchAll(/(?:activeIcon|icon):\s*'([a-z0-9-]+)
     `底部导航图标 ${match[1]} 必须存在于本地图标字库中`,
   );
 }
-assert.match(customTabData, /text: 'AI设计',[^\n]*glyph: '✦'/, 'AI 设计底部导航应使用效果图中的四向闪光字形');
+assert.match(customTabData, /text: 'AI设计',[^\n]*icon: 'edit-1', activeIcon: 'edit-1-filled'/, 'AI 设计底部导航应使用已交付的 TDesign 编辑图标及选中态');
 assert.match(
   read('miniprogram/custom-tab-bar/index.wxml'),
-  /wx:if="{{item\.glyph}}"[^>]*class="tabbar-glyph"/,
-  '底部导航应直接渲染原生闪光字形，避免依赖不存在的图标资源',
+  /<t-icon name="{{current === index \? item\.activeIcon : item\.icon}}"/,
+  '底部导航应按当前页面切换已在本地图标字库中验证的图标',
 );
 
 const homeMarkup = read('miniprogram/pages/home/index.wxml');
@@ -212,8 +212,9 @@ assert.match(profileMarkup, /bindtap="openMessages"[^>]*>[\s\S]*?消息中心/, 
 assert.match(profileMarkup, /class="message-count"/, '“我的”页面应展示未读消息数量');
 assert.match(read('miniprogram/custom-tab-bar/index.wxml'), /class="tabbar-badge"/, '“我的”Tab 应在有未读消息时展示角标');
 const aiDesignStyles = read('miniprogram/pages/ai-design/index.scss');
-assert.match(aiDesignStyles, /@media \(max-width: 350px\)[\s\S]*\.step-intro[^}]*flex-wrap:\s*wrap/, '小屏设备上的 AI 步骤说明应允许换行');
-assert.match(aiDesignStyles, /@media \(max-width: 350px\)[\s\S]*\.points[^}]*flex-wrap:\s*wrap/, '小屏设备上的设计点信息应允许换行');
+assert.match(aiDesignStyles, /\.step-intro\s*\{[^}]*flex-wrap:\s*wrap/, 'AI 步骤说明应允许换行，避免 375px 及更窄设备横向溢出');
+assert.match(aiDesignStyles, /\.cost-summary\s*\{[^}]*display:\s*grid/, '出图费用应使用独立网格而非挤在数量选择行');
+assert.match(aiDesignStyles, /\.cost-summary span\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/, '余额应独占下一行，避免小屏上与报价互相挤压');
 
 const theme = `${read('miniprogram/styles/v12-tokens.scss')}\n${read('miniprogram/styles/v12-theme.scss')}`;
 for (const token of ['#f7f4ee', '#fffdf8', '#6a3b1b', '#7b5532', '#c8a679', '#2f2925', '#786858', '#e8ded1']) {

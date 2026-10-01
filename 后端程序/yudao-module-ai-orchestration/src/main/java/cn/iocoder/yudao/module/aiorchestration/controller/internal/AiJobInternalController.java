@@ -40,6 +40,9 @@ public class AiJobInternalController {
     @Resource
     private InternalSignatureVerifier signatureVerifier;
 
+    @Resource
+    private cn.iocoder.yudao.module.aiorchestration.job.AiJobSettlementService settlementService;
+
     @org.springframework.beans.factory.annotation.Value("${zhongshu.ai.provider-code:apilio}")
     private String providerCode;
 
@@ -91,6 +94,15 @@ public class AiJobInternalController {
         requireSignature(request);
         return success(orchestrationService.renewLease(Long.parseLong(jobId),
                 reqVO.getAttemptNo(), reqVO.getFencingToken(), 60));
+    }
+
+    @PostMapping("/{jobId}/prompt-calls")
+    @Operation(summary = "提示词模型调用前幂等扣点")
+    public CommonResult<Boolean> chargePromptCall(@PathVariable("jobId") String jobId,
+                                                   HttpServletRequest request,
+                                                   @RequestBody(required = false) java.util.Map<String, Object> body) {
+        requireSignature(request);
+        return success(settlementService.chargePromptCall(Long.parseLong(jobId)));
     }
 
     @PostMapping("/{jobId}/progress-events")

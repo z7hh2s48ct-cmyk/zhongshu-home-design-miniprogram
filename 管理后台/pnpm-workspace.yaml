@@ -3,4 +3,5 @@ allowBuilds:
   core-js-pure: true
   es5-ext: true
 overrides:
+  'brace-expansion@>=4.0.0 <5.0.12': '>=5.0.12'
   '@form-create/designer>@form-create/component-wangeditor': file:./vendor/form-create-editor

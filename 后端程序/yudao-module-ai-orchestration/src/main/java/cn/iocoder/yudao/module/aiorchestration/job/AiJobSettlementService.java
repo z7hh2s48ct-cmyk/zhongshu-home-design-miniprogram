@@ -38,17 +38,28 @@ public class AiJobSettlementService {
     private final AiJobOrchestrationService orchestrationService;
 
     private final cn.iocoder.yudao.module.infra.zhongshu.event.ReliableEventPort reliableEventPort;
+    private final cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricingPort;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public AiJobSettlementService(DataSource dataSource, PlatformTransactionManager transactionManager,
                                   PricingPort pricingPort, PointLedgerPort pointLedgerPort,
                                   AiJobOrchestrationService orchestrationService,
-                                  cn.iocoder.yudao.module.infra.zhongshu.event.ReliableEventPort reliableEventPort) {
+                                  cn.iocoder.yudao.module.infra.zhongshu.event.ReliableEventPort reliableEventPort,
+                                  cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricingPort) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.txTemplate = new TransactionTemplate(transactionManager);
         this.pricingPort = pricingPort;
         this.pointLedgerPort = pointLedgerPort;
         this.orchestrationService = orchestrationService;
         this.reliableEventPort = reliableEventPort;
+        this.usagePricingPort = usagePricingPort;
+    }
+
+    public AiJobSettlementService(DataSource dataSource, PlatformTransactionManager transactionManager,
+                                  PricingPort pricingPort, PointLedgerPort pointLedgerPort,
+                                  AiJobOrchestrationService orchestrationService,
+                                  cn.iocoder.yudao.module.infra.zhongshu.event.ReliableEventPort reliableEventPort) {
+        this(dataSource, transactionManager, pricingPort, pointLedgerPort, orchestrationService, reliableEventPort, null);
     }
 
     /** 创建任务并同事务扣点（P4C 接通账本；幂等键 = user_id + Idempotency-Key） */
@@ -59,6 +70,12 @@ public class AiJobSettlementService {
 
     public long createJobWithCharge(long userId, String phase, int count,
                                     String idempotencyKey, String projectRef, PricingPort.PriceConfirmation confirmation) {
+        return createJobWithCharge(userId, phase, count, idempotencyKey, projectRef, confirmation, "2K");
+    }
+
+    public long createJobWithCharge(long userId, String phase, int count,
+                                    String idempotencyKey, String projectRef,
+                                    PricingPort.PriceConfirmation confirmation, String resolution) {
         try {
             return txTemplate.execute(status -> {
                 if (idempotencyKey != null && !idempotencyKey.isBlank()) {
@@ -70,9 +87,15 @@ public class AiJobSettlementService {
                         return existing.get(0);
                     }
                 }
-                PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count);
+                PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count, resolution);
                 PricingPort.requireConfirmed(quote, confirmation);
                 pricingPort.validateSnapshotStillValid(quote); // 价格更新竞态：失效即 PRICE_RULE_CHANGED
+                cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Snapshot promptQuote = null;
+                if (usagePricingPort != null) {
+                    promptQuote = usagePricingPort.quote("AI_PROMPT");
+                    cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.requireConfirmed(promptQuote,
+                            confirmation == null ? null : confirmation.usageConfirmation());
+                }
 
                 long jobId = IdWorker.getId();
                 String ledgerType = "FLAT".equals(phase) ? "FLAT_GENERATION_DEBIT" : "ELEVATION_GENERATION_DEBIT";
@@ -94,6 +117,7 @@ public class AiJobSettlementService {
                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         chargeId, jobId, userId, quote.ruleId(), quote.ruleVersion(),
                         quote.stage(), quote.unitPointCost(), count, quote.totalPointCost(), ledgerId);
+                if (promptQuote != null) usagePricingPort.prepareCharge(userId, promptQuote, "ai_job", String.valueOf(jobId));
                 reliableEventPort.append(cn.iocoder.yudao.module.infra.zhongshu.event.OutboxEventMessage.builder()
                         .eventType("AI_JOB_CREATED").bizType("ai_job").bizId(String.valueOf(jobId))
                         .payload(Map.of("jobId", jobId, "phase", phase, "count", count)).build());
@@ -106,6 +130,12 @@ public class AiJobSettlementService {
                     "SELECT id FROM ai_job WHERE idempotency_key = ? AND user_id = ?",
                     Long.class, idempotencyKey, userId);
         }
+    }
+
+    /** 扣除一次实际提示词模型调用；业务键使 runtime 重试保持幂等。 */
+    public boolean chargePromptCall(long jobId) {
+        long userId = jdbcTemplate.queryForObject("SELECT user_id FROM ai_job WHERE id = ?", Long.class, jobId);
+        return usagePricingPort.chargePrepared(userId, "AI_PROMPT", "ai_job", String.valueOf(jobId));
     }
 
     /**

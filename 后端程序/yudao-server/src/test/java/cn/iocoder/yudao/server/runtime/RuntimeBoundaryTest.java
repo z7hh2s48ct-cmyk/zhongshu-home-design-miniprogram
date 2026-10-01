@@ -29,7 +29,7 @@ class RuntimeBoundaryTest {
     }
     @BeforeEach void setup() {
         jdbc.execute("TRUNCATE ai_job,ai_job_attempt,asset,asset_rights_grant,outbox_event,export_job");
-        jdbc.execute("INSERT INTO ai_job(id,user_id,phase,status,requested_count,output_prefix,fencing_token,claim_expires_at,input_snapshot) VALUES(1,7,'FLAT','RUNNING',2,'ai-quarantine/1',3,now()+interval '1 minute','{\"schemaVersion\":1,\"phase\":\"FLAT\",\"assetIds\":[\"10\"],\"requirements\":{\"site\":\"frozen\"}}')");
+        jdbc.execute("INSERT INTO ai_job(id,user_id,phase,status,requested_count,output_prefix,fencing_token,claim_expires_at,input_snapshot) VALUES(1,7,'FLAT','RUNNING',2,'ai-quarantine/1',3,now()+interval '1 minute','{\"schemaVersion\":1,\"phase\":\"FLAT\",\"assetIds\":[\"10\"],\"requirements\":{\"site\":\"frozen\"},\"imageOptions\":{\"resolution\":\"4K\",\"orientation\":\"LANDSCAPE\"}}')");
         jdbc.execute("INSERT INTO ai_job_attempt(id,job_id,attempt_no,worker_id,fencing_token) VALUES(2,1,1,'runtime-test',3)");
         jdbc.execute("INSERT INTO asset(id,owner_user_id,object_key,asset_type,source_type,sha256,declared_mime,size_bytes,stored_sha256,stored_size,upload_status,security_scan_status,moderation_status) VALUES(10,7,'accepted/10/immutable','SKETCH','USER_UPLOAD',repeat('a',64),'image/png',100,repeat('b',64),100,'ACCEPTED','PASSED','PASSED')");
         signer=new InternalSignatureVerifier();ReflectionTestUtils.setField(signer,"sharedSecret","runtime-test-fixture");ReflectionTestUtils.setField(signer,"replayWindowSeconds",300L);
@@ -45,11 +45,12 @@ class RuntimeBoundaryTest {
     Map<String,Object> inputs() throws Exception {return controller.inputs("1",new RuntimeAssetController.Lease(1,3),request("inputs","{\"attemptNo\":1,\"fencingToken\":3}")).getData();}
     @Test void validLeaseReceivesOnlyFrozenInputAndSeparateShortLivedOutputKey() throws Exception {
         var data=inputs();assertThat(data.get("requirements")).isEqualTo(Map.of("site","frozen"));
+        assertThat(data.get("imageOptions")).isEqualTo(Map.of("resolution","4K","orientation","LANDSCAPE"));
         assertThat((List<?>)data.get("images")).hasSize(1);
         verify(storage).presignDownloadUrl("accepted/10/immutable",120);
         var upload=controller.upload("1",new RuntimeAssetController.Upload(1,3,2,"image/png"),request("output-tickets","{}"));
         assertThat(upload.getData().get("objectKey").toString()).startsWith("ai-quarantine/1/3/2/").endsWith(".png");
-        assertThat(upload.getData().get("maxBytes")).isEqualTo(7*1024*1024);
+        assertThat(upload.getData().get("maxBytes")).isEqualTo(20*1024*1024);
     }
     @Test void badSignatureExpiredLeaseOldFenceAndFinishedAttemptCannotGetTickets() {
         var bad=request("inputs","{}");bad.removeHeader("X-ZS-Signature");bad.addHeader("X-ZS-Signature","invalid");
@@ -81,7 +82,9 @@ class RuntimeBoundaryTest {
                 .contentType("application/json").content(body).header("X-ZS-Timestamp",signed.getHeader("X-ZS-Timestamp"))
                 .header("X-ZS-Signature",signed.getHeader("X-ZS-Signature")))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.requirements.site").value("frozen"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.requirements.site").value("frozen"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.imageOptions.resolution").value("4K"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.imageOptions.orientation").value("LANDSCAPE"));
     }
     @Test void backlogHealthDetectsQueuedDeadlineAndDatabaseFailureWithoutExceptionDetails() {
         var health=new BusinessBacklogHealth(ds);assertThat(health.health().getStatus().getCode()).isEqualTo("UP");

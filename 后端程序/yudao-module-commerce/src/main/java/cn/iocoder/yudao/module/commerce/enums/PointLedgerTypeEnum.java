@@ -22,6 +22,12 @@ public enum PointLedgerTypeEnum {
     /** 立面生成扣点 */
     ELEVATION_GENERATION_DEBIT,
 
+    /** 预算测算扣点 */
+    BUDGET_ESTIMATE_DEBIT,
+
+    /** AI 提示词模型调用扣点 */
+    AI_PROMPT_DEBIT,
+
     /** 任务结算退回（差额/全额） */
     TASK_SETTLEMENT_REFUND,
 

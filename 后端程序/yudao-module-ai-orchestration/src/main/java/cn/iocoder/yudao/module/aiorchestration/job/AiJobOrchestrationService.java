@@ -49,7 +49,8 @@ public class AiJobOrchestrationService {
     public record JobSnapshot(long jobId, long userId, String phase, String status, int requestedCount,
                               int acceptedCount, int progress, String cancelState, String projectRef,
                               Long unitPointCost, Long totalPointCost, Long refundedPointCost,
-                              java.time.Instant createdAt, java.time.Instant finishedAt) {
+                              java.time.Instant createdAt, java.time.Instant finishedAt,
+                              String resolution, String orientation) {
     }
 
     private final JdbcTemplate jdbcTemplate;
@@ -77,8 +78,16 @@ public class AiJobOrchestrationService {
     public boolean freezeInput(long jobId, Map<String,Object> snapshot) {
         if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("AI_INPUT_REQUIRES_TRANSACTION");
         try {
-            return jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
-                    new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(snapshot),jobId)==1;
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String json = mapper.writeValueAsString(snapshot);
+            if (jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
+                    json,jobId)==1) return true;
+            // 已有快照（同内容重放或异内容重冻结）一律不覆盖、返回 false，调用方
+            // （DesignProjectService）以 false 放弃本次冻结；真正的幂等键内容冲突在
+            // createJob 层拦截。5e4f1da9 曾把异内容改为抛 IDEMPOTENCY_KEY_REUSED，
+            // 与 P4C 契约「CompletedSnapshotCannotBeOverwritten→isFalse」及调用方分支相悖。
+            String existing = jdbcTemplate.queryForObject("SELECT input_snapshot::text FROM ai_job WHERE id=?", String.class, jobId);
+            return existing != null && mapper.readTree(existing).equals(mapper.readTree(json));
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("AI_INPUT_INVALID"); }
     }
 

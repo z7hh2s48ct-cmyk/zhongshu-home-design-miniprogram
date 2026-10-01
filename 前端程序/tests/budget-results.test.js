@@ -46,7 +46,7 @@ function runtime(overrides = {}) {
         return load(path.resolve(path.dirname(filename), specifier + '.js'));
       } }, { filename }); return module.exports;
   }
-  return { calls, api, storage, view: load('utils/budget-view.js'), token(value) { token = value; },
+  return { calls, api, storage, view: load('utils/budget-view.js'), token(value) { token = value; delete storage['zs_draft_scope']; },
     page(name = 'result', options = { budgetId }) {
       // Reopening a page creates a new instance, even when CommonJS dependencies are cached.
       modules.delete(path.resolve(root, 'pages/budget/' + name + '.js')); load('pages/budget/' + name + '.js');

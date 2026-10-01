@@ -18,9 +18,9 @@ public class PricingPortAdapter implements PricingPort {
     }
 
     @Override
-    public PriceSnapshot quote(String stage, int count) {
-        var quote = priceRuleService.quote(stage, count, Instant.now());
-        return new PriceSnapshot(quote.getRuleId(), quote.getRuleVersion(), quote.getStage(),
+    public PriceSnapshot quote(String stage, int count, String resolution) {
+        var quote = priceRuleService.quote(stage, resolution, count, Instant.now());
+        return new PriceSnapshot(quote.getRuleId(), quote.getRuleVersion(), quote.getStage(), quote.getResolution(),
                 quote.getUnitPointCost(), quote.getCount(), quote.getTotalPointCost());
     }
 
@@ -28,6 +28,7 @@ public class PricingPortAdapter implements PricingPort {
     public void validateSnapshotStillValid(PriceSnapshot snapshot) {
         priceRuleService.validateSnapshotStillValid(new PriceRuleQuote(
                 snapshot.ruleId(), snapshot.ruleVersion(), snapshot.stage(),
+                snapshot.resolution(),
                 snapshot.unitPointCost(), snapshot.count(), snapshot.totalPointCost(),
                 Instant.now()), Instant.now());
     }

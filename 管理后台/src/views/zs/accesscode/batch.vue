@@ -4,7 +4,7 @@
       <div>
         <h1 class="zs-page-title">批量生成授权码</h1>
         <div class="zs-page-subtitle"
-          >完整明文仅一次交付：INLINE 在创建响应内返回 / TICKET 通过一次性票据下载</div
+          >INLINE 创建响应显示整批码，之后可复制未使用单码；TICKET 整批下载仍为一次性票据</div
         >
       </div>
       <el-button @click="$router.back()">返回</el-button>
@@ -17,7 +17,7 @@
         </el-form-item>
         <el-form-item label="交付方式" required>
           <el-radio-group v-model="form.deliveryMode">
-            <el-radio value="INLINE">INLINE：创建后立即显示明文（仅此一次）</el-radio>
+            <el-radio value="INLINE">INLINE：创建后立即显示明文</el-radio>
             <el-radio value="TICKET">TICKET：生成一次性下载票据</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -48,7 +48,7 @@
           type="warning"
           :closable="false"
           show-icon
-          title="以下完整明文仅此一次显示，关闭页面后无法再次获取，请立即离线保存！"
+          title="请先复制并妥善保存；之后可在授权码列表中复制仍未使用的单码。"
         />
         <div class="zs-codes-list">
           <code v-for="c in inlineCodes" :key="c">{{ c }}</code>

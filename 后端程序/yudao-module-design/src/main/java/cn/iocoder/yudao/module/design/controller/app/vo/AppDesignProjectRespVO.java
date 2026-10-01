@@ -36,6 +36,9 @@ public class AppDesignProjectRespVO {
 
     private String jobStatus;
     private Integer requestedCount;
+    private String resolution;
+    private String orientation;
+    private Map<String, String> imageOptions;
     private String resumeAction;
     private String selectedFlatAssetId;
 

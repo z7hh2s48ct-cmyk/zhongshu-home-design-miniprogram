@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -11,6 +12,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+
+import cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.commerce.enums.ErrorCodeConstants.PRICE_RULE_CHANGED;
@@ -28,24 +31,41 @@ import static cn.iocoder.yudao.module.commerce.enums.ErrorCodeConstants.PRICE_RU
 @Service
 public class PriceRuleService {
 
-    public record PriceRule(long id, long version, String stage, long unitPointCost,
+    public record PriceRule(long id, long version, String stage, String resolution, long unitPointCost,
                             int minCount, int maxCount, Instant effectiveAt, Instant expiresAt, String status) {
     }
 
     private final JdbcTemplate jdbcTemplate;
 
+    @Autowired
     public PriceRuleService(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+    }
+
+    PriceRuleService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     /** 新增一条规则（版本 1，ACTIVE）；调整价格 = 追加新规则，不修改历史 */
     public long createRule(String stage, long unitPointCost, int minCount, int maxCount,
                            Instant effectiveAt, Instant expiresAt) {
+        return createRule(stage, "2K", unitPointCost, minCount, maxCount, effectiveAt, expiresAt);
+    }
+
+    public long createRule(String stage, String resolution, long unitPointCost, int minCount, int maxCount,
+                           Instant effectiveAt, Instant expiresAt) {
+        resolution = GenerationImageOptions.normalize(stage, resolution, null).resolution();
+        stage = stage.trim().toUpperCase(java.util.Locale.ROOT);
+        if (unitPointCost < 1 || unitPointCost > 1_000_000_000L
+                || minCount < 1 || maxCount < minCount || maxCount > 4
+                || effectiveAt == null || expiresAt != null && !expiresAt.isAfter(effectiveAt)) {
+            throw new IllegalArgumentException("计价规则参数无效");
+        }
         long id = IdWorker.getId();
         jdbcTemplate.update(
-                "INSERT INTO generation_price_rule (id, stage, unit_point_cost, min_count, max_count, "
-                        + "effective_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                id, stage, unitPointCost, minCount, maxCount,
+                "INSERT INTO generation_price_rule (id, stage, resolution, unit_point_cost, min_count, max_count, "
+                        + "effective_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                id, stage, resolution, unitPointCost, minCount, maxCount,
                 Timestamp.from(effectiveAt), expiresAt == null ? null : Timestamp.from(expiresAt));
         return id;
     }
@@ -59,30 +79,39 @@ public class PriceRuleService {
 
     /** 解析某时点生效的规则（最近生效优先） */
     public Optional<PriceRule> resolve(String stage, Instant at) {
+        return resolve(stage, "2K", at);
+    }
+
+    public Optional<PriceRule> resolve(String stage, String resolution, Instant at) {
         List<PriceRule> rows = jdbcTemplate.query(
-                "SELECT id, version, stage, unit_point_cost, min_count, max_count, effective_at, expires_at, status "
+                "SELECT id, version, stage, resolution, unit_point_cost, min_count, max_count, effective_at, expires_at, status "
                         + "FROM generation_price_rule "
-                        + "WHERE stage = ? AND status = 'ACTIVE' AND effective_at <= ? "
+                        + "WHERE stage = ? AND resolution = ? AND status = 'ACTIVE' AND effective_at <= ? "
                         + "  AND (expires_at IS NULL OR expires_at > ?) AND deleted = FALSE "
                         + "ORDER BY effective_at DESC, id DESC LIMIT 1",
                 (rs, i) -> new PriceRule(rs.getLong("id"), rs.getLong("version"), rs.getString("stage"),
+                        rs.getString("resolution"),
                         rs.getLong("unit_point_cost"), rs.getInt("min_count"), rs.getInt("max_count"),
                         rs.getTimestamp("effective_at").toInstant(),
                         rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant(),
                         rs.getString("status")),
-                stage, Timestamp.from(at), Timestamp.from(at));
+                stage, resolution, Timestamp.from(at), Timestamp.from(at));
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
     }
 
     /** 生成计价快照；数量必须在规则允许区间内 */
     public PriceRuleQuote quote(String stage, int count, Instant at) {
-        PriceRule rule = resolve(stage, at)
-                .orElseThrow(() -> new IllegalStateException("阶段无生效计价规则: " + stage));
+        return quote(stage, "2K", count, at);
+    }
+
+    public PriceRuleQuote quote(String stage, String resolution, int count, Instant at) {
+        PriceRule rule = resolve(stage, resolution, at)
+                .orElseThrow(() -> new IllegalStateException("当前分辨率暂无可用计价规则: " + stage + "/" + resolution));
         if (count < rule.minCount() || count > rule.maxCount()) {
             throw new IllegalStateException(
                     "数量超出规则允许区间: count=" + count + " 允许=" + rule.minCount() + "~" + rule.maxCount());
         }
-        return new PriceRuleQuote(rule.id(), rule.version(), stage, rule.unitPointCost(),
+        return new PriceRuleQuote(rule.id(), rule.version(), stage, resolution, rule.unitPointCost(),
                 count, rule.unitPointCost() * count, rule.effectiveAt());
     }
 
@@ -91,22 +120,11 @@ public class PriceRuleService {
      * 失败抛 PRICE_RULE_CHANGED，调用方可重新报价后重试。
      */
     public void validateSnapshotStillValid(PriceRuleQuote quote, Instant at) {
-        List<PriceRule> rows = jdbcTemplate.query(
-                "SELECT id, version, status, effective_at, expires_at FROM generation_price_rule WHERE id = ?",
-                (rs, i) -> new PriceRule(rs.getLong("id"), rs.getLong("version"), quote.getStage(),
-                        0, 0, 0, rs.getTimestamp("effective_at").toInstant(),
-                        rs.getTimestamp("expires_at") == null ? null : rs.getTimestamp("expires_at").toInstant(),
-                        rs.getString("status")),
-                quote.getRuleId());
-        if (rows.isEmpty()) {
-            throw exception(PRICE_RULE_CHANGED);
-        }
-        PriceRule current = rows.get(0);
-        boolean stillValid = "ACTIVE".equals(current.status())
-                && current.version() == quote.getRuleVersion()
-                && !current.effectiveAt().isAfter(at)
-                && (current.expiresAt() == null || current.expiresAt().isAfter(at));
-        if (!stillValid) {
+        PriceRule current = resolve(quote.getStage(), quote.getResolution(), at)
+                .orElseThrow(() -> exception(PRICE_RULE_CHANGED));
+        if (current.id() != quote.getRuleId() || current.version() != quote.getRuleVersion()
+                || !current.stage().equals(quote.getStage())
+                || !current.resolution().equals(quote.getResolution())) {
             throw exception(PRICE_RULE_CHANGED);
         }
     }

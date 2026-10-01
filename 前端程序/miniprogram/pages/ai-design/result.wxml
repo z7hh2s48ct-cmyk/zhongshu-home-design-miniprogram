@@ -7,10 +7,10 @@
   <view class="result-tabs"><view wx:for="{{['立面','平面']}}" wx:key="*this" class="{{tab === index ? 'active' : ''}}" data-index="{{index}}" bindtap="selectTab">{{item}}</view></view>
   <view class="v12-card result-main">
     <view class="image-wrap"><image wx:if="{{tab === 0 && imageUrl}}" src="{{imageUrl}}" mode="aspectFit" /><image wx:elif="{{tab !== 0 && flatImageUrl}}" src="{{flatImageUrl}}" mode="aspectFit" /><text wx:if="{{tab === 0 && imageUrl}}">AI生成</text><text wx:if="{{tab === 0 ? !imageUrl : !flatImageUrl}}" class="plan-placeholder">{{imageError ? '本版本图片暂不可用' : '方案图加载中'}}</text></view>
-    <view class="result-copy"><text>{{elevationLabel || '立面方案'}} · 平面已选定</text><text>第 {{latest ? latest.version : '—'}} 版结果 · 历史版本只读可回看</text></view>
+    <view class="result-copy"><text>{{elevationLabel || '立面方案'}} · 平面已选定</text><text>第 {{latest ? latest.version : '—'}} 版结果 · {{resolution}} {{orientation === 'PORTRAIT' ? '竖屏' : '横屏'}} · {{outputPixels}}</text></view>
   </view>
   <view wx:if="{{imageError}}" class="v12-card result-main"><text>{{imageError}}</text><button bindtap="loadImages">重试图片</button></view>
-  <view class="result-actions"><view wx:if="{{!readOnly}}" class="v12-secondary-button" bindtap="adjust">重新生成立面</view><view class="v12-primary-button" bindtap="budget">生成预算</view></view>
+  <view class="result-actions"><view wx:if="{{!readOnly && optionsError}}" class="v12-secondary-button" bindtap="loadGenerationOptions">重试读取出图规格</view><view wx:elif="{{!readOnly}}" class="v12-secondary-button {{!optionsReady ? 'disabled' : ''}}" aria-disabled="{{!optionsReady}}" bindtap="adjust">{{optionsReady ? '按当前规格重新生成' : '正在读取出图规格'}}</view><view class="v12-primary-button" bindtap="budget">生成预算</view></view>
   <view class="tool-row {{readOnly ? 'cols-1' : 'cols-2'}}"><view bindtap="save"><t-icon name="bookmark" size="24px" color="#7b5532" /><text>我的方案</text></view><view wx:if="{{!readOnly}}" bindtap="publish"><t-icon name="home" size="24px" color="#7b5532" /><text>投稿到户型库</text></view></view>
   <view wx:if="{{!readOnly}}" class="publish-note"><t-icon name="secured" size="16px" color="#a89a8c" /> 发布前将校核户型库必填参数</view>
   </block>

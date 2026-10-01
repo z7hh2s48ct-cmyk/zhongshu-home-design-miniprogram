@@ -24,13 +24,11 @@ import static cn.iocoder.yudao.module.identity.enums.ErrorCodeConstants.ACCESS_C
 import static cn.iocoder.yudao.module.identity.enums.ErrorCodeConstants.ACCESS_CODE_SECRET_ALREADY_EXPOSED;
 
 /**
- * 授权码批次：生成、一次性交付、掩码查询与停用（架构 §6.1）
+ * 授权码批次：生成、受控单码复制、掩码查询、停用与删除（架构 §6.1）
  *
  * 合同：
- * - 批次创建时固定 deliveryMode=INLINE|TICKET，互斥且完整明文仅交付一次；
- * - INLINE 在创建响应内交付，同时全部标记 secret_exposed_at，此后任何形式的再次交付都被拒绝；
- * - TICKET 把明文仅存于 AES-GCM 加密制品：兑换单次票据 → 解密输出 → 制品置 NULL 永久销毁；
- *   响应重放/传输中断都不可再次得到明文；
+ * - 批次明文只以 AES-GCM 密文留存；INLINE 在创建响应内返回；
+ * - 授权管理员可再次复制仍未使用、未过期的单码，完整批次票据仍只能消费一次；
  * - 列表、搜索、日志、普通导出永远只返回掩码。
  */
 @Slf4j
@@ -40,7 +38,7 @@ public class AccessCodeService {
     public record BatchCreateResult(long batchId, String deliveryMode, List<String> oneTimeCodes) {
     }
 
-    public record AccessCodeRow(long id, String codeMask, long batchId, String status,
+    public record AccessCodeRow(long id, String codeMask, long batchId, String status, boolean canCopy,
                                 Instant issuedAt, Instant consumedAt, Instant secretExposedAt,
                                 Instant expiresAt, Long boundAccountId) {
     }
@@ -83,7 +81,7 @@ public class AccessCodeService {
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     batchId, quantity, deliveryMode, inline ? quantity : 0,
                     issuedBy, purposeNote, expiresAt,
-                    inline ? null : cipher.encryptArtifact(codes),
+                    cipher.encryptArtifact(codes),
                     null);
             for (String code : codes) {
                 jdbcTemplate.update(
@@ -115,7 +113,7 @@ public class AccessCodeService {
     }
 
     /**
-     * 凭一次性票据交付完整明文：先原子消费票据，再解密输出并销毁制品。
+     * 凭一次性票据交付完整明文：先原子消费票据，再解密输出。
      * 同一票据第二次消费（重放）与票据过期/未知分别映射稳定错误码。
      */
     public List<String> exportByTicket(long batchId, String ticketToken, String consumerId) {
@@ -143,10 +141,13 @@ public class AccessCodeService {
 
     private List<String> exportAndDestroyArtifact(long batchId, String consumerId) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT encrypted_artifact, quantity FROM design_access_code_batch "
+                "SELECT encrypted_artifact, quantity, exposed_count FROM design_access_code_batch "
                         + "WHERE id = ? AND delivery_mode = 'TICKET' FOR UPDATE", batchId);
         if (rows.isEmpty()) {
             throw exception(ACCESS_CODE_INVALID);
+        }
+        if (((Number) rows.get(0).get("exposed_count")).intValue() > 0) {
+            throw exception(ACCESS_CODE_SECRET_ALREADY_EXPOSED);
         }
         byte[] artifact = rows.get(0).get("encrypted_artifact") == null
                 ? null : (byte[]) rows.get(0).get("encrypted_artifact");
@@ -155,13 +156,70 @@ public class AccessCodeService {
         }
         List<String> codes = cipher.decryptArtifact(artifact);
         jdbcTemplate.update(
-                "UPDATE design_access_code_batch SET encrypted_artifact = NULL, artifact_nonce = NULL, "
-                        + "exposed_count = quantity, update_time = now() WHERE id = ?", batchId);
+                "UPDATE design_access_code_batch SET exposed_count = quantity, update_time = now() WHERE id = ?",
+                batchId);
         jdbcTemplate.update(
                 "UPDATE design_access_code SET secret_exposed_at = now(), update_time = now() "
                         + "WHERE batch_id = ? AND secret_exposed_at IS NULL", batchId);
-        log.warn("[exportByTicket][batch={} 完整明文已一次性交付给 {}，制品已销毁]", batchId, consumerId);
+        log.warn("[exportByTicket][batch={} 完整明文已一次性交付给 {}]", batchId, consumerId);
         return codes;
+    }
+
+    /** 受控复制仍可兑换的单码；明文只从加密批次制品中临时解密，不写日志或普通列。 */
+    public String copyActiveCode(long codeId, String operator) {
+        return txTemplate.execute(status -> {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                    "SELECT c.batch_id, c.status, c.deleted, c.expires_at, b.encrypted_artifact "
+                            + "FROM design_access_code c JOIN design_access_code_batch b ON b.id = c.batch_id "
+                            + "WHERE c.id = ? AND b.deleted = FALSE FOR UPDATE OF c, b", codeId);
+            if (rows.isEmpty()) {
+                throw exception(ACCESS_CODE_INVALID);
+            }
+            Map<String, Object> row = rows.get(0);
+            if (Boolean.TRUE.equals(row.get("deleted")) || !"ACTIVE".equals(row.get("status"))) {
+                throw exception(ACCESS_CODE_INVALID);
+            }
+            Timestamp expiresAt = (Timestamp) row.get("expires_at");
+            if (expiresAt != null && !expiresAt.toInstant().isAfter(Instant.now())) {
+                throw exception(ACCESS_CODE_EXPIRED);
+            }
+            byte[] artifact = (byte[]) row.get("encrypted_artifact");
+            if (artifact == null) {
+                throw exception(ACCESS_CODE_INVALID);
+            }
+            long batchId = ((Number) row.get("batch_id")).longValue();
+            // Ciphertext keeps creation order; Snowflake IDs are allocated during those same inserts.
+            List<Long> ids = jdbcTemplate.queryForList(
+                    "SELECT id FROM design_access_code WHERE batch_id = ? ORDER BY id", Long.class, batchId);
+            int index = ids.indexOf(codeId);
+            List<String> codes = cipher.decryptArtifact(artifact);
+            if (index < 0 || index >= codes.size()) {
+                throw exception(ACCESS_CODE_INVALID);
+            }
+            jdbcTemplate.update(
+                    "UPDATE design_access_code SET secret_exposed_at = COALESCE(secret_exposed_at, now()), "
+                            + "update_time = now() WHERE id = ?", codeId);
+            jdbcTemplate.update(
+                    "UPDATE design_access_code_batch SET exposed_count = CASE WHEN exposed_count = 0 "
+                            + "THEN 1 ELSE exposed_count END, update_time = now() "
+                            + "WHERE id = ?", batchId);
+            log.warn("[copyActiveCode][code={} batch={} 明文复制操作员={}]", codeId, batchId, operator);
+            return codes.get(index);
+        });
+    }
+
+    /** 逻辑删除未兑换码并同步停用；保留兑换与审计事实。 */
+    public boolean deleteUnusedCode(long codeId, String operator) {
+        boolean deleted = jdbcTemplate.update(
+                "UPDATE design_access_code c SET status = 'DISABLED', deleted = TRUE, update_time = now() "
+                        + "WHERE c.id = ? AND c.deleted = FALSE AND c.consumed_at IS NULL "
+                        + "AND c.status IN ('ACTIVE', 'DISABLED') "
+                        + "AND NOT EXISTS (SELECT 1 FROM access_code_redemption r "
+                        + "WHERE r.code_id = c.id AND r.deleted = FALSE)", codeId) == 1;
+        if (deleted) {
+            log.warn("[deleteUnusedCode][code={} 操作员={} 已逻辑删除并停用]", codeId, operator);
+        }
+        return deleted;
     }
 
     public boolean disableCode(long codeId) {
@@ -185,13 +243,16 @@ public class AccessCodeService {
         args.add(pageSize);
         args.add((long) Math.max(pageNo - 1, 0) * pageSize);
         return jdbcTemplate.query(
-                "SELECT c.id, c.batch_id, c.code_mask, c.status, c.issued_at, c.consumed_at, "
+                "SELECT c.id, c.batch_id, c.code_mask, c.status, "
+                        + "(c.status = 'ACTIVE' AND (c.expires_at IS NULL OR c.expires_at > now()) "
+                        + "AND b.encrypted_artifact IS NOT NULL) AS can_copy, c.issued_at, c.consumed_at, "
                         + "c.secret_exposed_at, c.expires_at, r.account_id AS bound_account_id "
                         + "FROM design_access_code c "
+                        + "JOIN design_access_code_batch b ON b.id = c.batch_id AND b.deleted = FALSE "
                         + "LEFT JOIN access_code_redemption r ON r.code_id = c.id AND r.deleted = FALSE"
                         + where + " ORDER BY c.id LIMIT ? OFFSET ?",
                 (rs, i) -> new AccessCodeRow(rs.getLong("id"), rs.getString("code_mask"),
-                        rs.getLong("batch_id"), rs.getString("status"),
+                        rs.getLong("batch_id"), rs.getString("status"), rs.getBoolean("can_copy"),
                         rs.getTimestamp("issued_at").toInstant(),
                         rs.getTimestamp("consumed_at") == null ? null : rs.getTimestamp("consumed_at").toInstant(),
                         rs.getTimestamp("secret_exposed_at") == null ? null

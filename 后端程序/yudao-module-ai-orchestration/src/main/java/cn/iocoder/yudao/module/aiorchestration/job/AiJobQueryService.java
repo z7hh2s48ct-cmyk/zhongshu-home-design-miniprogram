@@ -42,6 +42,9 @@ public class AiJobQueryService {
     static String baseSelect() {
         return "SELECT id, user_id, phase, status, requested_count, accepted_count, progress, "
                 + "cancel_seq, project_ref, unit_point_cost, total_point_cost, create_time, "
+                + "COALESCE(input_snapshot -> 'imageOptions' ->> 'resolution', '2K') AS resolution, "
+                + "COALESCE(input_snapshot -> 'imageOptions' ->> 'orientation', "
+                + "CASE WHEN phase='FLAT' THEN 'PORTRAIT' ELSE 'LANDSCAPE' END) AS orientation, "
                 + "(SELECT SUM(s.refunded_points) FROM ai_job_settlement s WHERE s.job_id = ai_job.id "
                 + "AND s.deleted = FALSE) AS refunded_points, "
                 + "(SELECT MAX(s.create_time) FROM ai_job_settlement s WHERE s.job_id = ai_job.id "
@@ -68,7 +71,8 @@ public class AiJobQueryService {
                 rs.getObject("unit_point_cost", Long.class), rs.getObject("total_point_cost", Long.class),
                 rs.getObject("refunded_points") == null ? null : rs.getBigDecimal("refunded_points").longValueExact(),
                 rs.getTimestamp("create_time").toInstant(),
-                terminal && rs.getTimestamp("finished_at") != null ? rs.getTimestamp("finished_at").toInstant() : null);
+                terminal && rs.getTimestamp("finished_at") != null ? rs.getTimestamp("finished_at").toInstant() : null,
+                rs.getString("resolution"), rs.getString("orientation"));
     }
 
 }

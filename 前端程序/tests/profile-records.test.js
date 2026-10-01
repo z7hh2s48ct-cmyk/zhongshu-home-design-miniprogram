@@ -24,6 +24,7 @@ test('退款记录区分退款成功、设计点冲正和未支付关闭，显�
 });
 function environment(file, api = {}) {
   if (file === 'pages/ai-design/publish.js') api.getResultVersions ||= async () => ({ list: [{ versionId: VERSION, version: 3, superseded: false, selectedFlatAssetId: '11', selectedElevationAssetId: '12' }] });
+  if (file === 'pages/ai-design/result.js') api.getProject ||= async () => ({});
   let definition;
   const state = { token: 'A', calls: [], timers: [], globalData: { selectedElevationAssetId: '999', selectedFlatAssetId: '998' } };
   const deps = {
@@ -31,6 +32,7 @@ function environment(file, api = {}) {
     '../../utils/api': api,
     '../../utils/request': { getToken: () => state.token },
     '../../utils/record-view': view,
+    '../../utils/generation-options': require('../miniprogram/utils/generation-options'),
     '../../utils/format': require('../miniprogram/utils/format'),
     '../../utils/assets': { fetchProfileAvatar: async id => { state.calls.push(['asset', id]); return 'asset://' + id; } }
   };

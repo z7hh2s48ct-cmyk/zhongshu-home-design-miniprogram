@@ -76,12 +76,12 @@ module.exports = {
   getProject: function (projectId, jobId) {
     return http.get(BASE + '/design-projects/' + projectId + (jobId ? '?jobId=' + jobId : ''));
   },
-  getGenerationQuote: function (stage, count) {
-    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count);
+  getGenerationQuote: function (stage, count, resolution) {
+    return http.get(BASE + '/generation-price-quotes?stage=' + encodeURIComponent(stage) + '&count=' + count + '&resolution=' + encodeURIComponent(resolution || '4K'));
   },
-  createFlatJob: function (projectId, count, idemKey, priceConfirmation) {
+  createFlatJob: function (projectId, count, idemKey, priceConfirmation, options) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-jobs',
-      { count: count, priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
+      { count: count, resolution: (options && options.resolution) || '4K', orientation: (options && options.orientation) || 'LANDSCAPE', priceConfirmation: priceConfirmation }, { 'Idempotency-Key': idemKey });
   },
   selectFlat: function (projectId, jobId, candidateId) {
     return http.post(BASE + '/design-projects/' + projectId + '/flat-selections',
@@ -190,6 +190,9 @@ module.exports = {
   createItemizedBudget: function (projectId, input, idemKey) {
     return http.post(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-estimates/itemized',
       input, { 'Idempotency-Key': idemKey });
+  },
+  getBudgetPointQuote: function () {
+    return http.get(BASE + '/budget-point-quotes');
   },
   getBudgetEstimate: function (budgetId, revisionId) {
     return http.get(BASE + '/budget-estimates/' + encodeURIComponent(budgetId)

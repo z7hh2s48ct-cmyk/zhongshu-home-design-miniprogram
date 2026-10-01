@@ -12,6 +12,12 @@
 # - zsdev  = 开发便利开关（占位密钥、种子数据、本地对象内容端点）
 zhongshu:
   ai:
+    # P2-D（报告 15）：取消收敛调度器——未领取的 CANCEL_REQUESTED 任务即时结算退款，
+    # 已领取失联的超时兜底；不开则取消任务永久滞留、点数不退（资损）。
+    job-cancel-recovery-enabled: true
+    job-deadline-minutes: 30
+    job-cancel-minutes: 10
+    job-cancel-sweep-interval-ms: 15000
     # C6 internal-api 签名联调占位值；生产由密钥托管注入，缺失时 internal 端点全部拒绝
     internal-secret: ${ZS_INTERNAL_SECRET:zsdev-internal-secret-0123456789abcdef}
     internal-replay-window: ${ZS_INTERNAL_REPLAY_WINDOW:300}
@@ -43,7 +49,9 @@ zhongshu:
       read-timeout-ms: ${ZS_WX_READ_TIMEOUT_MS:5000}
     access-code-pepper: ${ZS_ACCESS_CODE_PEPPER:dev-only-pepper-0123456789abcdef-0123456789}
     access-code-pepper-version: ${ZS_ACCESS_CODE_PEPPER_VERSION:v1}
-    access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:ZGV2LW9ubHktYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzISEh}
+    # 默认制品密钥必须是 Base64 且解码后恰好 32 字节（AccessCodeCipher 启动校验）；
+    # 旧默认值解码为 33 字节会导致管理端创建授权码 500（测试报告 15 P1-1）。
+    access-code-artifact-key: ${ZS_ACCESS_CODE_ARTIFACT_KEY:WlNkZXYtYXJ0aWZhY3Qta2V5LTMyLWJ5dGVzLW9rISE=}
   commerce:
     payment:
       # T13-01 实现选择：stub=开发替身（本 profile 默认）；real=B4 微信支付

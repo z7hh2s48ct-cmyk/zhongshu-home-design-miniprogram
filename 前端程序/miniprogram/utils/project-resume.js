@@ -1,6 +1,7 @@
 'use strict';
 const api = require('./api');
 const view = require('./record-view');
+const generationOptions = require('./generation-options');
 
 function target(project) {
   const id = view.id(project && project.projectId);
@@ -33,8 +34,10 @@ function resume(projectId) {
       resultVersionId: project.resultVersionId || null, elevationConfig: null, flatLabel: '已选平面方案' });
     if (project.resumeAction === 'CREATE_FLAT_JOB') {
       const count = project.requestedCount || 2;
-      const price = await require('./generation-price').confirm('FLAT', count);
-      const job = await api.createFlatJob(project.projectId, count, 'resume-' + Date.now() + '-' + Math.random().toString(36).slice(2), price);
+      const selected = generationOptions.selection('FLAT', project);
+      const price = await require('./generation-price').confirm('FLAT', count, '', { resolution: selected.resolution });
+      const job = await api.createFlatJob(project.projectId, count, 'resume-' + Date.now() + '-' + Math.random().toString(36).slice(2), price,
+        { resolution: selected.resolution, orientation: selected.orientation });
       global.jobId = job.jobId;
     }
     wx.navigateTo({ url });

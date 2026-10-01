@@ -78,11 +78,21 @@
             row.expiresAt ? fmtDate(row.expiresAt) : '长期'
           }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="250">
           <template #default="{ row }">
             <span class="zs-link" v-if="row.status === 'ACTIVE'" @click="doDisable(row)">停用</span>
             <span class="zs-link-success" v-if="row.status === 'DISABLED'" @click="doEnable()"
               >启用</span
+            >
+            <span
+              v-if="row.canCopy"
+              v-hasPermi="['identity:access-code:export']"
+              class="zs-link"
+              @click="copyCode(row)"
+              >复制授权码</span
+            >
+            <span v-if="row.status !== 'CONSUMED'" class="zs-link-danger" @click="doDelete(row)"
+              >删除</span
             >
           </template>
         </el-table-column>
@@ -100,6 +110,7 @@
 
       <div class="zs-footnote">
         <div>明确规则：一码一账号，授权码仅可绑定一个微信账号；状态与绑定用户信息以表格为准。</div>
+        <div>上线前批次没有保存加密制品，旧授权码无法补回；新批次的未使用码可按权限复制。</div>
         <div>安全说明：无公开注册入口，授权码与绑定信息请妥善保管，禁止泄露与转售。</div>
       </div>
     </div>
@@ -109,6 +120,7 @@
 <script lang="ts" setup>
 import * as ZsApi from '@/api/zs'
 import { fmtDate, fmtTime } from '@/utils/zsFormat'
+import { ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'ZsAccessCode' })
 const message = useMessage()
@@ -183,8 +195,35 @@ const doDisable = async (row: any) => {
 const doEnable = async () => {
   message.warning('已停用的授权码不可重新启用（安全规则），请生成新批次')
 }
+const copyCode = async (row: any) => {
+  try {
+    const code = await ZsApi.copyAccessCode(row.id)
+    await navigator.clipboard.writeText(code)
+    message.success('授权码已复制')
+  } catch (e: any) {
+    message.error(e?.msg || '复制失败，请检查复制权限后重试')
+  }
+}
+const doDelete = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(
+      '删除后该码会立即停用并从列表隐藏，历史兑换事实仍会保留。已兑换的授权码不可删除。',
+      '确认删除授权码',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+    const deleted = await ZsApi.deleteAccessCode(row.id)
+    if (!deleted) {
+      message.warning('该授权码已兑换或已删除，不能删除')
+      return
+    }
+    message.success('授权码已删除并停用')
+    load()
+  } catch (e: any) {
+    if (e !== 'cancel' && e !== 'close') message.error(e?.msg || '删除失败')
+  }
+}
 const exportCodes = () => {
-  message.info('完整码仅一次交付：请从批次详情生成一次性导出票据')
+  message.info('在授权码列表中复制单条未使用授权码；完整批次导出仍需一次性票据')
 }
 onMounted(load)
 </script>

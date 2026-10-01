@@ -10,7 +10,7 @@ public interface PermissionConstants {
     /** 授权码与批次管理（生成、停用、交付票据） */
     String ACCESS_CODE_MANAGE = "identity:access-code:manage";
 
-    /** 授权码完整明文一次性导出 */
+    /** 授权码完整明文复制与导出 */
     String ACCESS_CODE_EXPORT = "identity:access-code:export";
 
     /** C 端用户（账号/授权）只读查询 */

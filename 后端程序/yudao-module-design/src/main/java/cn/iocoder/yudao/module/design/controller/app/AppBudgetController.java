@@ -58,6 +58,20 @@ public class AppBudgetController {
     @Resource
     private BudgetQuoteService budgetQuoteService;
 
+    @Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricingPort;
+
+    public record BudgetPointQuote(String product, String ruleId, long ruleVersion, long pointCost) { }
+
+    @GetMapping("/budget-point-quotes")
+    @Operation(summary = "获取预算测算设计点报价")
+    public CommonResult<BudgetPointQuote> getBudgetPointQuote(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        requireAccountId(authorization);
+        var quote = usagePricingPort.quote("BUDGET_ESTIMATE");
+        return success(new BudgetPointQuote(quote.product(), String.valueOf(quote.ruleId()), quote.ruleVersion(), quote.pointCost()));
+    }
+
     @GetMapping("/design-projects/{projectId}/budget-inputs")
     @Operation(summary = "导入本人项目/方案版本的预算参数与来源，不返回内部工程量或假默认值")
     public CommonResult<AppBudgetInputsRespVO> getBudgetInputs(
@@ -81,7 +95,7 @@ public class AppBudgetController {
         long userId = requireAccountId(authorization);
         var estimate = budgetService.createEstimate(userId, Long.parseLong(projectId),
                 reqVO.getRegionCode(), reqVO.getStructureType(), reqVO.getMaterialGrade(),
-                reqVO.getBuildingArea(), reqVO.getResultVersionId());
+                reqVO.getBuildingArea(), reqVO.getResultVersionId(), reqVO.getUsageConfirmation());
         return success(toVo(estimate));
     }
 

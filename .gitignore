@@ -39,3 +39,9 @@ temp/
 # 临时文件与 Maven 守护进程 dump（surefire 会散落在 target 之外）。
 _tmp_*
 *.dumpstream
+
+# 本机构建缓存（Maven/pnpm 本地仓库镜像）：体积大且含海量校验文件，绝不入库。
+.maven-home/
+.maven/
+.pnpm-store/
+后端程序/.maven-repository/

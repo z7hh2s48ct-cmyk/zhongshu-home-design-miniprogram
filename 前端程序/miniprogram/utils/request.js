@@ -39,6 +39,9 @@ function setTokens(access, refresh) {
 function clearTokens() {
   wx.removeStorageSync(TOKEN_KEY);
   wx.removeStorageSync(REFRESH_KEY);
+  // P2-C（报告 15）：随会话清除预算草稿作用域——账号切换后新会话使用新作用域，
+  // 令牌静默刷新（setTokens）不清除，保证草稿跨刷新存续。
+  wx.removeStorageSync('zs_draft_scope');
   sessionGeneration++;
   sessionEpoch++;
   lastRotation = null;

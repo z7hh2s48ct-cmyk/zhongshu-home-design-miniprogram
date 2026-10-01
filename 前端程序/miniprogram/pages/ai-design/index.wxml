@@ -22,7 +22,23 @@
         <picker mode="selector" range="{{familyLabels}}" value="{{familyIndex}}" bindchange="onFamilyChange">
           <view class="form-row"><text>家庭需求</text><view>{{familyLabels[familyIndex]}} <t-icon name="chevron-right" size="16px" color="#2f2925" /></view></view>
         </picker>
-        <view class="textarea-row"><text>补充需求</text><textarea maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" /><span>{{note.length}}/200</span></view>
+        <view class="textarea-row">
+          <text>补充需求</text>
+          <view class="note-field">
+            <textarea auto-height maxlength="200" value="{{note}}" bindinput="onNoteInput" placeholder="如：老人房在一楼，客餐厅南向，保留露台" />
+            <view class="note-tools">
+              <view class="note-dropdown {{showNoteSuggestions ? 'open' : ''}}" bindtap="toggleNoteSuggestions">
+                <text>常用需求</text><t-icon name="chevron-down" size="14px" />
+              </view>
+              <text class="note-count">{{note.length}}/200</text>
+            </view>
+          </view>
+          <view wx:if="{{showNoteSuggestions}}" class="note-suggestions">
+            <view wx:for="{{noteSuggestions}}" wx:key="*this" data-index="{{index}}" bindtap="selectNoteSuggestion">
+              <text>{{item}}</text><t-icon name="add" size="14px" />
+            </view>
+          </view>
+        </view>
       </block>
       <block wx:else>
         <text class="form-title">提示词</text>
@@ -32,9 +48,27 @@
         <text class="form-title tag-title">需求标签</text>
         <view class="tag-row"><text>二层</text><text>5室</text><text>老人房</text><text>南向客厅</text><text>新中式</text><text>带露台</text></view>
       </block>
-      <view class="count-block"><text class="form-title">生成数量</text><view class="count-tabs"><view wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'active' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}}个</view></view></view>
-      <view class="points"><t-icon name="money" size="24px" color="#b9690b" /><text>{{mode === 0 ? '余额' : '当前余额'}} <text class="point-value">{{points}}</text> 设计点</text><i></i><text>{{priceText || "正在获取报价…"}}</text></view>
-      <view class="v12-primary-button v12-primary-button--sm" bindtap="generate">生成平面方案</view>
+    </view>
+    <view class="v12-card generation-settings">
+      <view class="settings-head"><view><text>出图设置</text><span>选择清晰度与画幅</span></view><b>{{outputPixels}}</b></view>
+      <text class="settings-label">清晰度</text>
+      <view class="resolution-grid">
+        <view wx:for="{{resolutions}}" wx:key="value" class="resolution-option {{resolution === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectResolution">
+          <text>{{item.label}}</text><span>{{item.detail}}</span><i wx:if="{{resolution === item.value}}"><t-icon name="check" size="16px" /></i>
+        </view>
+      </view>
+      <text class="settings-label">画面方向</text>
+      <view class="orientation-grid">
+        <view wx:for="{{orientations}}" wx:key="value" class="orientation-option {{orientation === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectOrientation">
+          <view class="orientation-frame {{item.value === 'PORTRAIT' ? 'portrait' : 'landscape'}}"><i></i></view>
+          <view><text>{{item.label}} · {{item.ratio}}</text><span>{{item.pixels}}</span></view>
+        </view>
+      </view>
+      <view class="quantity-row"><text class="settings-label">生成数量</text><view><text wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'selected' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}} 张</text></view></view>
+      <view class="settings-footer">
+        <view class="cost-summary"><text>本次费用</text><b>{{priceText || '正在获取报价…'}}</b><span>余额 {{points}} 设计点</span><text wx:if="{{quoteError}}" class="quote-retry" bindtap="retryQuote">重新获取报价</text></view>
+        <view class="v12-primary-button generate-button {{!quoteReady || creating ? 'disabled' : ''}}" aria-disabled="{{!quoteReady || creating}}" bindtap="generate">{{creating ? '正在创建…' : '生成平面方案'}}</view>
+      </view>
     </view>
   </view>
 </view>

@@ -32,6 +32,12 @@ yudao:
   security:
     mock-enable: false
 zhongshu:
+  ai:
+    # P2-D（报告 15）：取消收敛调度器——未领取取消即时退款、失联取消超时兜底（资损修复）
+    job-cancel-recovery-enabled: true
+    job-deadline-minutes: 30
+    job-cancel-minutes: 10
+    job-cancel-sweep-interval-ms: 15000
   privacy:
     export-worker-enabled: true
     retention-policy-version: ${ZS_PRIVACY_RETENTION_POLICY_VERSION:}

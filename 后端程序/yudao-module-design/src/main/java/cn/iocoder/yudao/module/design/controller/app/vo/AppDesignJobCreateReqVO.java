@@ -16,6 +16,12 @@ public class AppDesignJobCreateReqVO {
     @Max(value = 4, message = "生成数量最多 4")
     private Integer count;
 
+    @Schema(description = "出图分辨率：2K/4K；旧客户端缺省 2K", example = "2K")
+    private String resolution;
+
+    @Schema(description = "画面方向：LANDSCAPE/PORTRAIT；平面缺省竖屏、立面缺省横屏", example = "PORTRAIT")
+    private String orientation;
+
     @Schema(description = "用户确认的计价规则编号与版本", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotNull(message = "请先确认本次生成价格")
     private cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation priceConfirmation;

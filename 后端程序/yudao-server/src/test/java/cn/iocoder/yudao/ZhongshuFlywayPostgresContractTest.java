@@ -37,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 class ZhongshuFlywayPostgresContractTest {
 
-    /** platform 目录下的迁移总数（新增平台迁移时同步更新） */
-    private static final int MIGRATION_COUNT = 5;
+    /** 全部 location 的迁移执行总数（新增迁移时同步更新；2026-10-01 实测 8：platform 4 + 其余 location 4，含 007 授权码导出权限/008 积分价格菜单） */
+    private static final int MIGRATION_COUNT = 8;
 
     @Container
     static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>(
@@ -249,14 +249,14 @@ class ZhongshuFlywayPostgresContractTest {
              ResultSet rs = st.executeQuery(
                      "SELECT count(*) FROM system_menu WHERE id BETWEEN 9500 AND 9519 AND deleted = 0")) {
             rs.next();
-            assertThat(rs.getInt(1)).as("管理端业务菜单应完整种入").isEqualTo(9);
+            assertThat(rs.getInt(1)).as("管理端业务菜单应完整种入").isEqualTo(11);
         }
         try (Connection c = newConnection();
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(
                      "SELECT count(*) FROM system_role_menu WHERE role_id = 1 AND menu_id BETWEEN 9500 AND 9519 AND deleted = 0")) {
             rs.next();
-            assertThat(rs.getInt(1)).as("超级管理员应绑定全部业务菜单").isEqualTo(9);
+            assertThat(rs.getInt(1)).as("超级管理员应绑定全部业务菜单").isEqualTo(11);
         }
 
         // 种子可重复执行（DELETE + INSERT 幂等）：重放迁移不会产生重复行
@@ -267,7 +267,7 @@ class ZhongshuFlywayPostgresContractTest {
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery("SELECT count(*) FROM system_menu WHERE id BETWEEN 9500 AND 9519")) {
             rs.next();
-            assertThat(rs.getInt(1)).as("菜单种子重放后仍应恰为 9 行").isEqualTo(9);
+            assertThat(rs.getInt(1)).as("V004 重放后仅恢复自身种子（9512-9514 由 007/008 管理，Flyway 单次执行不受重放影响）").isEqualTo(9);
         }
     }
 

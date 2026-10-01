@@ -130,11 +130,17 @@ public class SubmissionAdminController {
     }
 
     @PostMapping("/{submissionId}/publication-commands")
-    @Operation(summary = "发布上架：仅 APPROVED 可发布；创建 AI 案例 + 公开发布事实，重复发布拒绝")
+    @Operation(summary = "发布上架：仅 APPROVED 可发布；创建 AI 案例 + 公开发布事实，重复发布拒绝。"
+            + "投稿版本面积为小数时必须携带 confirmedBuildingArea（管理员核定的整数平方米，P1-A）")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.SUBMISSION_REVIEW + "')")
-    public CommonResult<Map<String, Object>> publish(@PathVariable("submissionId") String submissionId) {
+    public CommonResult<Map<String, Object>> publish(@PathVariable("submissionId") String submissionId,
+                                                     @RequestBody(required = false) Map<String, Object> body) {
         String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
-        long caseId = submissionReviewService.publishApprovedAsCase(Long.parseLong(submissionId), operator);
+        Integer confirmedArea = null;
+        if (body != null && body.get("confirmedBuildingArea") instanceof Number n && n.intValue() > 0) {
+            confirmedArea = n.intValue();
+        }
+        long caseId = submissionReviewService.publishApprovedAsCase(Long.parseLong(submissionId), operator, confirmedArea);
         return success(Map.of("submissionId", submissionId, "publishedCaseId", String.valueOf(caseId)));
     }
 

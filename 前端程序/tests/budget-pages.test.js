@@ -63,7 +63,7 @@ function runtime(apiChanges = {}, globalData = {}, actualGuard = false) {
     return module.exports;
   }
   const draft = load('utils/budget-draft.js');
-  return { calls, storage, draft, api, failStorage() { failStorage = true; }, setToken(value) { token = value; },
+  return { calls, storage, draft, api, failStorage() { failStorage = true; }, setToken(value) { token = value; delete storage['zs_draft_scope']; },
     page(name, options = {}) {
       load('pages/budget/' + name + '.js');
       const page = Object.assign({}, definition, { data: plain(definition.data), setData(values) { Object.assign(this.data, values); } });
@@ -291,16 +291,20 @@ test('切换会话后的旧响应不写草稿、不覆盖新请求状态，旧�
     await flush();
     assert.equal(page.data.error, '无权访问此项目');
     assert.equal(page.data.draft, null);
-    assert.deepEqual(Object.keys(env.storage), []);
+    // P2-C：换号后新 scope 的草稿键不得被旧响应写入；旧 scope 残留键不可见且无害
+    const newScope = env.draft.sessionScope();
+    assert.deepEqual(Object.keys(env.storage).filter(k => k.startsWith('zs_budget_draft') && k.includes(newScope)), []);
   }
   const env = runtime({}, {}, true);
   const page = env.page('parameters', { projectId, resultVersionId });
   await flush();
-  const before = JSON.stringify(env.storage);
-  env.setToken('session-owner-B');
+  const before = JSON.parse(JSON.stringify(env.storage));
+  env.setToken('session-owner-B'); // 等效 clearTokens：清 zs_draft_scope
   page.save();
   assert.equal(page.data.draft, null);
-  assert.equal(JSON.stringify(env.storage), before);
+  // 除会话 scope 标识本身外，存储不得有任何变化（脏写防护）
+  const stripped = obj => JSON.stringify(Object.entries(obj).filter(([k]) => k !== 'zs_draft_scope'));
+  assert.equal(stripped(env.storage), stripped(before));
   assert.equal(env.calls.filter(call => call[0] === 'navigateBack').length, 0);
 });
 

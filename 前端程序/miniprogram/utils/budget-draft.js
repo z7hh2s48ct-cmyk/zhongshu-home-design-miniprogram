@@ -8,17 +8,23 @@ const FIELDS = ['regionCode', 'footprintArea', 'floorCount', 'buildingArea', 'ro
 const EDITABLE = ['regionCode', 'footprintArea', 'floorCount', 'roofArea'];
 const SOURCE_NAMES = ['PROJECT', 'DERIVED', 'USER_OVERRIDE', 'ADMIN_OVERRIDE'];
 
+const SCOPE_KEY = 'zs_draft_scope';
+
 function sessionScope() {
+  // P2-C（报告 15）：草稿作用域改绑本地稳定标识——access token 会静默刷新轮换，
+  // 旧实现按 token 摘要定作用域，刷新后旧草稿永远读不到（用户配到一半全丢）。
+  // 现改为首次使用时生成的稳定随机标识：token 刷新不影响，登出/会话失效
+  // （request.js clearTokens）时清除，账号切换自然隔离。
   try {
-    const token = getToken();
-    if (typeof token !== 'string' || !token) return null;
-    // Digest only; never copy the bearer credential into drafts, page data or logs.
-    const bytes = new Uint8Array(token.length * 2);
-    for (let index = 0; index < token.length; index++) {
-      bytes[index * 2] = token.charCodeAt(index) >>> 8;
-      bytes[index * 2 + 1] = token.charCodeAt(index) & 255;
+    if (!getToken()) return null;
+    let scope = wx.getStorageSync(SCOPE_KEY);
+    if (typeof scope !== 'string' || !/^[0-9a-f]{64}$/.test(scope)) {
+      const bytes = new Uint8Array(32);
+      for (let index = 0; index < bytes.length; index++) bytes[index] = Math.floor(Math.random() * 256);
+      scope = sha256Hex(bytes);
+      wx.setStorageSync(SCOPE_KEY, scope);
     }
-    return sha256Hex(bytes);
+    return scope;
   } catch (error) { return null; }
 }
 
@@ -83,6 +89,13 @@ function read(projectId, resultVersionId) {
   });
   draft.selections = Array.isArray(saved.selections) ? [...new Set(saved.selections.filter(value => id(value)))] : [];
   draft.selectionResetReason = ['REGION_CHANGED', 'OPTION_UNAVAILABLE'].includes(saved.selectionResetReason) ? saved.selectionResetReason : '';
+  const pricing = saved.usageConfirmation;
+  if (pricing && pricing.product === 'BUDGET_ESTIMATE' && id(pricing.ruleId)
+      && Number.isSafeInteger(pricing.ruleVersion) && pricing.ruleVersion > 0
+      && Number.isSafeInteger(saved.usagePointCost) && saved.usagePointCost > 0) {
+    draft.usageConfirmation = { product: pricing.product, ruleId: pricing.ruleId, ruleVersion: pricing.ruleVersion };
+    draft.usagePointCost = saved.usagePointCost;
+  }
   if (saved.generationAttempt && typeof saved.generationAttempt.signature === 'string'
       && saved.generationAttempt.signature === JSON.stringify(requestBody(draft))
       && /^[A-Za-z0-9_-]{1,64}$/.test(saved.generationAttempt.key || '')) {
@@ -119,9 +132,11 @@ function requestBody(draft) {
   EDITABLE.forEach(function (key) {
     if (Object.prototype.hasOwnProperty.call(draft.overrides || {}, key)) inputOverrides[key] = draft.overrides[key];
   });
-  return { resultVersionId: draft.resultVersionId, inputOverrides,
+  const body = { resultVersionId: draft.resultVersionId, inputOverrides,
     optionIds: [...new Set((Array.isArray(draft.selections) ? draft.selections : []).filter(value => id(value)))].sort(),
     requirementSnapshotIds: draft.requirementSnapshotIds.slice() };
+  if (draft.usageConfirmation) body.usageConfirmation = draft.usageConfirmation;
+  return body;
 }
 
 function prepareGeneration(draft) {

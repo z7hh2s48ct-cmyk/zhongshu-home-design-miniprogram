@@ -5,12 +5,15 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.identity.controller.admin.vo.AdminAccessCodeRespVO;
 import cn.iocoder.yudao.module.identity.enums.PermissionConstants;
 import cn.iocoder.yudao.module.identity.accesscode.AccessCodeService;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -49,6 +52,7 @@ public class AccessCodeAdminController {
             vo.setCodeMask(row.codeMask());
             vo.setBatchId(String.valueOf(row.batchId()));
             vo.setStatus(row.status());
+            vo.setCanCopy(row.canCopy());
             vo.setIssuedAt(LocalDateTime.ofInstant(row.issuedAt(), ZoneOffset.UTC));
             vo.setConsumedAt(row.consumedAt() == null ? null : LocalDateTime.ofInstant(row.consumedAt(), ZoneOffset.UTC));
             vo.setSecretExposedAt(row.secretExposedAt() == null ? null
@@ -75,6 +79,22 @@ public class AccessCodeAdminController {
     public CommonResult<Boolean> disableAccessCode(@PathVariable("codeId") Long codeId,
                                                    @RequestBody Map<String, Object> action) {
         return success(accessCodeService.disableCode(codeId));
+    }
+
+    @PostMapping("/{codeId}/copy")
+    @Operation(summary = "复制仍未使用且未过期的单个授权码；记录操作日志")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_EXPORT + "')")
+    public CommonResult<String> copyAccessCode(@PathVariable("codeId") Long codeId) {
+        String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
+        return success(accessCodeService.copyActiveCode(codeId, operator));
+    }
+
+    @DeleteMapping("/{codeId}")
+    @Operation(summary = "逻辑删除未兑换授权码并停用；已兑换码不可删除")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_MANAGE + "')")
+    public CommonResult<Boolean> deleteAccessCode(@PathVariable("codeId") Long codeId) {
+        String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
+        return success(accessCodeService.deleteUnusedCode(codeId, operator));
     }
 
 }

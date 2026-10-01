@@ -35,6 +35,15 @@ test('completion follows all slots; replay uses identical event ID and payload',
   assert.deepEqual(events[0], events[1]); assert.equal(events.length, 3);
   assert.equal(s.calls.at(-1)[0], 'completion-events');
 });
+test('提示词扣点端点在实际 plan 调用前只请求一次', async () => {
+  const s = scenario(); const order = [];
+  const originalJob = s.core.job;
+  s.core.job = async (task, endpoint, payload) => { order.push(endpoint); return originalJob(task, endpoint, payload); };
+  s.provider.plan = async () => { order.push('provider-plan'); return 'plan'; };
+  await runJob(job, s.core, s.provider, { providerCode: 'apilio' });
+  assert.equal(order.filter(value => value === 'prompt-calls').length, 1);
+  assert.ok(order.indexOf('prompt-calls') < order.indexOf('provider-plan'));
+});
 test('partial provider failure sends a completion barrier without regenerating a paid slot', async () => {
   const s = scenario('second'); await assert.rejects(runJob(job, s.core, s.provider, { providerCode: 'apilio' }), /INCOMPLETE/);
   assert.equal(s.calls.filter(x => x[0] === 'result-events').length, 1);
@@ -47,6 +56,31 @@ test('lost lease aborts provider and prevents result or completion writes', asyn
 test('elevation without selected plane fails before a provider request', async () => {
   const s = scenario(); let called = false; s.provider.plan = async () => { called = true; };
   await assert.rejects(runJob({ ...job, phase: 'ELEVATION' }, s.core, s.provider, { providerCode: 'apilio' })); assert.equal(called, false);
+});
+test('input imageOptions 冻结传给每个槽位，无字段的历史任务保持兼容', async () => {
+  const seen = [];
+  const options = { resolution: '4K', orientation: 'LANDSCAPE' };
+  const s = scenario();
+  const originalJob = s.core.job;
+  s.core.job = async (task, endpoint, payload) => endpoint === 'inputs'
+    ? { schemaVersion: 1, phase: task.phase, images: [], requirements: {}, imageOptions: options }
+    : originalJob(task, endpoint, payload);
+  s.provider.generate = async (_task, _slot, _prompt, _images, _signal, imageOptions) => {
+    seen.push(imageOptions);
+    return { sha256: 'digest', sizeBytes: 10, mimeType: 'image/png' };
+  };
+  await runJob(job, s.core, s.provider, { providerCode: 'apilio' });
+  assert.deepEqual(seen, [options, options]);
+  assert.equal(Object.isFrozen(seen[0]), true);
+});
+test('input 存在非法 imageOptions 时在 provider 调用前拒绝', async () => {
+  const s = scenario(); let called = false;
+  s.core.job = async (task, endpoint) => endpoint === 'inputs'
+    ? { schemaVersion: 1, phase: task.phase, images: [], requirements: {}, imageOptions: { resolution: '4K', orientation: 'SQUARE' } }
+    : true;
+  s.provider.plan = async () => { called = true; };
+  await assert.rejects(runJob(job, s.core, s.provider, { providerCode: 'apilio' }), /INCOMPLETE/);
+  assert.equal(called, false);
 });
 test('journal restart reuses completed work; uncertain paid call never repeats; shared quota cannot race', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'zs-runtime-'));
@@ -84,6 +118,10 @@ test('live config requires image model, spend limit and explicit trusted storage
   const env = { ZS_AI_DAILY_CALL_LIMIT: '10', ZS_AI_STORAGE_ORIGINS: 'https://storage.example', ZS_AI_CORE_URL: 'http://core:48080',
     ZS_INTERNAL_SECRET: 'test-secret', ZS_AI_API_KEY: 'test-key', ZS_AI_IMAGE_MODEL: 'reviewed-image-model', ZS_AI_JOURNAL_DIR: '/data' };
   assert.equal(config(env).base, 'https://api.apilio.ai/v1');
+  for (const size of ['2048x1152', '1152x2048', '3840x2160', '2160x3840']) {
+    assert.equal(config({ ...env, ZS_AI_IMAGE_SIZE_FLAT: size }).imageSizeFlat, size);
+  }
+  assert.equal(config({ ...env, ZS_AI_IMAGE_SIZE_FLAT: '1536x1536' }).imageSizeFlat, '1536x1536');
   assert.throws(() => config({ ...env, ZS_AI_BASE_URL: 'http://provider.example' }), /INVALID/);
   assert.throws(() => config({ ...env, ZS_AI_DAILY_CALL_LIMIT: '0' }), /INVALID/);
 });
