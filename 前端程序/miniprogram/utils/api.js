@@ -23,10 +23,6 @@ module.exports = {
     if (avatarAssetId) body.avatarAssetId = String(avatarAssetId);
     return http.patch(BASE + '/profile', body);
   },
-  // 用户偏好：字段白名单由服务端决定，白名单外的键丢弃（PATCH /profile/preferences）
-  updatePreferences: function (preferences) {
-    return http.patch(BASE + '/profile/preferences', preferences || {});
-  },
   // 客服入口配置（C06）：未配置时后端下发空串，前端据此隐藏入口，不展示打不通的假号码
   getSupportEntry: function () {
     return http.get(BASE + '/support-entry');
@@ -127,9 +123,6 @@ module.exports = {
   getPointAccount: function () {
     return http.get(BASE + '/point-account');
   },
-  getPointLedger: function (pageNo, pageSize) {
-    return http.get(BASE + '/point-ledger?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
-  },
 
   // ---- 消息 ----
   listMessages: function (cursor, limit) {
@@ -211,9 +204,6 @@ module.exports = {
   getBudgetQuotes: function (projectId) {
     return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes');
   },
-  getBudgetQuote: function (projectId, quoteId) {
-    return http.get(BASE + '/design-projects/' + encodeURIComponent(projectId) + '/budget-quotes/' + encodeURIComponent(quoteId));
-  },
 
   // ---- 投稿 ----
   validatePublication: function (projectId, data) {
@@ -225,27 +215,20 @@ module.exports = {
   },
 
   // ---- 协议 ----
+  // 小程序仅读取协议版本与同意事实、发起/下载数据主体请求；同意记录由后端在登录链路落库。
   getPrivacyConsents: function () {
     return http.get(BASE + '/privacy-consents');
   },
   listPrivacyRequests: function () { return http.get(BASE + '/privacy-requests'); },
   createPrivacyDownloadTicket: function (id) { return http.post(BASE + '/privacy-requests/' + encodeURIComponent(id) + '/download-tickets'); },
-  acceptPrivacyConsents: function () {
-    return http.post(BASE + '/privacy-consents');
-  },
 
   // ---- 数据主体请求（M10：数据导出 / 账号关闭）----
-  // P0 后端只登记与查询进度；导出包生成与关闭编排的执行链随后端接入（WS5/6/7）。
+  // P0 后端只登记；导出包下载闭环走 privacy-requests 的 download-tickets/content。
+  // 进度查询端点（GET /data-export-requests/{id} 等）暂无页面使用，接入时再补封装。
   createDataExportRequest: function () {
     return http.post(BASE + '/data-export-requests');
   },
-  getDataExportRequest: function (requestId) {
-    return http.get(BASE + '/data-export-requests/' + encodeURIComponent(requestId));
-  },
   createAccountClosureRequest: function () {
     return http.post(BASE + '/account-closure-requests');
-  },
-  getAccountClosureRequest: function (requestId) {
-    return http.get(BASE + '/account-closure-requests/' + encodeURIComponent(requestId));
   }
 };

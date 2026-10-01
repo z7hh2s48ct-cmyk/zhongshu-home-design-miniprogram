@@ -45,14 +45,13 @@ test('报价API编码大整数路径，三个写操作显式透传幂等键', as
   }
   const filename = path.join(root, 'src/api/zs/budget-quote.ts')
   const api = evaluate(fs.readFileSync(filename, 'utf8'), filename, { '@/config/axios': { __esModule: true, default: http } })
-  await api.getQuotes('1/2'); await api.getQuote('3&x=1')
+  await api.getQuotes('1/2')
   await api.createQuote(budgetId, { revisionId, expectedVersion: 3, finalPriceCents: 1, reason: 'x' }, 'create-key')
   await api.publishQuote(quoteId, { expectedVersion: 1, reason: 'x' }, 'publish-key')
   await api.withdrawQuote(quoteId, { expectedVersion: 2, reason: 'x' }, 'withdraw-key')
   assert.equal(calls[0][1].url, '/design/v1/budget/estimates/1%2F2/quotes')
-  assert.equal(calls[1][1].url, '/design/v1/budget/quotes/3%26x%3D1')
-  assert.deepEqual(calls.slice(2).map((call) => call[1].headers['Idempotency-Key']), ['create-key', 'publish-key', 'withdraw-key'])
-  assert.match(calls[3][1].url, /\/publish$/); assert.match(calls[4][1].url, /\/withdraw$/)
+  assert.deepEqual(calls.slice(1).map((call) => call[1].headers['Idempotency-Key']), ['create-key', 'publish-key', 'withdraw-key'])
+  assert.match(calls[2][1].url, /\/publish$/); assert.match(calls[3][1].url, /\/withdraw$/)
 })
 
 test('报价页面模板和脚本可编译，明确展示不可改系统总额、公开预览及发布撤回动作', () => {

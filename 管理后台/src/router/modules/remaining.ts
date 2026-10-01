@@ -128,32 +128,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/fms/auxiliary',
-    component: Layout,
-    name: 'FmsAuxiliaryRoot',
-    meta: {
-      hidden: true
-    },
-    children: [
-      {
-        path: 'type/item/:auxiliaryTypeId',
-        redirect: (to) => ({
-          path: '/fms/config/auxiliary',
-          query: { auxiliaryTypeId: to.params.auxiliaryTypeId }
-        }),
-        name: 'FmsAuxiliaryItem',
-        meta: {
-          title: '辅助核算项目',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/fms/config/auxiliary'
-        }
-      }
-    ]
-  },
-  {
     path: '/codegen',
     component: Layout,
     name: 'CodegenEdit',
@@ -268,13 +242,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
       hidden: true,
       breadcrumb: false
     }
-  },
-  {
-    path: '/pay',
-    component: Layout,
-    name: 'pay',
-    meta: { hidden: true },
-    children: []
   }
 ]
 

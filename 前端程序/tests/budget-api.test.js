@@ -68,13 +68,11 @@ test('新旧预算读取共用原路径，历史查询显式分页并编码全�
     '/app-api/design/v1/design-projects/9007199254740993/budget-estimates?savedOnly=true&limit=20', '/app-api/design/v1/design-projects/1%2F2/budget-estimates?savedOnly=false&limit=10&cursor=3%26evil%3Dtrue']);
 });
 
-test('正式报价列表与详情只按编码后的项目和报价ID读取', async () => {
+test('正式报价列表按编码后的项目ID读取；单条详情无页面使用不封装', async () => {
   const calls = [], api = loadApi({ get(url) { calls.push(url); return Promise.resolve([]); } });
   await api.getBudgetQuotes('1/2');
-  await api.getBudgetQuote('1/2', '3&draft=true');
   assert.deepEqual(calls, [
-    '/app-api/design/v1/design-projects/1%2F2/budget-quotes',
-    '/app-api/design/v1/design-projects/1%2F2/budget-quotes/3%26draft%3Dtrue'
+    '/app-api/design/v1/design-projects/1%2F2/budget-quotes'
   ]);
 });
 

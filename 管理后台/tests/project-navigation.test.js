@@ -38,7 +38,7 @@ test('导航仅保留工作台、现有业务及必要运维，不修改原始�
   const before = JSON.stringify({ base, business, authorized })
   const result = menus()
   assert.deepEqual(Array.from(result, route => route.path), ['/', '/zs', '/system', '/infra'])
-  assert.equal(result[1].children.length, 13)
+  assert.equal(result[1].children.length, 15)
   assert.equal(JSON.stringify({ base, business, authorized }), before)
   assert.equal(result[2].children[0].meta.title, '管理员账号')
   assert.equal(result[3].redirect, '/infra/config')
@@ -46,7 +46,7 @@ test('导航仅保留工作台、现有业务及必要运维，不修改原始�
 })
 
 test('保留全部已有预算、审核、用户、资金及任务入口，不依赖不完整菜单种子', () => {
-  for (const target of ['case', 'review', 'access-code', 'recharge-plan', 'recharge-order', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy']) {
+  for (const target of ['case', 'review', 'access-code', 'recharge-plan', 'recharge-order', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy', 'generation-pricing', 'usage-pricing']) {
     assert.ok(values(menus(), `/zs/${target}`).includes(`/zs/${target}`), target)
   }
 })
