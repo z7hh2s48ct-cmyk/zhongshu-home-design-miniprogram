@@ -70,8 +70,6 @@ export type QuoteCreateCommand = {
 
 export const getQuotes = (budgetId: string) =>
   request.get<BudgetQuote[]>({ url: `${BASE}/estimates/${encodeURIComponent(budgetId)}/quotes` })
-export const getQuote = (quoteId: string) =>
-  request.get<BudgetQuote>({ url: `${BASE}/quotes/${encodeURIComponent(quoteId)}` })
 export const createQuote = (budgetId: string, data: QuoteCreateCommand, key: string) =>
   request.post<BudgetQuote>({
     url: `${BASE}/estimates/${encodeURIComponent(budgetId)}/quotes`,
