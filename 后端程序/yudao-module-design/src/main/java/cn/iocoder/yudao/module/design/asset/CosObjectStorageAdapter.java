@@ -238,6 +238,14 @@ public class CosObjectStorageAdapter implements ObjectStoragePort {
                 .url().toString();
     }
 
+    @Override public boolean supportsExternalModerationSource() { return true; }
+
+    @Override public void deleteModerationObject(String objectKey) {
+        requireKey(objectKey);
+        if (!objectKey.startsWith("moderation-input/")) throw new IllegalArgumentException("MODERATION_TEMPORARY_KEY_REQUIRED");
+        s3.deleteObject(software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder().bucket(bucket).key(objectKey).build());
+    }
+
     /** 释放 SDK 客户端连接池（S3Client/S3Presigner 均 SdkAutoCloseable）；容器关闭时由 Spring 调用。 */
     @PreDestroy
     public void close() {

@@ -26,4 +26,9 @@ public interface ObjectStoragePort {
     /** 短期下载 URL */
     String presignDownloadUrl(String objectKey, long ttlSeconds);
 
+    default boolean supportsExternalModerationSource() { return false; }
+
+    /** Only server-owned temporary moderation objects may be deleted through this method. */
+    default void deleteModerationObject(String objectKey) { throw new UnsupportedOperationException("MODERATION_CLEANUP_NOT_WIRED"); }
+
 }

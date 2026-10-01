@@ -656,20 +656,20 @@ public class RechargePaymentService {
 
         return switch (notification.getState()) {
             case "SUCCEEDED" -> {
-                confirmReversal(refundId, userId, basePoints, bonusPoints);
+                if (!confirmReversal(refundId, userId, basePoints, bonusPoints)) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
                 yield "REVERSED";
             }
             case "FAILED" -> {
-                releaseReservation(refundId, userId, basePoints + bonusPoints);
-                yield "RELEASED";
+                boolean released = releaseReservation(refundId, userId, basePoints + bonusPoints);
+                yield released ? "RELEASED" : "REVERSED"; // Late failure cannot undo confirmed success.
             }
             // 红线 5：PROCESSING / UNKNOWN / CREATED 不冲正不释放，仅落 channel_state 等查单收口。
             // 白名单归一：非 ck_refund_channel_state 允许值一律归 UNKNOWN，避免约束违反。
             default -> {
-                String persisted = List.of("PROCESSING", "UNKNOWN", "CREATED").contains(notification.getState())
+                String persisted = List.of("PROCESSING", "UNKNOWN", "CREATED", "ABNORMAL").contains(notification.getState())
                         ? notification.getState() : "UNKNOWN";
                 jdbcTemplate.update(
-                        "UPDATE refund_order SET channel_state = ?, update_time = now() WHERE id = ?",
+                        "UPDATE refund_order SET channel_state = ?, update_time = now() WHERE id = ? AND point_reversal_state = 'RESERVED'",
                         persisted, refundId);
                 log.info("[handleRefundNotification][refund={} 渠道状态 {}，保持预留并进入查单收口]",
                         refundId, notification.getState());
@@ -878,6 +878,8 @@ public class RechargePaymentService {
                     "SELECT id, order_no, user_id, amount_cents, base_points, bonus_points, "
                             + "payment_state, fulfillment_state FROM recharge_order "
                             + "WHERE id = ? AND deleted = FALSE FOR UPDATE", orderId);
+            var lockedReplay = jdbcTemplate.queryForList("SELECT id FROM refund_order WHERE refund_request_key=?",Long.class,requestKey);
+            if (!lockedReplay.isEmpty()) return lockedReplay.get(0);
             if (!"SUCCEEDED".equals(order.get("payment_state"))
                     || !"CREDITED".equals(order.get("fulfillment_state"))) {
                 throw exception(PAYMENT_ORDER_STATE_CONFLICT);
@@ -916,26 +918,28 @@ public class RechargePaymentService {
             jdbcTemplate.update(
                     "INSERT INTO refund_order (id, order_id, refund_request_key, amount_cents, "
                             + "channel_state, point_reversal_state, reserved_base, reserved_bonus, "
-                            + "operator_id, reason) VALUES (?, ?, ?, ?, 'CREATED', 'RESERVED', ?, ?, ?, ?)",
+                            + "operator_id, reason, channel_refund_id) VALUES (?, ?, ?, ?, 'CREATED', 'RESERVED', ?, ?, ?, ?, ?)",
                     id, orderId, requestKey, ((Number) order.get("amount_cents")).longValue(),
-                    basePoints, bonusPoints, operator, reason);
+                    basePoints, bonusPoints, operator, reason, "refund-" + id);
             return id;
         });
 
-        // 渠道调用在事务外
+        var persisted = jdbcTemplate.queryForMap(
+                "SELECT order_id, channel_refund_id, point_reversal_state FROM refund_order WHERE id = ?", refundId);
+        if (((Number) persisted.get("order_id")).longValue() != orderId) {
+            throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+        }
+        if (!"RESERVED".equals(persisted.get("point_reversal_state"))) return refundId;
         var order = getOrderById(orderId).orElseThrow();
-        String channelRefundId = "refund-" + refundId;
-        var refund = paymentPort.requestRefund(order.orderNo(), channelRefundId, order.amountCents());
-        switch (refund.getState()) {
-            case "SUCCEEDED" -> confirmReversal(refundId, order.userId(), order.basePoints(), order.bonusPoints());
-            case "FAILED" -> releaseReservation(refundId, order.userId(), order.basePoints() + order.bonusPoints());
-            default -> {
-                // 审查 H1：UNKNOWN/PROCESSING 落渠道退款号，交由收口调度（reconcileRefunds）查单
-                jdbcTemplate.update(
-                        "UPDATE refund_order SET channel_state = 'UNKNOWN', channel_refund_id = ?, "
-                                + "update_time = now() WHERE id = ?", channelRefundId, refundId);
-                log.info("[requestRefund][refund={} 渠道状态 {}，保持预留并进入查单收口]", refundId, refund.getState());
-            }
+        String channelRefundId = (String) persisted.get("channel_refund_id");
+        try {
+            applyRefundState(refundId, orderId, paymentPort.requestRefund(
+                    order.orderNo(), channelRefundId, order.amountCents()).getState());
+        } catch (RuntimeException uncertain) {
+            // The channel may already have accepted this stable merchant refund identity.
+            persistPendingRefund(refundId, "UNKNOWN");
+            log.warn("[requestRefund][refund={} channel result uncertain type={}]", refundId,
+                    uncertain.getClass().getSimpleName());
         }
         return refundId;
     }
@@ -947,16 +951,9 @@ public class RechargePaymentService {
      * <p>分派表 §8 红线 5：PROCESSING/UNKNOWN 既不冲正也不释放，仅保持预留等下一轮查单，直到渠道终态。
      */
     public int reconcileRefunds() {
-        int resolved = 0;
-        for (Map<String, Object> row : queryPendingRefunds()) {
-            long refundId = ((Number) row.get("id")).longValue();
-            long orderId = ((Number) row.get("order_id")).longValue();
-            String channelRefundId = (String) row.get("channel_refund_id");
-            if (resolveRefundByQuery(refundId, orderId, channelRefundId)) {
-                resolved++;
-            }
-        }
-        return resolved;
+        // New refunds can become stuck long after ApplicationReadyEvent. Both drivers
+        // must use the same deduplicated audit as well as the same terminal settlement.
+        return recoverPendingRefunds();
     }
 
     /**
@@ -990,9 +987,9 @@ public class RechargePaymentService {
     private List<Map<String, Object>> queryPendingRefunds() {
         return jdbcTemplate.queryForList(
                 "SELECT id, order_id, channel_refund_id FROM refund_order "
-                        + "WHERE channel_state IN ('UNKNOWN','PROCESSING','CREATED') "
-                        + "AND point_reversal_state = 'RESERVED' AND deleted = FALSE "
-                        + "ORDER BY id LIMIT 20");
+                        + "WHERE channel_state IN ('UNKNOWN','PROCESSING','CREATED','ABNORMAL') "
+                        + "AND point_reversal_state = 'RESERVED' AND deleted = FALSE AND next_reconcile_at <= now() "
+                        + "ORDER BY next_reconcile_at, id LIMIT 20");
     }
 
     /**
@@ -1001,29 +998,45 @@ public class RechargePaymentService {
      * @return true=已到终态（SUCCEEDED 冲正 / FAILED 释放）；false=仍未终态或不可处理（保持预留）
      */
     private boolean resolveRefundByQuery(long refundId, long orderId, String channelRefundId) {
-        if (channelRefundId == null) {
-            return false; // CREATED 未提交渠道：等下一轮（受理方重试）
-        }
         var order = getOrderById(orderId).orElse(null);
-        if (order == null) {
+        if (order == null || channelRefundId == null) return false;
+        // Reserve a future slot first so one failing row cannot starve the remaining scan.
+        jdbcTemplate.update("UPDATE refund_order SET reconcile_attempts=reconcile_attempts+1, "
+                + "next_reconcile_at=now() + (LEAST(300, 5 * (reconcile_attempts+1)) * interval '1 second') "
+                + "WHERE id=? AND point_reversal_state='RESERVED'", refundId);
+        try {
+            String state = paymentPort.queryRefund(order.orderNo(), channelRefundId).getState();
+            if ("NOT_FOUND".equals(state)) {
+                // Authoritative absence: CREATED or UNKNOWN can both mean the first send never arrived.
+                // Always replay the persisted merchant number, never allocate another refund.
+                state = paymentPort.requestRefund(order.orderNo(), channelRefundId, order.amountCents()).getState();
+            }
+            return applyRefundState(refundId, orderId, state);
+        } catch (RuntimeException uncertain) {
+            log.warn("[reconcileRefunds][refund={} query uncertain type={}]", refundId,
+                    uncertain.getClass().getSimpleName());
             return false;
         }
-        var query = paymentPort.queryRefund(order.orderNo(), channelRefundId);
-        return switch (query.getState()) {
-            case "SUCCEEDED" -> {
-                confirmReversal(refundId, order.userId(), order.basePoints(), order.bonusPoints());
-                yield true;
-            }
-            case "FAILED" -> {
-                releaseReservation(refundId, order.userId(), order.basePoints() + order.bonusPoints());
-                yield true;
-            }
-            // 红线 5：PROCESSING/UNKNOWN 不冲正不释放，保持预留等下一轮查单
-            default -> {
-                log.info("[reconcileRefunds][refund={} 渠道仍 {}，保持预留]", refundId, query.getState());
-                yield false;
-            }
-        };
+    }
+
+    private boolean applyRefundState(long refundId, long orderId, String state) {
+        var order = getOrderById(orderId).orElseThrow();
+        if ("SUCCEEDED".equals(state)) {
+            if (!confirmReversal(refundId, order.userId(), order.basePoints(), order.bonusPoints())) throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+            return true;
+        }
+        if ("FAILED".equals(state)) {
+            releaseReservation(refundId, order.userId(), order.basePoints() + order.bonusPoints());
+            return true;
+        }
+        persistPendingRefund(refundId, state);
+        return false;
+    }
+
+    private void persistPendingRefund(long refundId, String state) {
+        String pending = List.of("PROCESSING", "UNKNOWN", "CREATED", "ABNORMAL").contains(state) ? state : "UNKNOWN";
+        jdbcTemplate.update("UPDATE refund_order SET channel_state=?, update_time=now() "
+                + "WHERE id=? AND point_reversal_state='RESERVED'", pending, refundId);
     }
 
     /**
@@ -1033,9 +1046,9 @@ public class RechargePaymentService {
     private void auditStuckRefundIfNeeded(long refundId, String orderNo) {
         Integer stuck = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM refund_order WHERE id = ? "
-                        + "AND channel_state IN ('PROCESSING','UNKNOWN','CREATED') "
+                        + "AND channel_state IN ('PROCESSING','UNKNOWN','CREATED','ABNORMAL') "
                         + "AND point_reversal_state = 'RESERVED' "
-                        + "AND update_time < now() - (? * interval '1 minute')",
+                        + "AND create_time < now() - (? * interval '1 minute')",
                 Integer.class, refundId, REFUND_STUCK_GRACE_MINUTES);
         if (stuck == null || stuck == 0) {
             return; // 未超宽限期：正常在途，不告警
@@ -1052,13 +1065,13 @@ public class RechargePaymentService {
     }
 
     /** 渠道退款成功：冲正事务（预留扣减+两类冲正流水+退款单 CAS） */
-    private void confirmReversal(Long refundId, long userId, long basePoints, long bonusPoints) {
-        txTemplate.execute(status -> {
+    private boolean confirmReversal(Long refundId, long userId, long basePoints, long bonusPoints) {
+        return Boolean.TRUE.equals(txTemplate.execute(status -> {
             Map<String, Object> refund = jdbcTemplate.queryForMap(
                     "SELECT order_id, point_reversal_state, reserved_base, reserved_bonus FROM refund_order "
                             + "WHERE id = ? FOR UPDATE", refundId);
             if (!"RESERVED".equals(refund.get("point_reversal_state"))) {
-                return null; // 幂等：已冲正/已释放
+                return "REVERSED".equals(refund.get("point_reversal_state")); // Only real reversal is successful
             }
             long orderId = ((Number) refund.get("order_id")).longValue();
             pointAccountService.consumeReserveWithReversal(userId, basePoints, bonusPoints,
@@ -1074,25 +1087,25 @@ public class RechargePaymentService {
             reliableEventPort.append(OutboxEventMessage.builder()
                     .eventType("ORDER_REFUND_REVERSED").bizType("refund_order").bizId(String.valueOf(refundId))
                     .payload(Map.of("refundId", refundId, "orderId", orderId, "userId", userId)).build());
-            return null;
-        });
+            return true;
+        }));
     }
 
     /** 渠道退款失败：释放预留 */
-    private void releaseReservation(Long refundId, long userId, long totalPoints) {
-        txTemplate.execute(status -> {
+    private boolean releaseReservation(Long refundId, long userId, long totalPoints) {
+        return Boolean.TRUE.equals(txTemplate.execute(status -> {
             Map<String, Object> refund = jdbcTemplate.queryForMap(
                     "SELECT order_id, point_reversal_state, reserved_base, reserved_bonus FROM refund_order "
                             + "WHERE id = ? FOR UPDATE", refundId);
             if (!"RESERVED".equals(refund.get("point_reversal_state"))) {
-                return null;
+                return "RELEASED".equals(refund.get("point_reversal_state"));
             }
             pointAccountService.releaseReserve(userId, totalPoints);
             jdbcTemplate.update(
                     "UPDATE refund_order SET channel_state = 'FAILED', point_reversal_state = 'RELEASED', "
                             + "update_time = now() WHERE id = ?", refundId);
-            return null;
-        });
+            return true;
+        }));
     }
 
     // ========== 工具 ==========

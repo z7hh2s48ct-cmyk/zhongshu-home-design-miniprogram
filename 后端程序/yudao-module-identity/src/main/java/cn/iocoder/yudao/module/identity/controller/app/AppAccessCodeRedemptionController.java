@@ -34,6 +34,9 @@ public class AppAccessCodeRedemptionController {
     private AccessCodeRedemptionService redemptionService;
 
     @Resource
+    private cn.iocoder.yudao.framework.ratelimiter.core.VerifiedAccountRateLimiter verifiedAccountRateLimiter;
+
+    @Resource
     private UserSessionService sessionService;
 
     @Resource
@@ -45,10 +48,11 @@ public class AppAccessCodeRedemptionController {
      */
     @PostMapping
     @Operation(summary = "兑换授权码并绑定微信身份")
-    @RateLimiter(time = 60, count = 10)
+    @RateLimiter(time = 60, count = 30, keyResolver = ClientIpRateLimiterKeyResolver.class)
     public CommonResult<AppAccessGrantRespVO> redeem(@Valid @RequestBody AppAccessCodeRedeemReqVO reqVO,
                                                      @RequestHeader(value = "Authorization", required = false) String authorization) {
         UserSessionService.AccessContext context = requireContext(authorization);
+        verifiedAccountRateLimiter.check("access-code-redemption", context.accountId(), 10, 60);
         AccessCodeRedemptionService.RedemptionResult result = redemptionService.redeem(
                 context.appid(), context.openid(), null, reqVO.getAccessCode());
         return success(toGrantVO(result.accountId(), result.grantId()));

@@ -26,6 +26,8 @@ import java.util.Map;
 @Slf4j
 @Service
 public class AiJobSettlementService {
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.AccountStatePort accountStatePort;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -76,17 +78,11 @@ public class AiJobSettlementService {
     public long createJobWithCharge(long userId, String phase, int count,
                                     String idempotencyKey, String projectRef,
                                     PricingPort.PriceConfirmation confirmation, String resolution) {
-        try {
+        final String requestKey = idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey;
             return txTemplate.execute(status -> {
-                if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-                    // 审查 H8：幂等键限定 user 维度（跨用户同 Key 不得复用他人任务）
-                    List<Long> existing = jdbcTemplate.query(
-                            "SELECT id FROM ai_job WHERE idempotency_key = ? AND user_id = ?",
-                            (rs, i) -> rs.getLong("id"), idempotencyKey, userId);
-                    if (!existing.isEmpty()) {
-                        return existing.get(0);
-                    }
-                }
+                if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
+                Long replay=orchestrationService.findRequestReplay(userId,phase,count,requestKey,projectRef,resolution);
+                if (replay != null) return replay;
                 PricingPort.PriceSnapshot quote = pricingPort.quote(phase, count, resolution);
                 PricingPort.requireConfirmed(quote, confirmation);
                 pricingPort.validateSnapshotStillValid(quote); // 价格更新竞态：失效即 PRICE_RULE_CHANGED
@@ -101,38 +97,81 @@ public class AiJobSettlementService {
                 String ledgerType = "FLAT".equals(phase) ? "FLAT_GENERATION_DEBIT" : "ELEVATION_GENERATION_DEBIT";
                 long ledgerId = pointLedgerPort.debit(userId, ledgerType, quote.totalPointCost(),
                         "ai_job", String.valueOf(jobId),
-                        "AI_JOB:" + (idempotencyKey == null ? jobId : idempotencyKey), null, null);
+                        scopedChargeKey(userId,requestKey,jobId), null, null);
+                Integer bound = jdbcTemplate.queryForObject("SELECT count(*) FROM design_point_ledger WHERE id=? AND user_id=? AND type=? AND delta=? AND biz_type='ai_job' AND biz_id=? AND deleted=FALSE",
+                        Integer.class, ledgerId, userId, ledgerType, -quote.totalPointCost(), String.valueOf(jobId));
+                if (bound == null || bound != 1) throw cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception(
+                        cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
 
                 long chargeId = IdWorker.getId();
                 jdbcTemplate.update(
                         "INSERT INTO ai_job (id, user_id, project_ref, phase, status, requested_count, "
-                                + "output_prefix, idempotency_key, unit_point_cost, total_point_cost, charge_id) "
-                                + "VALUES (?, ?, ?, ?, 'QUEUED', ?, ?, ?, ?, ?, ?)",
+                                + "output_prefix, idempotency_key, unit_point_cost, total_point_cost, charge_id,request_resolution) "
+                                + "VALUES (?, ?, ?, ?, 'QUEUED', ?, ?, ?, ?, ?, ?,?)",
                         jobId, userId, projectRef, phase, count,
-                        "ai-quarantine/" + jobId, idempotencyKey,
-                        quote.unitPointCost(), quote.totalPointCost(), chargeId);
+                        "ai-quarantine/" + jobId, requestKey,
+                        quote.unitPointCost(), quote.totalPointCost(), chargeId,resolution);
                 jdbcTemplate.update(
                         "INSERT INTO ai_task_charge (id, job_id, user_id, price_rule_id, price_rule_version, "
                                 + "stage, unit_point_cost, requested_count, total_point_cost, ledger_id) "
                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         chargeId, jobId, userId, quote.ruleId(), quote.ruleVersion(),
                         quote.stage(), quote.unitPointCost(), count, quote.totalPointCost(), ledgerId);
-                if (promptQuote != null) usagePricingPort.prepareCharge(userId, promptQuote, "ai_job", String.valueOf(jobId));
+                if (promptQuote != null) {
+                    usagePricingPort.prepareCharge(userId, promptQuote, "ai_job", String.valueOf(jobId));
+                    jdbcTemplate.update("UPDATE ai_job SET prompt_pricing_version=1 WHERE id=?",jobId);
+                }
                 reliableEventPort.append(cn.iocoder.yudao.module.infra.zhongshu.event.OutboxEventMessage.builder()
                         .eventType("AI_JOB_CREATED").bizType("ai_job").bizId(String.valueOf(jobId))
                         .payload(Map.of("jobId", jobId, "phase", phase, "count", count)).build());
                 log.info("[createJobWithCharge][job={} user={} 扣点={}]", jobId, userId, quote.totalPointCost());
                 return jobId;
             });
-        } catch (org.springframework.dao.DuplicateKeyException e) {
-            // 并发同幂等键：本事务（含扣点）整体回滚，复用获胜方任务（同用户）
-            return jdbcTemplate.queryForObject(
-                    "SELECT id FROM ai_job WHERE idempotency_key = ? AND user_id = ?",
-                    Long.class, idempotencyKey, userId);
-        }
+    }
+
+    private String scopedChargeKey(long userId,String key,long jobId) {
+        if (key == null || key.isBlank()) return "AI_JOB:GENERATED:" + userId + ":" + jobId;
+        try { return "AI_JOB:REQUEST:"+userId+":"+java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(key.getBytes(java.nio.charset.StandardCharsets.UTF_8))); }
+        catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
     }
 
     /** 扣除一次实际提示词模型调用；业务键使 runtime 重试保持幂等。 */
+    public String reservePromptCall(long jobId,int attemptNo,long token) {
+        return txTemplate.execute(transaction -> {
+            var job=lockPromptJob(jobId,attemptNo,token,true);
+            if (((Number)job.get("prompt_pricing_version")).intValue()==0) return "EXEMPT";
+            return usagePricingPort.reservePrompt(((Number)job.get("user_id")).longValue(),String.valueOf(jobId),token);
+        });
+    }
+
+    public boolean finishPromptCall(long jobId,int attemptNo,long token,String outcome) {
+        return Boolean.TRUE.equals(txTemplate.execute(transaction -> {
+            var job=lockPromptJob(jobId,attemptNo,token,false);
+            if (((Number)job.get("prompt_pricing_version")).intValue()==0) return false;
+            return usagePricingPort.finishPrompt(((Number)job.get("user_id")).longValue(),String.valueOf(jobId),token,outcome);
+        }));
+    }
+
+
+    public boolean finishPromptCall(long jobId,int attemptNo,long token,String outcome,String callId,String responseHash) {
+        return Boolean.TRUE.equals(txTemplate.execute(transaction -> {
+            var job=lockPromptJob(jobId,attemptNo,token,true);
+            if (((Number)job.get("prompt_pricing_version")).intValue()==0) return false;
+            return usagePricingPort.finishPromptForCurrentAttempt(((Number)job.get("user_id")).longValue(),
+                    String.valueOf(jobId),token,outcome,callId,responseHash);
+        }));
+    }
+
+    private Map<String,Object> lockPromptJob(long id,int attempt,long token,boolean starting) {
+        var row=jdbcTemplate.queryForMap("SELECT user_id,prompt_pricing_version,status,fencing_token,claim_expires_at FROM ai_job WHERE id=? AND deleted=FALSE FOR UPDATE",id);
+        Integer exists=jdbcTemplate.queryForObject("SELECT count(*) FROM ai_job_attempt WHERE job_id=? AND attempt_no=? AND fencing_token=?",Integer.class,id,attempt,token);
+        if (((Number)row.get("fencing_token")).longValue()!=token || exists==null || exists!=1) throw new IllegalStateException("Stale prompt attempt");
+        var lease=(java.sql.Timestamp)row.get("claim_expires_at");
+        if (starting && (!"RUNNING".equals(row.get("status")) || lease==null || !lease.toInstant().isAfter(java.time.Instant.now()))) throw new IllegalStateException("Prompt lease expired");
+        return row;
+    }
+
     public boolean chargePromptCall(long jobId) {
         long userId = jdbcTemplate.queryForObject("SELECT user_id FROM ai_job WHERE id = ?", Long.class, jobId);
         return usagePricingPort.chargePrepared(userId, "AI_PROMPT", "ai_job", String.valueOf(jobId));
@@ -187,6 +226,7 @@ public class AiJobSettlementService {
                 nextStatus = "PARTIALLY_SUCCEEDED";
             }
 
+            if (usagePricingPort != null) usagePricingPort.releaseUnsentPrompt(userId,String.valueOf(jobId));
             long settlementVersion = 1;
             long refundedNow = 0;
             if (refund > 0) {

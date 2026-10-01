@@ -404,14 +404,14 @@ class WechatPaymentAdapterTest {
     }
 
     @Test
-    @DisplayName("requestRefund ABNORMAL → FAILED")
-    void requestRefundAbnormalMapsToFailed() throws Exception {
+    @DisplayName("requestRefund ABNORMAL remains pending")
+    void requestRefundAbnormalRemainsPending() throws Exception {
         WxPayRefundV3Result refundResult = new WxPayRefundV3Result();
         refundResult.setStatus("ABNORMAL");
         when(wxPayService.refundV3(any(WxPayRefundV3Request.class))).thenReturn(refundResult);
 
         assertThat(adapter.requestRefund("R4003", "refund-003", 500L).getState())
-                .isEqualTo("FAILED");
+                .isEqualTo("ABNORMAL");
     }
 
     // ========== queryRefund ==========
@@ -540,12 +540,12 @@ class WechatPaymentAdapterTest {
     }
 
     @Test
-    @DisplayName("parseRefundNotification ABNORMAL → FAILED；未知状态 → UNKNOWN")
+    @DisplayName("parseRefundNotification ABNORMAL remains pending；未知状态 → UNKNOWN")
     void parseRefundNotificationMapsAbnormalAndUnknownStates() throws Exception {
         when(wxPayService.parseRefundNotifyV3Result(any(String.class), any(SignatureHeader.class)))
                 .thenReturn(refundNotify("rn-abn", "ABNORMAL", 1000, null));
         assertThat(adapter.parseRefundNotification(REFUND_HEADERS, "{}".getBytes(StandardCharsets.UTF_8)).getState())
-                .isEqualTo("FAILED");
+                .isEqualTo("ABNORMAL");
 
         when(wxPayService.parseRefundNotifyV3Result(any(String.class), any(SignatureHeader.class)))
                 .thenReturn(refundNotify("rn-weird", "SOME_NEW_STATE", 1000, null));
@@ -632,4 +632,24 @@ class WechatPaymentAdapterTest {
         var config = ((com.github.binarywang.wxpay.service.impl.BaseWxPayServiceImpl) service).getConfig();
         assertThat(config.getRefundNotifyUrl()).isNull();
     }
+    @Test
+    void refundQueryAuthoritativeMissingIsDistinctFromUncertainFailure() throws Exception {
+        var absent = new WxPayException("fixture"); absent.setErrCode("RESOURCE_NOT_EXISTS");
+        absent.setErrCodeDes("退款单不存在");
+        when(wxPayService.refundQueryV3("refund-stable")).thenThrow(absent);
+        assertThat(adapter.queryRefund("order", "refund-stable").getState()).isEqualTo("NOT_FOUND");
+        verify(wxPayService, never()).refundV3(any());
+    }
+
+    @Test
+    void certificateMissingAndTemporaryErrorsNeverMeanRefundAbsent() throws Exception {
+        var certificate = new WxPayException("fixture"); certificate.setErrCode("RESOURCE_NOT_EXISTS");
+        certificate.setErrCodeDes("平台证书不存在");
+        var temporary = new WxPayException("fixture"); temporary.setErrCode("SYSTEM_ERROR");
+        when(wxPayService.refundQueryV3("refund-stable")).thenThrow(certificate).thenThrow(temporary);
+        assertThatThrownBy(() -> adapter.queryRefund("order", "refund-stable")).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> adapter.queryRefund("order", "refund-stable")).isInstanceOf(IllegalStateException.class);
+        verify(wxPayService, never()).refundV3(any());
+    }
+
 }

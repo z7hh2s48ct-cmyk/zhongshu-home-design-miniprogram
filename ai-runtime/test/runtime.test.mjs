@@ -39,7 +39,7 @@ test('提示词扣点端点在实际 plan 调用前只请求一次', async () =>
   const s = scenario(); const order = [];
   const originalJob = s.core.job;
   s.core.job = async (task, endpoint, payload) => { order.push(endpoint); return originalJob(task, endpoint, payload); };
-  s.provider.plan = async () => { order.push('provider-plan'); return 'plan'; };
+  s.provider.plan = async (job, input, images, signal, billing) => { await billing.reserve(); order.push('provider-plan'); await billing.dispatch(); await billing.confirm('plan'); return 'plan'; };
   await runJob(job, s.core, s.provider, { providerCode: 'apilio' });
   assert.equal(order.filter(value => value === 'prompt-calls').length, 1);
   assert.ok(order.indexOf('prompt-calls') < order.indexOf('provider-plan'));

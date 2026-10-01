@@ -140,6 +140,18 @@ class CosObjectStorageAdapterContractTest {
         }
     }
 
+    @Test void temporaryModerationObjectsArePrivateAndDeletedWithoutTouchingAcceptedAssets() throws Exception {
+        String temporary="moderation-input/fixture/image.png",accepted="accepted/fixture/image.png";
+        byte[] bytes={1,2,3};adapter.putObject(temporary,bytes);adapter.putObject(accepted,bytes);
+        assertThat(adapter.supportsExternalModerationSource()).isTrue();
+        var signed=adapter.presignDownloadUrl(temporary,120);
+        assertThat(http.send(HttpRequest.newBuilder(URI.create(signed)).GET().build(),HttpResponse.BodyHandlers.ofByteArray()).body()).isEqualTo(bytes);
+        adapter.deleteModerationObject(temporary);assertThat(adapter.existsWithSize(temporary,3)).isFalse();
+        assertThatThrownBy(()->adapter.deleteModerationObject(accepted)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(adapter.existsWithSize(accepted,3)).isTrue();
+        assertThat(adminS3.headObject(HeadObjectRequest.builder().bucket(BUCKET).key(accepted).build()).contentType()).isEqualTo("image/png");
+    }
+
     /** T13-11：Content-Type 按 key 扩展名推断——消毒回写不丢形象 MIME（否则预签名 GET 内联展示异常）。 */
     @Test
     void putObjectInfersContentTypeFromKey() {

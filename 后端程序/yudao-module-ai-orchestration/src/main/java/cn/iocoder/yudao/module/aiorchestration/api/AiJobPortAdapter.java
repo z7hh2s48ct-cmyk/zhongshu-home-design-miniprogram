@@ -38,7 +38,7 @@ public class AiJobPortAdapter implements AiJobPort {
     public Optional<JobView> getJob(long jobId) {
         return orchestrationService.getJob(jobId).map(job -> new JobView(
                 job.jobId(), job.userId(), job.status(), job.requestedCount(),
-                job.acceptedCount(), job.progress()));
+                job.acceptedCount(), job.progress(), job.phase(), job.projectRef()));
     }
 
     @Override
@@ -73,7 +73,7 @@ public class AiJobPortAdapter implements AiJobPort {
     @Override
     public Optional<JobView> latestJob(long userId, long projectId, String phase) {
         return orchestrationService.latestJob(userId, projectId, phase).map(job -> new JobView(
-                job.jobId(), job.userId(), job.status(), job.requestedCount(), job.acceptedCount(), job.progress()));
+                job.jobId(), job.userId(), job.status(), job.requestedCount(), job.acceptedCount(), job.progress(),job.phase(),job.projectRef()));
     }
 
     @Override

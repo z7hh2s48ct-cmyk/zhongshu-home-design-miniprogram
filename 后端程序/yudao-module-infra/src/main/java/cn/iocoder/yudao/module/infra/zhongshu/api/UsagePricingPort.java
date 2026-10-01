@@ -2,6 +2,9 @@ package cn.iocoder.yudao.module.infra.zhongshu.api;
 
 /** 可独立计价的业务调用；commerce 实现价格快照和幂等扣点。 */
 public interface UsagePricingPort {
+    default String reservePrompt(long userId, String bizId, long token) { throw new UnsupportedOperationException("Prompt reservation not wired"); }
+    default boolean finishPrompt(long userId, String bizId, long token, String outcome) { throw new UnsupportedOperationException("Prompt reservation not wired"); }
+    default void releaseUnsentPrompt(long userId, String bizId) { }
 
     record Confirmation(String product, String ruleId, long ruleVersion) { }
 
@@ -22,4 +25,10 @@ public interface UsagePricingPort {
 
     /** 锁定待扣记录并原子扣点；同业务键重复调用只返回 false，不重复扣款。 */
     boolean chargePrepared(long userId, String product, String bizType, String bizId);
+    /** Called only after the orchestration service has locked and verified the current active job lease. */
+    default boolean finishPromptForCurrentAttempt(long userId, String bizId, long token, String outcome,
+                                                   String callId, String responseHash) {
+        return finishPrompt(userId, bizId, token, outcome);
+    }
+
 }

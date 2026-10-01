@@ -8,6 +8,11 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PointLedgerPortAdapter implements PointLedgerPort {
+    @Override public void reserve(long userId, long amount, String bizType, String bizId) { pointAccountService.reserve(userId, amount, bizType, bizId); }
+    @Override public void releaseReserve(long userId, long amount) { pointAccountService.releaseReserve(userId, amount); }
+    @Override public long consumeReserve(long userId, long amount, String type, String bizType, String bizId, String key) {
+        return pointAccountService.consumeReserve(userId, amount, type, bizType, bizId, key);
+    }
 
     private final PointAccountService pointAccountService;
 

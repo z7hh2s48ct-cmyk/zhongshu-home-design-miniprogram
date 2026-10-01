@@ -45,6 +45,7 @@ function loadCreatePage(file, price) {
       floorLabels: () => [], familyLabels: () => [], indexOfFloor: () => 0, indexOfFamily: () => 0,
       buildRequirementInputs: () => ({ inputs: { floorCount: 2 } })
     },
+    '../../utils/generation-attempt': require('./helpers/generation-attempt')(),
     '../../utils/generation-options': generationOptions,
     '../../utils/generation-price': price,
     '../../utils/assets': { fetchAssetDataUrl: async () => 'asset://flat-1' }
@@ -158,6 +159,8 @@ test('恢复待生成平面任务沿用服务端4K规格，不静默回落2K', a
   };
   const resume = loadModule('utils/project-resume.js', {
     './api': api,
+    './request': { captureSession: () => 'fixture-session', isSameSession: value => value === 'fixture-session' },
+    './generation-attempt': require('./helpers/generation-attempt')(),
     './record-view': { id: value => String(value || '') || null },
     './generation-options': require('../miniprogram/utils/generation-options'),
     './generation-price': { confirm: async (stage, count, description, options) => {

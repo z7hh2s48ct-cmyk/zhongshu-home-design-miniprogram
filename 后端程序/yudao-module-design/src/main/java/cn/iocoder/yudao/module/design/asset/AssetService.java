@@ -91,6 +91,9 @@ public class AssetService {
             throw new ServiceException(1_071_000_001,
                     "资产校验未通过：类型 " + assetType + " 不允许 " + mimeType);
         }
+        if (!contentModerationPort.supportsUpload(assetType)) {
+            throw new ServiceException(1_071_000_001,"当前审核服务不支持此文件类型，请上传 JPG 或 PNG 图片");
+        }
         if (sizeBytes <= 0 || sizeBytes > policy.maxBytes()) {
             throw new ServiceException(1_071_000_001,
                     "资产校验未通过：大小超限（上限 " + policy.maxBytes() + " 字节）");

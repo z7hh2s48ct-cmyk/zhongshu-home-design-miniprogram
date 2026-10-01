@@ -27,7 +27,7 @@ function refresh(page, stage) {
 
 function confirm(stage, count, description, options) {
   const http = require('./request');
-  const token = http.getToken();
+  const token = http.captureSession ? http.captureSession() : http.getToken();
   return quote(stage, count, options).then(value => new Promise((resolve, reject) => {
     wx.showModal({ title: '确认生成', content: '出图 ' + value.totalPointCost + ' 点；提示词模型调用 ' + value.usagePointCost + ' 点。' + (description || ''),
       success: result => {

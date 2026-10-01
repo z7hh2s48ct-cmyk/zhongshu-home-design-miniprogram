@@ -80,6 +80,12 @@ class PaymentP8AContractTest {
                 + "payment_transaction, recharge_credit, refund_order, "
                 + "design_point_account, design_point_ledger, outbox_event, payment_anomaly_audit");
         stubChannel.clearScripts();
+        // Recovery scenarios replace the adapter. Restore the standard fixture for every test,
+        // so execution order never leaves following contracts using a different channel.
+        var ds = jdbc.getDataSource();
+        payment = new RechargePaymentService(ds, new DataSourceTransactionManager(ds), stubChannel,
+                new cn.iocoder.yudao.module.commerce.points.PointLedgerPortAdapter(points), points,
+                new JdbcReliableEventPort(ds), new PaymentFactValidator(ds, stubChannel));
     }
 
     private long seedPlan(long amountCents, long base, long bonus) {
@@ -552,7 +558,7 @@ class PaymentP8AContractTest {
         long refundId = (Long) seed[2];
 
         // PROCESSING 阶段：退款单落 UNKNOWN，点数全额预留（未冲正也未释放）
-        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("UNKNOWN");
+        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("PROCESSING");
         assertThat(refundColumn(refundId, "point_reversal_state")).isEqualTo("RESERVED");
         assertThat(available(1L)).isZero();
         assertThat(points.findAccount(1L).orElseThrow().reservedPoints()).isEqualTo(120);
@@ -719,7 +725,7 @@ class PaymentP8AContractTest {
         String orderNo = (String) seed[1];
         long refundId = (Long) seed[2];
         // PROCESSING 阶段：退款单落 UNKNOWN、点数全额预留（未冲正也未释放）
-        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("UNKNOWN");
+        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("PROCESSING");
         assertThat(refundColumn(refundId, "point_reversal_state")).isEqualTo("RESERVED");
         assertThat(available(1L)).isZero();
 
@@ -749,7 +755,7 @@ class PaymentP8AContractTest {
             assertThat(payment.reconcileRefunds()).as("第 %d 轮仍 PROCESSING 不收口", i + 1).isZero();
         }
 
-        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("UNKNOWN");
+        assertThat(refundColumn(refundId, "channel_state")).isEqualTo("PROCESSING");
         assertThat(refundColumn(refundId, "point_reversal_state"))
                 .as("红线 5：非终态不得冲正也不得释放").isEqualTo("RESERVED");
         assertThat(points.findAccount(1L).orElseThrow().reservedPoints()).isEqualTo(120);
@@ -807,7 +813,7 @@ class PaymentP8AContractTest {
         Object[] seed = seedPaidOrderWithProcessingRefund("key-rp-stuck", "rk-rp-stuck");
         long refundId = (Long) seed[2];
         // 仍 PROCESSING（查单不终态），且已超过 30min 宽限期
-        jdbc.update("UPDATE refund_order SET update_time = now() - interval '60 minutes' WHERE id = ?", refundId);
+        jdbc.update("UPDATE refund_order SET create_time = now() - interval '60 minutes' WHERE id = ?", refundId);
 
         int resolved = payment.recoverPendingRefunds();
 
@@ -854,6 +860,73 @@ class PaymentP8AContractTest {
                 .isEqualTo(1);
         assertThat(points.findAccount(1L).orElseThrow().reservedPoints())
                 .as("预留不得翻倍").isEqualTo(120);
+    }
+
+    static class RecoveryChannel extends StubPaymentPortAdapter {
+        String refundState = "SUCCEEDED";
+        boolean timeout;
+        String sentId, queriedId;
+        int queries;
+        @Override public PaymentPort.ChannelRefundResult requestRefund(String order, String id, long amount) {
+            sentId = id;
+            if (timeout) throw new IllegalStateException("fixture response lost");
+            return new PaymentPort.ChannelRefundResult(refundState);
+        }
+        @Override public PaymentPort.ChannelRefundResult queryRefund(String order, String id) {
+            queriedId = id; queries++;
+            return new PaymentPort.ChannelRefundResult(refundState);
+        }
+    }
+
+    private RecoveryChannel recoveryChannel() {
+        var channel = new RecoveryChannel();
+        var ds = jdbc.getDataSource();
+        payment = new RechargePaymentService(ds, new DataSourceTransactionManager(ds), channel,
+                new cn.iocoder.yudao.module.commerce.points.PointLedgerPortAdapter(points), points,
+                new JdbcReliableEventPort(ds), new PaymentFactValidator(ds, channel));
+        return channel;
+    }
+
+    @Test
+    void refundWithNoBonusSettlesAndReplayDoesNotDebitAgain() {
+        var channel = recoveryChannel();
+        var order = payment.createOrder(91, seedPlan(1000, 100, 0), "zero-bonus", "fixture-openid");
+        channel.scriptAmount(order.orderNo(), 1000L); payment.reconcile(order.orderNo());
+        long refund = payment.requestRefund(order.orderId(), "fixture", "refund", "refund-zero");
+        assertThat(payment.requestRefund(order.orderId(), "fixture", "refund", "refund-zero")).isEqualTo(refund);
+        assertThat(available(91)).isZero();
+        assertThat(points.findAccount(91).orElseThrow().reservedPoints()).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM design_point_ledger WHERE type LIKE '%REVERSAL'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT point_reversal_state FROM refund_order WHERE id=?", String.class, refund)).isEqualTo("REVERSED");
+    }
+
+    @Test
+    void responseLostPreservesMerchantIdAndRecoversByQuery() {
+        var channel = recoveryChannel();
+        var order = payment.createOrder(92, seedPlan(1000, 100, 20), "lost-response", "fixture-openid");
+        channel.scriptAmount(order.orderNo(), 1000L); payment.reconcile(order.orderNo());
+        channel.timeout = true;
+        long refund = payment.requestRefund(order.orderId(), "fixture", "refund", "refund-timeout");
+        assertThat(jdbc.queryForObject("SELECT channel_refund_id FROM refund_order WHERE id=?", String.class, refund)).isEqualTo(channel.sentId);
+        channel.timeout = false;
+        assertThat(payment.recoverPendingRefunds()).isEqualTo(1);
+        assertThat(channel.queriedId).isEqualTo(channel.sentId);
+        assertThat(points.findAccount(92).orElseThrow().reservedPoints()).isZero();
+    }
+
+    @Test
+    void abnormalKeepsReserveUntilLaterSuccess() {
+        var channel = recoveryChannel(); channel.refundState = "ABNORMAL";
+        var order = payment.createOrder(93, seedPlan(1000, 100, 20), "abnormal", "fixture-openid");
+        channel.scriptAmount(order.orderNo(), 1000L); payment.reconcile(order.orderNo());
+        long refund = payment.requestRefund(order.orderId(), "fixture", "refund", "refund-abnormal");
+        assertThat(available(93)).isZero();
+        assertThat(points.findAccount(93).orElseThrow().reservedPoints()).isEqualTo(120);
+        assertThat(jdbc.queryForObject("SELECT channel_state FROM refund_order WHERE id=?", String.class, refund)).isEqualTo("ABNORMAL");
+        channel.refundState = "SUCCEEDED";
+        assertThat(payment.recoverPendingRefunds()).isEqualTo(1);
+        assertThat(available(93)).isZero();
+        assertThat(points.findAccount(93).orElseThrow().reservedPoints()).isZero();
     }
 
 }

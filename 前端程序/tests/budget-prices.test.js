@@ -75,6 +75,7 @@ function pricesRuntime(apiChanges = {}) {
     require(specifier) {
       if (specifier.endsWith('/access')) return { protectedPage(value) { definition = value; } };
       if (specifier.endsWith('/api')) return api;
+      if (specifier.endsWith('/request')) return { captureSession: () => 'fixture-account', isSameSession: value => value === 'fixture-account' };
       throw new Error('unexpected require ' + specifier);
     },
   }, { filename });

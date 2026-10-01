@@ -70,8 +70,8 @@ module.exports = {
   listRechargeOrders: function (pageNo, pageSize) {
     return http.get(BASE + '/recharge-orders?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
   },
-  createProject: function (body) {
-    return http.post(BASE + '/design-projects', body || null);
+  createProject: function (body, idemKey) {
+    return http.post(BASE + '/design-projects', body || null, idemKey ? { 'Idempotency-Key': idemKey } : undefined);
   },
   getProject: function (projectId, jobId) {
     return http.get(BASE + '/design-projects/' + projectId + (jobId ? '?jobId=' + jobId : ''));

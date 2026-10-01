@@ -44,7 +44,10 @@ public interface AiJobPort {
     List<CandidateView> listAcceptedResults(long jobId);
 
     record JobView(long jobId, long userId, String status, int requestedCount,
-                   int acceptedCount, int progress) {
+                   int acceptedCount, int progress, String phase, String projectRef) {
+        public JobView(long jobId,long userId,String status,int requestedCount,int acceptedCount,int progress) {
+            this(jobId,userId,status,requestedCount,acceptedCount,progress,null,null);
+        }
     }
 
     record CandidateView(long resultId, int slotNo, String objectKey, String sha256, String mimeType) {

@@ -12,7 +12,7 @@ protectedPage({
     drawings: [], hero: { assetId: '', url: '', status: 'missing' }, detailError: false
   },
   onLoad(options) {
-    this._token = http.getToken(); this._closed = false;
+    this._token = http.captureSession ? http.captureSession() : http.getToken(); this._closed = false;
     const caseId = options && options.id;
     this._caseId = caseId;
     if (!caseId) {

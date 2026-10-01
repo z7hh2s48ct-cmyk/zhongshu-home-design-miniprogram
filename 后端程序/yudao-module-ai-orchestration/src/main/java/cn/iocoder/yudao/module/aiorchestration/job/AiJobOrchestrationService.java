@@ -82,40 +82,48 @@ public class AiJobOrchestrationService {
             String json = mapper.writeValueAsString(snapshot);
             if (jdbcTemplate.update("UPDATE ai_job SET input_snapshot=CAST(? AS jsonb) WHERE id=? AND input_snapshot IS NULL AND status='QUEUED'",
                     json,jobId)==1) return true;
-            // 已有快照（同内容重放或异内容重冻结）一律不覆盖、返回 false，调用方
-            // （DesignProjectService）以 false 放弃本次冻结；真正的幂等键内容冲突在
-            // createJob 层拦截。5e4f1da9 曾把异内容改为抛 IDEMPOTENCY_KEY_REUSED，
-            // 与 P4C 契约「CompletedSnapshotCannotBeOverwritten→isFalse」及调用方分支相悖。
             String existing = jdbcTemplate.queryForObject("SELECT input_snapshot::text FROM ai_job WHERE id=?", String.class, jobId);
-            return existing != null && mapper.readTree(existing).equals(mapper.readTree(json));
+            if (existing != null) {
+                var original=mapper.readTree(existing);var replay=mapper.readTree(json);
+                // Legacy jobs did not record these envelope fields. Their already-frozen
+                // requirements/options/reference assets still must match exactly; neither
+                // replay nor migration may overwrite the original snapshot.
+                if (replay instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
+                    for(String field:List.of("sourceFlat","requestedImageOptions","requestConfig"))
+                        if (!original.has(field)) object.remove(field);
+                }
+                if (original.equals(replay)) return false;
+            }
+            throw exception(cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("AI_INPUT_INVALID"); }
     }
 
     public long createJob(long userId, String phase, int count, String idempotencyKey, String projectRef) {
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            List<Long> existing = jdbcTemplate.query(
-                    "SELECT id FROM ai_job WHERE idempotency_key = ?", (rs, i) -> rs.getLong("id"), idempotencyKey);
-            if (!existing.isEmpty()) {
-                return existing.get(0);
-            }
-        }
-        long jobId = IdWorker.getId();
-        try {
-            txTemplate.execute(status -> {
-                if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
-                jdbcTemplate.update(
-                        "INSERT INTO ai_job (id, user_id, project_ref, phase, status, requested_count, "
-                                + "output_prefix, idempotency_key) VALUES (?, ?, ?, ?, 'QUEUED', ?, ?, ?)",
-                        jobId, userId, projectRef, phase, count,
-                        "ai-quarantine/" + jobId, idempotencyKey);
-                return null;
-            });
+        return txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
+            Long replay=findRequestReplay(userId,phase,count,idempotencyKey,projectRef,null);
+            if (replay != null) return replay;
+            long jobId=IdWorker.getId();
+            jdbcTemplate.update("INSERT INTO ai_job(id,user_id,project_ref,phase,status,requested_count,output_prefix,idempotency_key) VALUES(?,?,?,?,'QUEUED',?,?,?)",
+                    jobId,userId,projectRef,phase,count,"ai-quarantine/"+jobId,idempotencyKey);
             return jobId;
-        } catch (DuplicateKeyException e) {
-            // 并发同幂等键：唯一索引兜底后回读
-            return jdbcTemplate.queryForObject(
-                    "SELECT id FROM ai_job WHERE idempotency_key = ?", Long.class, idempotencyKey);
-        }
+        });
+    }
+
+    /** Serialize the account's operation before any debit, including calls from different projects. */
+    public Long findRequestReplay(long userId,String phase,int count,String key,String ref,String resolution) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) throw new IllegalStateException("AI_REQUEST_REQUIRES_TRANSACTION");
+        if (key == null || key.isBlank()) return null;
+        if (key.length()>128) throw new IllegalArgumentException("AI_REQUEST_KEY_TOO_LONG");
+        jdbcTemplate.query("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",rs -> null,"ai-job:"+userId+":"+key);
+        var rows=jdbcTemplate.queryForList("SELECT id,phase,project_ref,requested_count,request_resolution,deleted FROM ai_job WHERE user_id=? AND idempotency_key=?",userId,key);
+        if (rows.isEmpty()) return null;
+        var row=rows.get(0);
+        if (Boolean.TRUE.equals(row.get("deleted")) || !java.util.Objects.equals(phase,row.get("phase"))
+                || !java.util.Objects.equals(ref,row.get("project_ref")) || count!=((Number)row.get("requested_count")).intValue()
+                || resolution!=null && !resolution.equals(row.get("request_resolution")))
+            throw exception(cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
+        return ((Number)row.get("id")).longValue();
     }
 
     /** App 端属主校验版查询（IDOR 防护） */

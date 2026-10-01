@@ -15,6 +15,11 @@ import java.util.List;
 public class YudaoRateLimiterConfiguration {
 
     @Bean
+    public cn.iocoder.yudao.framework.ratelimiter.core.VerifiedAccountRateLimiter verifiedAccountRateLimiter(RateLimiterRedisDAO redis) {
+        return new cn.iocoder.yudao.framework.ratelimiter.core.VerifiedAccountRateLimiter(redis);
+    }
+
+    @Bean
     public RateLimiterAspect rateLimiterAspect(List<RateLimiterKeyResolver> keyResolvers, RateLimiterRedisDAO rateLimiterRedisDAO) {
         return new RateLimiterAspect(keyResolvers, rateLimiterRedisDAO);
     }

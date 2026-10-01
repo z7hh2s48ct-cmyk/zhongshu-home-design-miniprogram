@@ -67,7 +67,7 @@
       <view class="quantity-row"><text class="settings-label">生成数量</text><view><text wx:for="{{[1,2,4]}}" wx:key="*this" class="{{count === item ? 'selected' : ''}}" data-count="{{item}}" bindtap="selectCount">{{item}} 张</text></view></view>
       <view class="settings-footer">
         <view class="cost-summary"><text>本次费用</text><b>{{priceText || '正在获取报价…'}}</b><span>余额 {{points}} 设计点</span><text wx:if="{{quoteError}}" class="quote-retry" bindtap="retryQuote">重新获取报价</text></view>
-        <view class="v12-primary-button generate-button {{!quoteReady || creating ? 'disabled' : ''}}" aria-disabled="{{!quoteReady || creating}}" bindtap="generate">{{creating ? '正在创建…' : '生成平面方案'}}</view>
+        <view class="v12-primary-button generate-button {{!quoteReady || creating ? 'disabled' : ''}}" aria-disabled="{{!quoteReady || creating}}" bindtap="generate">{{creating ? '正在创建…' : pendingGeneration ? '继续上次生成' : '生成平面方案'}}</view>
       </view>
     </view>
   </view>

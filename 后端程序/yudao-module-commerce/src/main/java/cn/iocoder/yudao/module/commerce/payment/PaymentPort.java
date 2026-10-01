@@ -91,7 +91,7 @@ public interface PaymentPort {
 
     @Value
     class ChannelRefundResult {
-        String state; // SUCCEEDED / PROCESSING / UNKNOWN / FAILED
+        String state; // SUCCEEDED / PROCESSING / ABNORMAL / UNKNOWN / FAILED / NOT_FOUND (query only)
     }
 
     /**

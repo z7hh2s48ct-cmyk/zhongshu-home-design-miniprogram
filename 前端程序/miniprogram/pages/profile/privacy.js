@@ -6,7 +6,7 @@ const view = require('../../utils/record-view');
 const stateText = { PENDING: '待处理', PROCESSING: '处理中', COMPLETED: '已完成', REJECTED: '未完成' };
 Page({
   data: { consents: [], requests: [], busy: false, loading: false, error: '' },
-  onShow() { this._token = http.getToken(); this.setData({ busy: false }); return this.load(); },
+  onShow() { this._token = http.captureSession ? http.captureSession() : http.getToken(); this.setData({ busy: false }); return this.load(); },
   onHide() { this._seq = (this._seq || 0) + 1; },
   onUnload() { this.onHide(); },
   current(seq) {

@@ -73,10 +73,38 @@ public class BudgetService {
     public Estimate createEstimate(long userId, long projectId, String regionCode,
                                    String structureType, String materialGrade, int buildingArea,
                                    Long resultVersionId,
-                                   cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation) {
+                                    cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation) {
+        if (usagePricing != null) throw new ServiceException(400, "付费预算测算必须提供 Idempotency-Key");
         if (transactionTemplate != null) return transactionTemplate.execute(status -> createEstimateInside(
                 userId, projectId, regionCode, structureType, materialGrade, buildingArea, resultVersionId, confirmation));
         return createEstimateInside(userId, projectId, regionCode, structureType, materialGrade, buildingArea, resultVersionId, confirmation);
+    }
+
+    public Estimate createEstimate(long userId, long projectId, String regionCode,
+                                   String structureType, String materialGrade, int buildingArea,
+                                   Long resultVersionId,
+                                   cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort.Confirmation confirmation,
+                                   String key) {
+        if (key == null || key.isBlank() || key.length() > 128) throw new ServiceException(400, "请提供有效 Idempotency-Key");
+        if (transactionTemplate == null) throw new IllegalStateException("BUDGET_TRANSACTION_NOT_WIRED");
+        return transactionTemplate.execute(status -> {
+            projectService.getProject(projectId, userId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+            var input = new java.util.LinkedHashMap<String,Object>();
+            input.put("projectId",String.valueOf(projectId));input.put("region",regionCode);
+            input.put("structure",structureType);input.put("material",materialGrade);
+            input.put("area",buildingArea);input.put("resultVersionId",resultVersionId);
+            String hash;
+            try { hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(input))); }
+            catch (Exception error) { throw new IllegalArgumentException("Invalid budget input",error); }
+            jdbcTemplate.update("INSERT INTO budget_legacy_request(user_id,request_key,request_hash) VALUES(?,?,?) ON CONFLICT DO NOTHING",userId,key,hash);
+            var receipt=jdbcTemplate.queryForMap("SELECT request_hash,estimate_id FROM budget_legacy_request WHERE user_id=? AND request_key=? FOR UPDATE",userId,key);
+            if (!hash.equals(receipt.get("request_hash"))) throw new ServiceException(409,"同一请求号不能用于不同预算输入");
+            if (receipt.get("estimate_id") != null) return getEstimate(userId,((Number)receipt.get("estimate_id")).longValue()).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+            var estimate=createEstimateInside(userId,projectId,regionCode,structureType,materialGrade,buildingArea,resultVersionId,confirmation);
+            jdbcTemplate.update("UPDATE budget_legacy_request SET estimate_id=? WHERE user_id=? AND request_key=?",estimate.estimateId(),userId,key);
+            return estimate;
+        });
     }
 
     private Estimate createEstimateInside(long userId, long projectId, String regionCode,

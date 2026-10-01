@@ -501,7 +501,9 @@ class AiJobP4CContractTest {
         new org.springframework.transaction.support.TransactionTemplate(txManager).executeWithoutResult(status->{
             long id=settlement.createJobWithCharge(803,"FLAT",1,"snapshot",null,confirmed("FLAT"));
             assertThat(orchestration.freezeInput(id,Map.of("phase","FLAT","requirements",Map.of("width",10)))).isTrue();
-            assertThat(orchestration.freezeInput(id,Map.of("phase","ELEVATION"))).isFalse();
+            assertThatThrownBy(()->orchestration.freezeInput(id,Map.of("phase","ELEVATION")))
+                    .isInstanceOf(cn.iocoder.yudao.framework.common.exception.ServiceException.class);
+            assertThat(orchestration.freezeInput(id,Map.of("phase","FLAT","requirements",Map.of("width",10)))).isFalse();
             assertThat(jdbc.queryForObject("SELECT input_snapshot->>'phase' FROM ai_job WHERE id=?",String.class,id)).isEqualTo("FLAT");
         });
     }

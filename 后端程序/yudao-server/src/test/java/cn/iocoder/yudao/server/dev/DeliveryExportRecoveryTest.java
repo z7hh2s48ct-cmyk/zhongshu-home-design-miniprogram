@@ -89,7 +89,9 @@ class DeliveryExportRecoveryTest {
     }
     @Test void historicalRefundWithoutRecipientResolvesOriginalOrderAndOwner() {
         jdbc.execute("INSERT INTO recharge_order(id,order_no,user_id,plan_id,plan_snapshot,amount_cents,base_points,bonus_points) VALUES(10,'R10',7,1,'{}',1000,10,0)");
-        jdbc.execute("INSERT INTO refund_order(id,order_id,refund_request_key,amount_cents,operator_id) VALUES(20,10,'refund20',1000,'admin')");
+        // The separate RefundMigrationRecoveryTest upgrades actual old nullable rows. Here the
+        // migrated shape retains its merchant number while the historical event has no recipient.
+        jdbc.execute("INSERT INTO refund_order(id,order_id,refund_request_key,amount_cents,operator_id,channel_refund_id) VALUES(20,10,'refund20',1000,'admin','refund-20')");
         var event=new OutboxEventRecord(1002,"ORDER_REFUND_REVERSED","refund_order","20","{\"refundId\":20,\"orderId\":10}","worker");
         messages.deliver(event);messages.deliver(event);
         var message=messages.list(7,10).get(0);assertThat(message.get("biz_type")).isEqualTo("recharge_order");assertThat(message.get("biz_id")).isEqualTo("10");assertThat(message.get("title")).isEqualTo("退款已完成");assertThat(messages.list(8,10)).isEmpty();

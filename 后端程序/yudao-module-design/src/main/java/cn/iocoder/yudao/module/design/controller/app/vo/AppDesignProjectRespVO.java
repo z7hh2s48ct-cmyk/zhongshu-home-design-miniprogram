@@ -13,6 +13,9 @@ public class AppDesignProjectRespVO {
     @Schema(description = "项目编号")
     private String projectId;
 
+    @Schema(description = "项目创建回执关联的首次生成请求号，仅向项目所属账户返回")
+    private String initialGenerationKey;
+
     @Schema(description = "来源：CASE_REFERENCE / SELF_UPLOAD")
     private String sourceType;
 

@@ -181,19 +181,31 @@ public class PointAccountService {
      * 预留转冲正（渠道退款成功）：预留点直接扣减、总余额减少，并写两类冲正流水（同一事务）。
      * 幂等由调用方以 bizId+幂等键保证。
      */
+    public long consumeReserve(long userId, long amount, String type, String bizType, String bizId, String key) {
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+        return txTemplate.execute(status -> {
+            BalanceAfter after = updateBalanceGuarded(userId, "reserved_points = reserved_points - ?", amount, "reserved_points >= ?");
+            if (after == null) throw exception(POINTS_INSUFFICIENT);
+            return insertLedger(userId,type,-amount,after,bizType,bizId,key,null,"Confirmed supplier call");
+        });
+    }
+
     public void consumeReserveWithReversal(long userId, long baseAmount, long bonusAmount,
                                            String bizType, String bizId,
                                            String idemBase, String idemBonus) {
         long total = baseAmount + bonusAmount;
+        if (baseAmount < 0 || bonusAmount < 0 || total <= 0) {
+            throw new IllegalArgumentException("Invalid refund point amounts");
+        }
         txTemplate.execute(status -> {
             BalanceAfter after = updateBalanceGuarded(userId,
                     "reserved_points = reserved_points - ?", total, "reserved_points >= ?");
             if (after == null) {
                 throw exception(POINTS_INSUFFICIENT);
             }
-            insertLedger(userId, "RECHARGE_BASE_REVERSAL", -baseAmount, after,
+            if (baseAmount > 0) insertLedger(userId, "RECHARGE_BASE_REVERSAL", -baseAmount, after,
                     bizType, bizId, idemBase, null, "渠道退款成功冲正基础点");
-            insertLedger(userId, "RECHARGE_BONUS_REVERSAL", -bonusAmount, after,
+            if (bonusAmount > 0) insertLedger(userId, "RECHARGE_BONUS_REVERSAL", -bonusAmount, after,
                     bizType, bizId, idemBonus, null, "渠道退款成功冲正赠送点");
             return null;
         });

@@ -45,7 +45,7 @@ protectedPage({
   },
   load() {
     if (this.data.submitting) return;
-    const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
+    const seq = this._seq = (this._seq || 0) + 1; this._token = http.captureSession ? http.captureSession() : http.getToken();
     this.setData({ loading: false, error: '', fields: [], versions: [], projectId: '', versionId: '', loaded: false, canResubmit: false, canResume: false,
       requirementRows: [], candidates: [], nextLabel: '', jobView: null });
     if (!this._type || !this._id) { this.setData({ error: '记录编号无效，请从「我的」重新进入' }); return; }

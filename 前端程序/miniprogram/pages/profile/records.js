@@ -27,7 +27,7 @@ protectedPage({
     return false;
   },
   reload() {
-    this._seq = (this._seq || 0) + 1; this._token = http.getToken(); this._cursor = null; this._page = 1;
+    this._seq = (this._seq || 0) + 1; this._token = http.captureSession ? http.captureSession() : http.getToken(); this._cursor = null; this._page = 1;
     this.setData({ rows: [], error: '', loading: false, hasMore: false });
     return this.load();
   },
