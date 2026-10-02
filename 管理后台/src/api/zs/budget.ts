@@ -79,8 +79,12 @@ export interface AccountPricePage {
   total: number
 }
 
-export const getAccountPrices = (params: { accountId: string; regionCode: string; pageNo: number; pageSize: number }) =>
-  request.get<AccountPricePage>({ url: `${BASE}/account-prices`, params })
+export const getAccountPrices = (params: {
+  accountId: string
+  regionCode: string
+  pageNo: number
+  pageSize: number
+}) => request.get<AccountPricePage>({ url: `${BASE}/account-prices`, params })
 // E-7 覆盖价账号搜索（复用账号分页端点）
 export const searchAccountsApi = (params: any) =>
   request.get<any>({ url: '/design/v1/accounts', params })
