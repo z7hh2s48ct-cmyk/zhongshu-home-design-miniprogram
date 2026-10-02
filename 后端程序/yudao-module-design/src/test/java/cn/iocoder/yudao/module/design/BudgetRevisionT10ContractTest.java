@@ -217,6 +217,27 @@ class BudgetRevisionT10ContractTest {
     }
 
     @Test
+    void discardKeepsDraftPublicationFieldsEmptyAndRejectsPublishedOrRepeatedTransitions() {
+        var draft = quotes.create(99, budgetId, "discard-draft", Map.of("revisionId", initialRevisionId, "expectedVersion", 1,
+                "finalPriceCents", TOTAL, "reason", "discard draft"));
+        var discarded = quotes.discard(99, draft.quoteId(), "discard-draft-command",
+                Map.of("expectedVersion", 1, "reason", "obsolete draft"));
+        assertThat(discarded.status()).isEqualTo("DISCARDED");
+        assertThat(jdbc.queryForObject("SELECT published_by FROM budget_quote WHERE id = ?", String.class,
+                Long.parseLong(draft.quoteId()))).isNull();
+        assertThat(jdbc.queryForObject("SELECT published_at FROM budget_quote WHERE id = ?", java.sql.Timestamp.class,
+                Long.parseLong(draft.quoteId()))).isNull();
+        rejected(STATE_VERSION_CONFLICT, () -> quotes.discard(99, draft.quoteId(), "discard-again",
+                Map.of("expectedVersion", 2, "reason", "already discarded")));
+
+        var publishedDraft = quotes.create(99, budgetId, "discard-published", Map.of("revisionId", initialRevisionId, "expectedVersion", 1,
+                "finalPriceCents", TOTAL, "reason", "publish first"));
+        quotes.publish(99, publishedDraft.quoteId(), "discard-published-publish", Map.of("expectedVersion", 1, "reason", "published"));
+        rejected(STATE_VERSION_CONFLICT, () -> quotes.discard(99, publishedDraft.quoteId(), "discard-published-command",
+                Map.of("expectedVersion", 2, "reason", "must not discard published")));
+    }
+
+    @Test
     void staleDraftCannotPublishAndWithdrawalNeverFallsBackToOlderPublishedQuote() throws Exception {
         var first = quotes.create(99, budgetId, "quote-v1", Map.of("revisionId", initialRevisionId, "expectedVersion", 1,
                 "finalPriceCents", TOTAL, "reason", "首版报价"));
