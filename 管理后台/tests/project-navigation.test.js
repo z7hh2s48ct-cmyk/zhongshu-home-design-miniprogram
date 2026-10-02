@@ -43,7 +43,7 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
   )
   assert.deepEqual(
     Array.from(result, route => route.meta?.title).slice(1, 7),
-    ['户型与内容', '用户与授权', '资金与点数', '预算与报价', '价格管理', '运营与合规']
+    ['案例库', '客户与激活', '资金与点数', '预算与报价', '定价管理', '运营与合规']
   )
   // 隐藏路由（详情/编辑/旧充值路由）不进菜单
   assert.deepEqual(Array.from(result[1].children, child => child.path), ['/zs/case', '/zs/review'])

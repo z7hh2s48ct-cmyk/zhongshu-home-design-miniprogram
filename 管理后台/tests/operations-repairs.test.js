@@ -151,9 +151,12 @@ test('公司案例编辑先加载真实参数和版本，连续保存不使用�
   await app.state.save(false); await app.state.save(false)
   assert.equal(writes[0][1].version, 7); assert.equal(writes[1][1].version, 8)
 })
-test('直达AI案例编辑或详情加载失败均不能提交默认表单', async () => {
+test('AI案例直达编辑开放参数修改：图纸区隐藏且不走公司上传路径（2026-10-02 决策）', async () => {
   let writes = 0
-  const app = component('case/create.vue', { getCase: async () => ({ sourceType: 'AI' }), updateCase: async () => { writes++ } }, { path: '/zs/case/create', query: { id: '1' } })
-  await app.hooks.mount(); await app.state.save(false)
-  assert.match(app.state.loadError.value, /投稿审核/); assert.equal(writes, 0)
+  const app = component('case/create.vue', { getCase: async () => ({ sourceType: 'AI', title: 'AI作品', version: 3 }), updateCase: async () => { writes++ } }, { path: '/zs/case/create', query: { id: '1' } })
+  await app.hooks.mount()
+  assert.equal(app.state.isAiCase.value, true)
+  assert.equal(app.state.loadError.value, '')
+  await app.state.save(false)
+  assert.equal(writes, 1)
 })
