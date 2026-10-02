@@ -25,6 +25,9 @@ public class AiJobAdminController {
 
     private final cn.iocoder.yudao.module.aiorchestration.job.AiJobQueryService queryService;
 
+    @jakarta.annotation.Resource
+    private cn.iocoder.yudao.module.infra.zhongshu.api.UsagePricingPort usagePricingPort;
+
     public AiJobAdminController(cn.iocoder.yudao.module.aiorchestration.job.AiJobQueryService queryService) {
         this.queryService = queryService;
     }
@@ -46,12 +49,18 @@ public class AiJobAdminController {
     }
 
     @GetMapping("/{jobId}")
-    @Operation(summary = "任务详情：attempt、租约、结果校验与结算信息")
+    @Operation(summary = "任务详情：attempt、租约、结果校验与结算信息；含提示词调用实扣点数")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.AI_JOB_QUERY + "')")
     public CommonResult<AppAiJobRespVO> getJob(@PathVariable("jobId") String jobId) {
         var job = queryService.getJob(Long.parseLong(jobId))
                 .orElse(null);
-        return success(job == null ? null : AppAiJobController.toVo(job));
+        if (job == null) {
+            return success(null);
+        }
+        var vo = AppAiJobController.toVo(job);
+        // 提示词费与生图扣点分账展示：生图前文本模型按 AI_PROMPT 实扣， biz_id 与任务号同键
+        vo.setPromptPointCost(usagePricingPort.chargedPointCost("AI_PROMPT", "ai_job", String.valueOf(job.jobId())));
+        return success(vo);
     }
 
 }

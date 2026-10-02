@@ -25,6 +25,12 @@ public interface UsagePricingPort {
 
     /** 锁定待扣记录并原子扣点；同业务键重复调用只返回 false，不重复扣款。 */
     boolean chargePrepared(long userId, String product, String bizType, String bizId);
+
+    /**
+     * 查询业务键的已实扣点数；无扣点记录或尚未实际扣点（PENDING/UNKNOWN）返回 null。
+     * 供管理端费用明细展示，只读不改账。
+     */
+    default Long chargedPointCost(String product, String bizType, String bizId) { return null; }
     /** Called only after the orchestration service has locked and verified the current active job lease. */
     default boolean finishPromptForCurrentAttempt(long userId, String bizId, long token, String outcome,
                                                    String callId, String responseHash) {

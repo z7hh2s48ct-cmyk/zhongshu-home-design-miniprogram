@@ -33,13 +33,14 @@ public class RechargeOrderAdminController {
     }
 
     @GetMapping("/recharge-orders")
-    @Operation(summary = "充值订单分页：支付事实与到账事实分别展示，异常订单筛选")
+    @Operation(summary = "充值订单分页：支付事实与到账事实分别展示，异常订单筛选；userId 供用户/授权码抽屉按账号查询")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.RECHARGE_ORDER_QUERY + "')")
     public CommonResult<PageResult<Map<String, Object>>> getOrderPage(
             @RequestParam(value = "paymentState", required = false) String paymentState,
             @RequestParam(value = "fulfillmentState", required = false) String fulfillmentState,
             @RequestParam(value = "abnormalOnly", required = false) Boolean abnormalOnly,
             @RequestParam(value = "paidNoCredit", required = false) Boolean paidNoCredit,
+            @RequestParam(value = "userId", required = false) String userId,
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
         var where = new java.util.ArrayList<String>(List.of("deleted = FALSE"));
@@ -57,6 +58,11 @@ public class RechargeOrderAdminController {
         }
         if (Boolean.TRUE.equals(paidNoCredit)) {
             where.add("payment_state = 'SUCCEEDED' AND fulfillment_state <> 'CREDITED'");
+        }
+        // userId 为 19 位雪花编号，前端以字符串传递，此处按数值等值过滤
+        if (userId != null && !userId.isBlank()) {
+            where.add("user_id = ?");
+            args.add(Long.parseLong(userId.trim()));
         }
         pageSize = Math.min(Math.max(pageSize, 1), 100);
         String base = "FROM recharge_order WHERE " + String.join(" AND ", where);

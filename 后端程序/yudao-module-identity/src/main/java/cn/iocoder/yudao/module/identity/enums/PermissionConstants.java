@@ -16,6 +16,9 @@ public interface PermissionConstants {
     /** C 端用户（账号/授权）只读查询 */
     String ACCOUNT_READ = "identity:account:query";
 
+    /** C 端账号停用：状态置 DISABLED 并立即撤销全部有效授权（可逆操作用重新兑换/后台恢复另行管理） */
+    String ACCOUNT_DISABLE = "identity:account:disable";
+
     /** Review data subject requests and approve closure after retention/financial checks. */
     String PRIVACY_MANAGE = "identity:privacy:manage";
 

@@ -21,9 +21,12 @@ public class AccessGrantService {
     }
 
     private final JdbcTemplate jdbcTemplate;
+    private final org.springframework.transaction.support.TransactionTemplate txTemplate;
 
-    public AccessGrantService(DataSource dataSource) {
+    public AccessGrantService(DataSource dataSource,
+                              org.springframework.transaction.PlatformTransactionManager transactionManager) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.txTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
     }
 
     public Optional<GrantRow> findGrant(long grantId) {
@@ -54,6 +57,28 @@ public class AccessGrantService {
                 "UPDATE design_access_grant SET status = 'REVOKED', revoked_at = now(), revoked_by = ?, "
                         + "update_time = now() WHERE id = ? AND status = 'ACTIVE'",
                 revokedBy, grantId) == 1;
+    }
+
+    /**
+     * 停用账号：状态置 DISABLED 并撤销全部有效授权（同一事务）。
+     * 生效边界：兑换链路拒绝非 ACTIVE 账号（AccessCodeRedemptionService）；存量访问随 grant 撤销实时降级。
+     * 返回 false 表示账号不存在或已非 ACTIVE（已停用/已注销不可重复停用）。
+     */
+    public boolean disableAccount(long accountId, String operator) {
+        return Boolean.TRUE.equals(txTemplate.execute(status -> {
+            int updated = jdbcTemplate.update(
+                    "UPDATE account SET status = 'DISABLED', updater = ?, update_time = now() "
+                            + "WHERE id = ? AND status = 'ACTIVE' AND deleted = FALSE",
+                    operator, accountId);
+            if (updated != 1) {
+                return false;
+            }
+            jdbcTemplate.update(
+                    "UPDATE design_access_grant SET status = 'REVOKED', revoked_at = now(), revoked_by = ?, "
+                            + "update_time = now() WHERE account_id = ? AND status = 'ACTIVE' AND deleted = FALSE",
+                    operator, accountId);
+            return true;
+        }));
     }
 
 }

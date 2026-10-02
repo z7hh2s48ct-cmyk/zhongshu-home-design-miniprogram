@@ -24,9 +24,10 @@ import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 /**
  * C 端用户管理（运营诉求：查用户、看授权与点数；页面 15 之外的运营面）。
  *
- * 只读读模型：跨 account / design_access_grant / design_point_ledger / design_project /
- * case_submission 的展示型联查，与工作台同款取数方式（参数化只读 SQL，无写入路径）。
- * 账号生命周期管理（停用/注销）涉及账号合同与合规流程，待产品确认后另行补充。
+ * 读模型：跨 account / design_access_grant / design_point_ledger / design_project /
+ * case_submission 的展示型联查，与工作台同款取数方式（参数化只读 SQL）。
+ * 生命周期：停用已获产品确认（2026-10-02）——PATCH /{id} 置 DISABLED 并撤销全部有效授权；
+ * 注销仍走隐私申请关闭流程（identity:privacy:manage）。
  */
 @Tag(name = "管理后台 - C端用户管理")
 @RestController
@@ -35,6 +36,9 @@ public class AccountAdminController {
 
     @Resource
     private DataSource dataSource;
+
+    @Resource
+    private cn.iocoder.yudao.module.identity.accesscode.AccessGrantService accessGrantService;
 
     @GetMapping
     @Operation(summary = "用户分页查询（昵称关键字/账号状态筛选；含授权态与点数余额汇总）")
@@ -132,6 +136,14 @@ public class AccountAdminController {
 
     private Long countOrNull(JdbcTemplate jdbc, String sql, Object... args) {
         return jdbc.queryForObject(sql, Long.class, args);
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/{accountId}")
+    @Operation(summary = "停用账号：状态置 DISABLED 并立即撤销全部有效授权；新兑换与登录激活被拒绝，存量访问实时降级")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCOUNT_DISABLE + "')")
+    public CommonResult<Boolean> disableAccount(@PathVariable("accountId") String accountId) {
+        String operator = String.valueOf(cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId());
+        return success(accessGrantService.disableAccount(Long.parseLong(accountId), operator));
     }
 
 }

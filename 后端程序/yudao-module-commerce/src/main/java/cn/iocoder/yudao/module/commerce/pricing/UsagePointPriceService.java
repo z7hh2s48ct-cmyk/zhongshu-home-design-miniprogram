@@ -180,6 +180,19 @@ public class UsagePointPriceService implements UsagePricingPort {
         }
     }
 
+    @Override
+    public Long chargedPointCost(String product, String bizType, String bizId) {
+        try {
+            var rows = jdbc.queryForList("SELECT point_cost FROM service_usage_charge "
+                    + "WHERE product = ? AND biz_type = ? AND biz_id = ? AND state = 'CHARGED' AND deleted = FALSE",
+                product, bizType, bizId);
+            return rows.isEmpty() ? null : ((Number) rows.get(0).get("point_cost")).longValue();
+        } catch (org.springframework.dao.DataAccessException error) {
+            log.error("[chargedPointCost][业务扣点查询失败 product={} type={} id={}]", product, bizType, bizId, error);
+            return null;
+        }
+    }
+
     private Map<String,Object> lockPrompt(long userId, String bizId) {
         return jdbc.queryForMap("SELECT point_cost,state,reservation_token,reservation_expires_at,call_receipt_id,call_response_hash "
                 + "FROM service_usage_charge WHERE product='AI_PROMPT' AND user_id=? AND biz_type='ai_job' AND biz_id=? AND deleted=FALSE FOR UPDATE",userId,bizId);
