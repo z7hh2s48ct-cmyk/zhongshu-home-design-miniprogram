@@ -2,7 +2,7 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">设计点流水</h1>
+        <h1 class="zs-page-title">点数流水</h1>
         <div class="zs-page-subtitle"
           >只追加账本：充值、赠送、生成扣点、失败退回、人工调整全程留痕；点行查看流水详情，生成任务并于一处</div
         >

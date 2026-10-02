@@ -2,14 +2,14 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">授权码管理</h1>
-        <div class="zs-page-subtitle">通过授权码控制小程序用户准入与微信账号绑定</div>
+        <h1 class="zs-page-title">激活码管理</h1>
+        <div class="zs-page-subtitle">通过激活码控制小程序用户准入与微信账号绑定</div>
       </div>
       <div class="zs-actions">
         <el-button class="zs-btn-primary" @click="single.visible = true">
-          <Icon icon="ep:plus" class="mr-4px" /> 生成授权码
+          <Icon icon="ep:plus" class="mr-4px" /> 生成激活码
         </el-button>
-        <el-button @click="$router.push('/zs/access-code/batch')">批量生成授权码</el-button>
+        <el-button @click="$router.push('/zs/access-code/batch')">批量生成激活码</el-button>
       </div>
     </div>
 
@@ -139,7 +139,7 @@
           v-if="loadError"
           type="error"
           :closable="false"
-          title="授权码列表加载失败，请重试后再执行批量操作"
+          title="激活码列表加载失败，请重试后再执行批量操作"
           style="margin-bottom: 12px"
         />
 
@@ -202,12 +202,12 @@
         />
 
         <div class="zs-footnote">
-          <div>明确规则：一码一账号，授权码仅可绑定一个微信账号；统计卡可点击筛选对应状态。</div>
+          <div>明确规则：一码一账号，激活码仅可绑定一个微信账号；统计卡可点击筛选对应状态。</div>
           <div>
-            授权码旁的复制图标：未使用码复制明文（需权限），其余复制掩码；双击行同样复制掩码。
+            激活码旁的复制图标：未使用码复制明文（需权限），其余复制掩码；双击行同样复制掩码。
           </div>
           <div>
-            已停用的授权码不可重新启用（安全规则），请生成新码；已兑换码不可删除，解绑只会撤销用户访问、码仍作废。
+            已停用的激活码不可重新启用（安全规则），请生成新码；已兑换码不可删除，解绑只会撤销用户访问、码仍作废。
           </div>
         </div>
       </template>
@@ -257,7 +257,7 @@
     </el-dialog>
 
     <!-- 授权码详情抽屉 -->
-    <el-drawer v-model="detail.visible" title="授权码详情" size="520px">
+    <el-drawer v-model="detail.visible" title="激活码详情" size="520px">
       <div v-loading="detail.loading">
         <el-alert v-if="detail.error" type="error" :title="detail.error" :closable="false"
           ><el-button @click="loadDetail">重新加载</el-button></el-alert
@@ -570,7 +570,7 @@ const createSingle = async () => {
 const copySingle = async () => {
   try {
     await navigator.clipboard.writeText(single.code)
-    message.success('授权码已复制')
+    message.success('激活码已复制')
   } catch {
     message.error('复制失败，请手动选择复制')
   }
@@ -640,7 +640,7 @@ const copyCode = async (row: any) => {
   try {
     const code = await ZsApi.copyAccessCode(row.id)
     await navigator.clipboard.writeText(code)
-    message.success('授权码已复制')
+    message.success('激活码已复制')
   } catch (e: any) {
     message.error(e?.msg || '复制失败，请检查复制权限后重试')
   }
@@ -664,7 +664,7 @@ const doDelete = async (row: any) => {
   try {
     await ElMessageBox.confirm(
       '删除后该码会立即停用并从列表隐藏，历史兑换事实仍会保留。已兑换的授权码不可删除。',
-      '确认删除授权码',
+      '确认删除激活码',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
     const deleted = await ZsApi.deleteAccessCode(row.id)
@@ -672,7 +672,7 @@ const doDelete = async (row: any) => {
       message.warning('该授权码已兑换或已删除，不能删除')
       return
     }
-    message.success('授权码已删除并停用')
+    message.success('激活码已删除并停用')
     if (detail.visible && detail.row?.id === row.id) detail.visible = false
     load()
   } catch (e: any) {

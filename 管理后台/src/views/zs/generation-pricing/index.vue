@@ -2,7 +2,7 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">生成价格</h1>
+        <h1 class="zs-page-title">出图定价</h1>
         <div class="zs-page-subtitle">按平面、立面及 2K / 4K 分别定价；横竖画幅同价</div>
       </div>
       <el-button v-if="canManage" class="zs-btn-primary" @click="openEditor()">新增价格</el-button>

@@ -4,7 +4,7 @@
       <div
         ><h1 class="zs-page-title">业务积分价格</h1
         ><div class="zs-page-subtitle"
-          >预算按成功测算计费；提示词按模型实际调用计费。新价格仅影响新业务。</div
+          >预算测算、提示词调用等功能的计费标准；调价只影响新业务，历史账单不变。</div
         ></div
       >
       <el-button v-if="canManage" type="primary" @click="openEditor()">新增价格</el-button>
@@ -17,7 +17,7 @@
     />
     <div v-else class="zs-table-card">
       <el-alert
-        title="平面图、立面图的 2K / 4K 价格在“生成价格”中单独设置。"
+        title="平面图、立面图的 2K / 4K 价格在「出图定价」中单独设置。"
         type="info"
         :closable="false"
         class="mb-16px"
@@ -98,7 +98,7 @@
     </div>
     <el-dialog
       v-model="editorOpen"
-      title="新增业务价格"
+      title="新增计费价格"
       width="480px"
       :close-on-click-modal="false"
     >

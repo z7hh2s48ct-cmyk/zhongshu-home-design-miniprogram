@@ -2,7 +2,7 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">C端用户</h1>
+        <h1 class="zs-page-title">客户管理</h1>
         <div class="zs-page-subtitle">小程序用户查询：授权状态、设计点余额、设计与投稿统计</div>
       </div>
     </div>

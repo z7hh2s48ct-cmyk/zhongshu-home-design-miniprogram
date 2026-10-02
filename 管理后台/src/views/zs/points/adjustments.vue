@@ -2,9 +2,9 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">人工调点单</h1>
+        <h1 class="zs-page-title">点数调整审核</h1>
         <div class="zs-page-subtitle"
-          >用户点数的补偿/活动调整入口；制单与复核双人分离，全程留痕</div
+          >对客户点数的补偿/赠送调整进行复核；制单在客户详情发起，双人分离全程留痕</div
         >
       </div>
       <el-button type="warning" plain @click="adjustDialog.visible = true">人工调点</el-button>

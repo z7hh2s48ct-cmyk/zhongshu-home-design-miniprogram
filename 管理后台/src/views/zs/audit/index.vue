@@ -2,16 +2,16 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">审计事件</h1>
+        <h1 class="zs-page-title">操作记录</h1>
         <div class="zs-page-subtitle"
-          >全部管理操作留痕：制单复核、授权码交付、发布上架、退款与调点；支持按时间/类型/操作者/业务对象取证</div
+          >谁在什么时间对什么做了什么：调点复核、激活码交付、发布上架、退款等全部留痕，可按时间/类型/操作者/对象取证</div
         >
       </div>
       <el-button
         v-hasPermi="['design:export:manage']"
         class="zs-btn-primary"
         @click="$router.push('/zs/export')"
-        ><Icon icon="ep:download" class="mr-4px" /> 导出审计事件</el-button
+        ><Icon icon="ep:download" class="mr-4px" /> 导出操作记录</el-button
       >
     </div>
 
@@ -84,7 +84,7 @@
         v-if="loadError"
         type="error"
         :closable="false"
-        title="审计事件加载失败，请重试（当前列表不代表完整审计记录）"
+        title="操作记录加载失败，请重试（当前列表不代表完整留痕）"
         style="margin-bottom: 12px"
         ><el-button @click="load">重新加载</el-button></el-alert
       >
@@ -92,7 +92,7 @@
         v-if="!loading && !loadError && !list.length"
         type="info"
         :closable="false"
-        title="当前筛选条件下没有审计事件；清空筛选可查看全部留痕"
+        title="当前筛选条件下没有操作记录；清空筛选可查看全部"
         style="margin-bottom: 12px"
       />
 

@@ -179,7 +179,7 @@ const todos = computed(() => [
 const quickActions = computed(() => [
   { label: '新增公司案例', icon: 'ep:office-building', go: () => $router.push('/zs/case/create') },
   { label: '审核AI案例', icon: 'ep:document-checked', go: () => $router.push('/zs/review') },
-  { label: '生成授权码', icon: 'ep:key', go: () => $router.push('/zs/access-code/batch') },
+  { label: '生成激活码', icon: 'ep:key', go: () => $router.push('/zs/access-code/batch') },
   { label: '新增充值方案', icon: 'ep:coin', go: () => $router.push('/zs/recharge-plan/edit') },
   ...(checkPermi(['design:budget:query'])
     ? [

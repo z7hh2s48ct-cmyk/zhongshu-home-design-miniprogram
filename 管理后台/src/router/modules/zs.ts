@@ -70,13 +70,13 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'account',
         component: () => import('@/views/zs/user/index.vue'),
         name: 'ZsAccount',
-        meta: { title: 'C端用户', icon: 'ep:user', group: 'auth' }
+        meta: { title: '客户管理', icon: 'ep:user', group: 'auth' }
       },
       {
         path: 'access-code',
         component: () => import('@/views/zs/accesscode/index.vue'),
         name: 'ZsAccessCode',
-        meta: { title: '授权码管理', icon: 'ep:key', noCache: true, group: 'auth' }
+        meta: { title: '激活码管理', icon: 'ep:key', noCache: true, group: 'auth' }
       },
       {
         path: 'access-code-batches',
@@ -101,7 +101,7 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'point-adjustments',
         component: () => import('@/views/zs/points/adjustments.vue'),
         name: 'ZsPointAdjustments',
-        meta: { title: '调点复核', icon: 'ep:finished', noCache: true, group: 'auth' }
+        meta: { title: '点数调整审核', icon: 'ep:finished', noCache: true, group: 'auth' }
       },
       // —— 资金与点数 fund ——
       {
@@ -138,7 +138,7 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'point-ledger',
         component: () => import('@/views/zs/points/ledger/index.vue'),
         name: 'ZsPointLedger',
-        meta: { title: '设计点流水', icon: 'ep:wallet', group: 'fund' }
+        meta: { title: '点数流水', icon: 'ep:wallet', group: 'fund' }
       },
       // —— 预算与报价 budget ——
       {
@@ -182,13 +182,13 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'generation-pricing',
         component: () => import('@/views/zs/generation-pricing/index.vue'),
         name: 'ZsGenerationPricing',
-        meta: { title: '出图计价', icon: 'ep:price-tag', noCache: true, group: 'pricing' }
+        meta: { title: '出图定价', icon: 'ep:price-tag', noCache: true, group: 'pricing' }
       },
       {
         path: 'usage-pricing',
         component: () => import('@/views/zs/usage-pricing/index.vue'),
         name: 'ZsUsagePricing',
-        meta: { title: '业务积分价格', icon: 'ep:coin', noCache: true, group: 'pricing' }
+        meta: { title: '服务计费', icon: 'ep:coin', noCache: true, group: 'pricing' }
       },
       // —— 运营与合规 ops ——
       {
@@ -207,7 +207,7 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'audit',
         component: () => import('@/views/zs/audit/index.vue'),
         name: 'ZsAudit',
-        meta: { title: '审计事件', icon: 'ep:document-checked', group: 'ops' }
+        meta: { title: '操作记录', icon: 'ep:document-checked', group: 'ops' }
       },
       {
         path: 'announcement',

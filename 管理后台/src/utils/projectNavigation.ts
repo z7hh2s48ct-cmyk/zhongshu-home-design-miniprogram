@@ -21,11 +21,11 @@ const businessPermissions: Record<string, string> = {
 
 // 业务菜单分组：与路由 meta.group 对应，顺序即侧边栏顺序（户型最上、隐私在最后组末尾）。
 const businessGroups = [
-  { key: 'content', title: '户型与内容', icon: 'ep:office-building' },
-  { key: 'auth', title: '用户与授权', icon: 'ep:key' },
+  { key: 'content', title: '案例库', icon: 'ep:office-building' },
+  { key: 'auth', title: '客户与激活', icon: 'ep:key' },
   { key: 'fund', title: '资金与点数', icon: 'ep:coin' },
   { key: 'budget', title: '预算与报价', icon: 'ep:money' },
-  { key: 'pricing', title: '价格管理', icon: 'ep:price-tag' },
+  { key: 'pricing', title: '定价管理', icon: 'ep:price-tag' },
   { key: 'ops', title: '运营与合规', icon: 'ep:document-checked' }
 ] as const
 
