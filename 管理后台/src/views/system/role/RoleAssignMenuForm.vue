@@ -10,6 +10,17 @@
       <el-form-item label="菜单权限">
         <el-card class="w-full h-400px !overflow-y-scroll" shadow="never">
           <template #header>
+            F-3 角色模板:
+            <el-button size="small" link type="primary" @click="applyTemplate('reviewer')"
+              >审核员</el-button
+            >
+            <el-button size="small" link type="primary" @click="applyTemplate('support')"
+              >客服</el-button
+            >
+            <el-button size="small" link type="primary" @click="applyTemplate('finance')"
+              >财务</el-button
+            >
+            <el-divider direction="vertical" />
             全选/全不选:
             <el-switch
               v-model="treeNodeAll"
@@ -94,6 +105,20 @@ const open = async (row: RoleApi.RoleVO) => {
 // 2026-10-02 运营确认：授权树只保留本项目子树（/zs 业务 + /system 系统设置 + /infra 运维支持），
 // 上游 CRM/商城/ERP 等模板节点不再出现在角色配置中；仅影响展示，已勾选的历史权限不受影响。
 const PROJECT_MENU_ROOTS = new Set(['/zs', '/system', '/infra'])
+// F-3 角色模板：按菜单种子 ID 预勾选（9501-9550 为本项目业务菜单段）
+const ROLE_TEMPLATES: Record<string, number[]> = {
+  // 审核员：户型库（查）、AI案例审核（审）、AI任务（看）、工作台统计
+  reviewer: [9502, 9503, 9529, 9533, 9525, 9547],
+  // 客服：授权码全套、C端用户（停用）、隐私申请、人工调点、数据导出
+  support: [9505, 9512, 9534, 9523, 9528, 9550, 9539, 9540, 9526],
+  // 财务：充值方案/订单、点数流水、两类价格、对账退款、点数导出、数据导出
+  finance: [9507, 9508, 9509, 9510, 9513, 9535, 9536, 9537, 9538, 9539, 9541, 9526]
+}
+function applyTemplate(key: string) {
+  const ids = ROLE_TEMPLATES[key]
+  if (!ids) return
+  ids.forEach((id) => treeRef.value?.setChecked(id, true, false))
+}
 const filterProjectMenus = async (menus: any[]) => {
   if (!menus.length) return menus
   const nodeById = new Map<number, any>()
