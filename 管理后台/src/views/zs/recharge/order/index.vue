@@ -1,7 +1,7 @@
 <template>
   <div class="zs-page">
     <div class="zs-page-header">
-      <div>
+      <div v-if="!embedded">
         <h1 class="zs-page-title">充值订单</h1>
         <div class="zs-page-subtitle">支付事实与到账事实分列展示；异常订单可发起对账与整单退款</div>
       </div>
@@ -210,6 +210,8 @@ import * as ZsApi from '@/api/zs'
 import { fmtTime } from '@/utils/zsFormat'
 
 defineOptions({ name: 'ZsRechargeOrder' })
+// embedded=true 时由充值管理合并页内嵌，标题交给外层
+defineProps<{ embedded?: boolean }>()
 const message = useMessage()
 
 const activeTab = ref('ALL')

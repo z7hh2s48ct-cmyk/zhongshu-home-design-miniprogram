@@ -160,13 +160,13 @@ const todos = computed(() => [
     label: '支付未到账',
     count: summary.value.ordersPendingFulfillment,
     color: '#d0342c',
-    go: () => $router.push('/zs/recharge-order')
+    go: () => $router.push('/zs/recharge?tab=orders')
   },
   {
     label: '支付状态未知',
     count: summary.value.ordersUnknownPayment,
     color: '#d0342c',
-    go: () => $router.push('/zs/recharge-order')
+    go: () => $router.push('/zs/recharge?tab=orders')
   },
   {
     label: '进行中任务',

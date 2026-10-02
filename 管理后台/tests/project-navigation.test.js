@@ -34,36 +34,53 @@ const authorized = [
 const menus = can => helpers.buildProjectMenus(base, business, authorized, can || (() => true))
 const values = (routes, query) => Array.from(helpers.searchProjectMenus(routes, query), item => item.value)
 
-test('导航仅保留工作台、现有业务及必要运维，不修改原始路由或重复使用种子目录', () => {
+test('业务菜单按六组组装：户型最上、隐私在最后组末尾，工作台与系统/运维保留', () => {
   const before = JSON.stringify({ base, business, authorized })
   const result = menus()
-  assert.deepEqual(Array.from(result, route => route.path), ['/', '/zs', '/system', '/infra'])
-  assert.equal(result[1].children.length, 15)
+  assert.deepEqual(
+    Array.from(result, route => route.path),
+    ['/', '/zs-content', '/zs-auth', '/zs-fund', '/zs-budget', '/zs-pricing', '/zs-ops', '/system', '/infra']
+  )
+  assert.deepEqual(
+    Array.from(result, route => route.meta?.title).slice(1, 7),
+    ['户型与内容', '用户与授权', '资金与点数', '预算与报价', '价格管理', '运营与合规']
+  )
+  // 隐藏路由（详情/编辑/旧充值路由）不进菜单
+  assert.deepEqual(Array.from(result[1].children, child => child.path), ['/zs/case', '/zs/review'])
+  assert.deepEqual(Array.from(result[2].children, child => child.path), ['/zs/account', '/zs/access-code', '/zs/point-adjustments'])
+  assert.deepEqual(Array.from(result[3].children, child => child.path), ['/zs/recharge', '/zs/point-ledger'])
+  assert.deepEqual(Array.from(result[4].children, child => child.path), ['/zs/budget', '/zs/budget-estimates'])
+  assert.deepEqual(Array.from(result[5].children, child => child.path), ['/zs/generation-pricing', '/zs/usage-pricing'])
+  assert.deepEqual(Array.from(result[6].children, child => child.path), ['/zs/ai-job', '/zs/export', '/zs/audit', '/zs/privacy'])
   assert.equal(JSON.stringify({ base, business, authorized }), before)
-  assert.equal(result[2].children[0].meta.title, '管理员账号')
-  assert.equal(result[3].redirect, '/infra/config')
-  assert.equal(helpers.searchProjectMenus(result, '工作台').length, 1)
+  assert.equal(result[7].children[0].meta.title, '管理员账号')
+  assert.equal(result[8].redirect, '/infra/config')
 })
 
-test('保留全部已有预算、审核、用户、资金及任务入口，不依赖不完整菜单种子', () => {
-  for (const target of ['case', 'review', 'access-code', 'recharge-plan', 'recharge-order', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy', 'generation-pricing', 'usage-pricing']) {
+test('保留全部业务入口且子项为绝对路径，可直接导航', () => {
+  for (const target of ['case', 'review', 'access-code', 'point-adjustments', 'recharge', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy', 'generation-pricing', 'usage-pricing']) {
     assert.ok(values(menus(), `/zs/${target}`).includes(`/zs/${target}`), target)
   }
 })
 
-test('普通角色只展示已有权限对应业务，空权限不补发业务菜单', () => {
+test('普通角色只展示已有权限对应业务组，空权限不补发业务菜单', () => {
   const limited = menus(permissions => permissions.includes('design:budget:query'))
-  assert.deepEqual(Array.from(limited[1].children, child => child.path), ['budget', 'budget-estimates'])
-  assert.equal(menus(() => false).some(route => route.path === '/zs'), false)
+  assert.deepEqual(
+    Array.from(limited.filter(route => String(route.path).startsWith('/zs-')), route => route.path),
+    ['/zs-budget']
+  )
+  assert.deepEqual(Array.from(limited[1].children, child => child.path), ['/zs/budget', '/zs/budget-estimates'])
+  assert.equal(menus(() => false).some(route => String(route.path).startsWith('/zs-')), false)
   const noSupport = helpers.buildProjectMenus(base, business, [], () => false)
   assert.deepEqual(Array.from(noSupport, route => route.path), ['/'])
 })
 
 test('搜索不泄露无关模块、外链、隐藏详情和参数占位路由', () => {
-  for (const query of ['商城', '/mall', '/crm', '/pay', '/system/tenant', 'codegen', 'http', ':budgetId', 'quotes', 'create', '开发文档']) {
+  for (const query of ['商城', '/mall', '/crm', '/pay', '/system/tenant', 'codegen', 'http', ':budgetId', 'quotes', 'create', 'detail', '开发文档', 'zs-content']) {
     assert.equal(helpers.searchProjectMenus(menus(), query).length, 0, query)
   }
   assert.deepEqual(values(menus(), '  /ZS/BUDGET  '), ['/zs/budget', '/zs/budget-estimates'])
+  assert.deepEqual(values(menus(), '充值'), ['/zs/recharge'])
   assert.equal(helpers.searchProjectMenus(menus(), ' ').length, 0)
 })
 
