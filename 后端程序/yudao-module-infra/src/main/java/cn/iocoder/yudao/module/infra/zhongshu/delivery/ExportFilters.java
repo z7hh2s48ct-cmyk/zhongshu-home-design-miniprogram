@@ -15,12 +15,19 @@ public final class ExportFilters {
             if (!allowed.contains(entry.getKey())) throw invalid();
             if (entry.getValue() != null && !entry.getValue().toString().isBlank()) result.put(entry.getKey(), entry.getValue().toString());
         }
-        if (result.get("jobType") == null || !Set.of("POINT_LEDGER", "AUDIT_EVENTS").contains(result.get("jobType"))) throw invalid();
+        if (result.get("jobType") == null
+                || !Set.of("POINT_LEDGER", "AUDIT_EVENTS", "ACCESS_CODE_BATCHES", "ACCOUNTS").contains(result.get("jobType"))) throw invalid();
         if (result.containsKey("userId")) {
             if (!"POINT_LEDGER".equals(result.get("jobType"))) throw invalid();
             try { if (Long.parseLong(result.get("userId").toString()) <= 0) throw invalid(); } catch (NumberFormatException e) { throw invalid(); }
         }
-        if (result.containsKey("type") && !result.get("type").toString().matches("[A-Z][A-Z0-9_]{0,63}")) throw invalid();
+        // type 语义随任务类型：点数流水=流水类型；审计=事件类型；用户清单=账号状态；批次交付不支持该筛选
+        if (result.containsKey("type")) {
+            if ("ACCESS_CODE_BATCHES".equals(result.get("jobType"))) throw invalid();
+            if ("ACCOUNTS".equals(result.get("jobType"))
+                    && !Set.of("ACTIVE", "DISABLED", "CLOSED").contains(result.get("type").toString())) throw invalid();
+            if (!result.get("type").toString().matches("[A-Z][A-Z0-9_]{0,63}")) throw invalid();
+        }
         try {
             Instant from = result.containsKey("from") ? Instant.parse(result.get("from").toString()) : null;
             Instant to = result.containsKey("to") ? Instant.parse(result.get("to").toString()) : null;

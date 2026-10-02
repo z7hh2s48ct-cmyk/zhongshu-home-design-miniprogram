@@ -12,16 +12,25 @@
     <div class="zs-table-card">
       <el-form inline class="zs-filter">
         <el-form-item label="导出类型">
-          <el-select v-model="form.jobType" style="width: 220px">
+          <el-select v-model="form.jobType" style="width: 220px" @change="onJobTypeChange">
             <el-option label="设计点流水" value="POINT_LEDGER" />
             <el-option label="审计事件" value="AUDIT_EVENTS" />
+            <el-option label="授权码批次交付记录" value="ACCESS_CODE_BATCHES" />
+            <el-option label="C端用户清单" value="ACCOUNTS" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="form.jobType === 'POINT_LEDGER'" label="用户编号">
           <el-input v-model="form.userId" placeholder="可选，精确匹配" clearable />
         </el-form-item>
-        <el-form-item label="记录类型">
-          <el-input v-model="form.type" placeholder="可选，业务类型代码" clearable />
+        <el-form-item v-if="typeOptions.length" label="记录筛选">
+          <el-select v-model="form.type" style="width: 200px" clearable placeholder="可选，全部">
+            <el-option
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="时间范围">
           <el-date-picker
@@ -128,6 +137,34 @@ const displayTime = (value: string) =>
     : '—'
 
 const form = reactive({ jobType: 'POINT_LEDGER', userId: '', type: '', range: [] as Date[] })
+// 记录筛选按导出类型给出候选（此前为自由文本，要求背业务代码形同虚设）
+const typeOptions = computed(() => {
+  if (form.jobType === 'POINT_LEDGER') {
+    return [
+      { label: '充值基础点', value: 'RECHARGE_BASE_CREDIT' },
+      { label: '充值赠送点', value: 'RECHARGE_BONUS_CREDIT' },
+      { label: '平面生成扣点', value: 'FLAT_GENERATION_DEBIT' },
+      { label: '立面生成扣点', value: 'ELEVATION_GENERATION_DEBIT' },
+      { label: '结算退回', value: 'TASK_SETTLEMENT_REFUND' },
+      { label: '人工调增', value: 'MANUAL_CREDIT' },
+      { label: '人工调减', value: 'MANUAL_DEBIT' },
+      { label: '退款冲正(基础)', value: 'RECHARGE_BASE_REVERSAL' },
+      { label: '退款冲正(赠送)', value: 'RECHARGE_BONUS_REVERSAL' }
+    ]
+  }
+  if (form.jobType === 'ACCOUNTS') {
+    return [
+      { label: '正常', value: 'ACTIVE' },
+      { label: '已停用', value: 'DISABLED' },
+      { label: '已注销', value: 'CLOSED' }
+    ]
+  }
+  return []
+})
+const onJobTypeChange = () => {
+  form.type = ''
+  form.userId = ''
+}
 const exportError = (code: string) =>
   ({
     EXPORT_ROW_LIMIT: '记录超限，请缩小范围',
@@ -135,7 +172,13 @@ const exportError = (code: string) =>
     EXPORT_RETRY_LIMIT: '重试次数超限，请重新创建'
   })[code] || '生成失败，请重新创建'
 
-const typeText = (t: string) => ({ POINT_LEDGER: '设计点流水', AUDIT_EVENTS: '审计事件' })[t] || t
+const typeText = (t: string) =>
+  ({
+    POINT_LEDGER: '设计点流水',
+    AUDIT_EVENTS: '审计事件',
+    ACCESS_CODE_BATCHES: '批次交付记录',
+    ACCOUNTS: '用户清单'
+  })[t] || t
 const statusTextMap: Record<string, string> = {
   PENDING: '排队中',
   RUNNING: '生成中',
