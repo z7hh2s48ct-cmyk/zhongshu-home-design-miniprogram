@@ -97,7 +97,7 @@ class IdentityP2AContractTest {
                 new UserSessionService(dataSource, txManager));
         redemptionService = new AccessCodeRedemptionService(dataSource, txManager, cipher, loginService);
         sessionService = new UserSessionService(dataSource, txManager);
-        grantService = new AccessGrantService(dataSource);
+        grantService = new AccessGrantService(dataSource, txManager);
     }
 
     @BeforeEach

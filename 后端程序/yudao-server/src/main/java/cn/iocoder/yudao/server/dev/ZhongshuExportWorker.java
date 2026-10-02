@@ -67,28 +67,72 @@ public class ZhongshuExportWorker {
                 + "AND status='RUNNING' AND lease_token=? AND lease_expires_at>now()",id,token)!=1) throw new ExportLimit("EXPORT_LEASE_LOST");
     }
     private byte[] csv(long jobId,String token,Map<String,Object> filters,Instant cutoff) {
-        boolean ledger = "POINT_LEDGER".equals(filters.get("jobType"));
-        String[] columns = ledger ? new String[]{"id","user_id","type","delta","available_after","reserved_after","biz_type","biz_id","reason","create_time"}
-                : new String[]{"id","event_type","actor_type","actor_id","action","biz_type","biz_id","result","create_time"};
-        String[] header = ledger ? new String[]{"流水号","用户编号","类型","变动","变动后可用","变动后预留","业务类型","业务编号","备注","时间（UTC）"}
-                : new String[]{"事件号","事件类型","操作者类型","操作者","动作","业务类型","业务编号","结果","时间（UTC）"};
-        var out = new ByteArrayOutputStream(); out.writeBytes(new byte[]{(byte)0xef,(byte)0xbb,(byte)0xbf}); appendRow(out,(Object[])header);
-        StringBuilder where = new StringBuilder(ledger ? "deleted=FALSE" : "1=1");
+        // 2026-10-02 扩充：批次交付记录（含每批次已兑换数子查询）与 C端用户清单（余额/授权态子查询）
+        String jobType = String.valueOf(filters.get("jobType"));
+        String table;
+        String[] columns;
+        String[] header;
+        boolean hasDeleted = true;
+        String typeColumn = "type";
+        switch (jobType) {
+            case "POINT_LEDGER" -> {
+                table = "design_point_ledger";
+                columns = new String[]{"id","user_id","type","delta","available_after","reserved_after","biz_type","biz_id","reason","create_time"};
+                header = new String[]{"流水号","用户编号","类型","变动","变动后可用","变动后预留","业务类型","业务编号","备注","时间（UTC）"};
+            }
+            case "AUDIT_EVENTS" -> {
+                table = "audit_event";
+                columns = new String[]{"id","event_type","actor_type","actor_id","action","biz_type","biz_id","result","create_time"};
+                header = new String[]{"事件号","事件类型","操作者类型","操作者","动作","业务类型","业务编号","结果","时间（UTC）"};
+                hasDeleted = false;
+                typeColumn = "event_type";
+            }
+            case "ACCESS_CODE_BATCHES" -> {
+                table = "design_access_code_batch";
+                columns = new String[]{"id","quantity","delivery_mode","exposed_count","issued_by","purpose_note","expires_at","create_time"};
+                header = new String[]{"批次号","数量","交付方式","明文暴露数","发行人","用途备注","有效期至","创建时间（UTC）"};
+            }
+            default -> {
+                table = "account";
+                columns = new String[]{"id","nickname","status","create_time"};
+                header = new String[]{"用户编号","昵称","状态","注册时间（UTC）"};
+                typeColumn = "status";
+            }
+        }
+        var out = new ByteArrayOutputStream();
+        StringBuilder where = new StringBuilder(hasDeleted ? "deleted=FALSE" : "1=1");
         var args = new ArrayList<Object>();
         where.append(" AND create_time<=?"); args.add(Timestamp.from(cutoff));
         if (filters.containsKey("userId")) { where.append(" AND user_id=?"); args.add(Long.parseLong(filters.get("userId").toString())); }
-        if (filters.containsKey("type")) { where.append(ledger ? " AND type=?" : " AND event_type=?"); args.add(filters.get("type")); }
+        if (filters.containsKey("type")) { where.append(" AND ").append(typeColumn).append("=?"); args.add(filters.get("type")); }
         for (var key : List.of("from","to")) if (filters.containsKey(key)) {
             where.append("from".equals(key) ? " AND create_time>=?" : " AND create_time<?"); args.add(Timestamp.from(Instant.parse(filters.get(key).toString())));
         }
+        String selectColumns = String.join(",",columns);
+        String[] keys = columns;
+        if ("ACCESS_CODE_BATCHES".equals(jobType)) {
+            selectColumns = selectColumns + ",(SELECT count(*) FROM access_code_redemption r "
+                    + "WHERE r.code_id IN (SELECT c.id FROM design_access_code c WHERE c.batch_id = design_access_code_batch.id)) AS redeemed_count";
+            keys = new String[]{columns[0],columns[1],columns[2],columns[3],columns[4],columns[5],columns[6],columns[7],"redeemed_count"};
+            header = new String[]{"批次号","数量","交付方式","明文暴露数","发行人","用途备注","有效期至","创建时间（UTC）","已兑换数"};
+        } else if ("ACCOUNTS".equals(jobType)) {
+            selectColumns = selectColumns
+                    + ",COALESCE((SELECT available_points FROM design_point_account pa WHERE pa.user_id = account.id AND pa.deleted = FALSE), 0) AS available_points"
+                    + ",COALESCE((SELECT g.status FROM design_access_grant g WHERE g.account_id = account.id AND g.status = 'ACTIVE' AND g.deleted = FALSE), 'NONE') AS grant_status";
+            keys = new String[]{columns[0],columns[1],columns[2],columns[3],"available_points","grant_status"};
+            header = new String[]{"用户编号","昵称","状态","注册时间（UTC）","可用点数","授权状态"};
+        }
+        final String[] rowKeys = keys;
+        // 表头在派生列计算完成后写入，保证批次/用户清单带上附加列
+        out.writeBytes(new byte[]{(byte)0xef,(byte)0xbb,(byte)0xbf}); appendRow(out,(Object[])header);
         long cursor=0; int total=0;
         while (true) {
             renew(jobId,token);
             var pageArgs = new ArrayList<>(args); pageArgs.add(cursor); pageArgs.add(PAGE_SIZE);
-            var page = jdbc.queryForList("SELECT "+String.join(",",columns)+" FROM "+(ledger?"design_point_ledger":"audit_event")+" WHERE "+where+" AND id>? ORDER BY id LIMIT ?",pageArgs.toArray());
+            var page = jdbc.queryForList("SELECT "+selectColumns+" FROM "+table+" WHERE "+where+" AND id>? ORDER BY id LIMIT ?",pageArgs.toArray());
             for (var row : page) {
                 if (++total>MAX_ROWS) throw new ExportLimit("EXPORT_ROW_LIMIT");
-                appendRow(out,Arrays.stream(columns).map(c->row.get(c)).toArray());
+                appendRow(out,Arrays.stream(rowKeys).map(c->row.get(c)).toArray());
                 cursor=((Number)row.get("id")).longValue();
             }
             if (page.size()<PAGE_SIZE) return out.toByteArray();

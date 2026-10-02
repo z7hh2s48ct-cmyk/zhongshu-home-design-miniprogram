@@ -46,6 +46,9 @@ public class AppAiJobRespVO {
     @Schema(description = "结算后净消耗；未结算时为空")
     private Long netPointCost;
 
+    @Schema(description = "提示词调用实扣点数（生图前文本模型计费）；未实际扣点时为空，仅管理端详情下发")
+    private Long promptPointCost;
+
     @Schema(description = "进度百分比 0~100")
     private Integer progress;
 

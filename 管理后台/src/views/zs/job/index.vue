@@ -114,16 +114,19 @@
         <el-descriptions-item label="完成时间">{{
           fmtTime(detail.data.finishedAt)
         }}</el-descriptions-item>
-        <el-descriptions-item label="单位点数" :span="2">{{
+        <el-descriptions-item label="生图单价（设计点/张）" :span="2">{{
           detail.data.unitPointCost ?? '—'
         }}</el-descriptions-item>
-        <el-descriptions-item label="扣点快照">{{
+        <el-descriptions-item label="提示词调用（文本模型）">{{
+          detail.data.promptPointCost ?? '未扣点'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="生图扣点快照">{{
           detail.data.totalPointCost ?? '—'
         }}</el-descriptions-item>
         <el-descriptions-item label="结算退点">{{
           detail.data.refundedPointCost ?? '暂无结算'
         }}</el-descriptions-item>
-        <el-descriptions-item label="结算净消耗">{{
+        <el-descriptions-item label="结算净消耗（生图）">{{
           detail.data.netPointCost ?? '暂无结算'
         }}</el-descriptions-item>
       </el-descriptions>

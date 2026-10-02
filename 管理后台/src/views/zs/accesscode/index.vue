@@ -197,6 +197,28 @@
             </el-descriptions>
           </template>
 
+          <template v-if="detail.orders?.length">
+            <h4 class="zs-drawer-section">该用户近期充值记录</h4>
+            <el-table :data="detail.orders" size="small" stripe>
+              <el-table-column label="金额(元)" width="80">
+                <template #default="{ row }">{{ (row.amountCents / 100).toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column label="点数" width="80">
+                <template #default="{ row }">{{ row.basePoints + row.bonusPoints }}</template>
+              </el-table-column>
+              <el-table-column label="支付/到账" min-width="120">
+                <template #default="{ row }"
+                  >{{ payStateText(row.paymentState) }}/{{
+                    payStateText(row.fulfillmentState)
+                  }}</template
+                >
+              </el-table-column>
+              <el-table-column label="时间" min-width="150">
+                <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
+              </el-table-column>
+            </el-table>
+          </template>
+
           <template v-if="detail.account?.recentLedger?.length">
             <h4 class="zs-drawer-section">该用户近期点数流水（含充值入账）</h4>
             <el-table :data="detail.account.recentLedger" size="small" stripe>
@@ -383,12 +405,23 @@ const detail = reactive({
   loading: false,
   error: '',
   row: null as any,
-  account: null as any
+  account: null as any,
+  orders: [] as any[]
 })
 const accountGrantText = computed(() => {
   const grant = (detail.account?.grants || []).find((g: any) => g.status === 'ACTIVE')
   return grant ? '已授权（可用）' : '无有效授权'
 })
+const payStateText = (s: string) =>
+  ({
+    CREATED: '已创建',
+    PENDING: '待支付',
+    SUCCEEDED: '成功',
+    FAILED: '失败',
+    UNKNOWN: '未知',
+    CREDITED: '已到账',
+    VOID: '已作废'
+  })[s] || s
 const canUnbind = computed(() => {
   if (detail.row?.status !== 'CONSUMED' || !detail.account) return false
   return (detail.account.grants || []).some((g: any) => g.status === 'ACTIVE')
@@ -396,6 +429,7 @@ const canUnbind = computed(() => {
 const openDetail = (row: any) => {
   detail.row = row
   detail.account = null
+  detail.orders = []
   detail.error = ''
   detail.visible = true
   loadDetail()
@@ -406,6 +440,17 @@ const loadDetail = async () => {
   try {
     if (detail.row?.boundUser) {
       detail.account = await ZsApi.getAccount(detail.row.boundUser)
+      // 充值记录独立加载：订单接口失败不阻塞详情主体
+      try {
+        const orders = await ZsApi.getOrderPage({
+          userId: String(detail.row.boundUser),
+          pageNo: 1,
+          pageSize: 5
+        })
+        detail.orders = orders?.list || []
+      } catch {
+        detail.orders = []
+      }
     }
   } catch (e: any) {
     detail.error = e?.msg || '绑定用户信息加载失败，可关闭后重试'

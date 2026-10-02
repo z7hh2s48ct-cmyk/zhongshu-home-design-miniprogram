@@ -116,6 +116,18 @@
             </div>
           </div>
 
+          <el-button
+            v-if="detail.data.status === 'ACTIVE'"
+            v-hasPermi="['identity:account:disable']"
+            type="danger"
+            plain
+            @click="disableAccount(detail.data)"
+            >停用账号</el-button
+          >
+          <p v-if="detail.data.status === 'ACTIVE'" class="zs-disable-hint"
+            >停用后立即撤销访问授权、拒绝新兑换；点数余额冻结不清零，可恢复（另行管理）。</p
+          >
+
           <div class="zs-detail-block-title">授权记录（解绑后该账号立即降为受限会话）</div>
           <el-table :data="detail.data.grants || []" size="small" stripe>
             <el-table-column label="授权号" prop="id" width="180" />
@@ -143,6 +155,25 @@
                   >解绑</el-button
                 >
               </template>
+            </el-table-column>
+          </el-table>
+
+          <div class="zs-detail-block-title">近期充值记录（近 5 条）</div>
+          <el-table :data="detail.orders || []" size="small" stripe>
+            <el-table-column label="订单号" prop="orderNo" width="150" show-overflow-tooltip />
+            <el-table-column label="金额(元)" width="80">
+              <template #default="{ row }">{{ (row.amountCents / 100).toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="点数" width="90">
+              <template #default="{ row }">{{ row.basePoints + row.bonusPoints }}</template>
+            </el-table-column>
+            <el-table-column label="支付/到账" min-width="130">
+              <template #default="{ row }"
+                >{{ payText(row.paymentState) }}/{{ payText(row.fulfillmentState) }}</template
+              >
+            </el-table-column>
+            <el-table-column label="时间" min-width="150">
+              <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
             </el-table-column>
           </el-table>
 
@@ -180,7 +211,7 @@ const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ nickname: '', status: '', pageNo: 1, pageSize: 10 })
-const detail = reactive({ visible: false, loading: false, data: null as any })
+const detail = reactive({ visible: false, loading: false, data: null as any, orders: [] as any[] })
 
 const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' })[s] || s
 const statusClass = (s: string) =>
@@ -222,10 +253,49 @@ const openDetail = async (row: any) => {
   detail.visible = true
   detail.loading = true
   detail.data = null
+  detail.orders = []
   try {
     detail.data = await ZsApi.getAccount(row.id)
+    // 充值记录独立加载：订单接口失败不阻塞详情主体
+    try {
+      const orders = await ZsApi.getOrderPage({ userId: String(row.id), pageNo: 1, pageSize: 5 })
+      detail.orders = orders?.list || []
+    } catch {
+      detail.orders = []
+    }
   } finally {
     detail.loading = false
+  }
+}
+
+const payText = (s: string) =>
+  ({
+    CREATED: '已创建',
+    PENDING: '待支付',
+    SUCCEEDED: '成功',
+    FAILED: '失败',
+    UNKNOWN: '未知',
+    CREDITED: '已到账',
+    VOID: '已作废'
+  })[s] || s
+
+const disableAccount = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(
+      '停用后该用户立即失去访问授权、无法兑换新授权码；点数余额冻结但不清零。确定停用？',
+      '确认停用账号',
+      { type: 'warning', confirmButtonText: '停用', cancelButtonText: '取消' }
+    )
+    const ok = await ZsApi.disableAccount(row.id)
+    if (!ok) {
+      ElMessage.warning('该账号已停用或已注销，无需重复操作')
+      return
+    }
+    ElMessage.success('已停用，访问授权已撤销')
+    load()
+    openDetail({ id: row.id })
+  } catch (e: any) {
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(e?.msg || '停用失败，请重试')
   }
 }
 
@@ -271,5 +341,12 @@ onMounted(load)
   font-size: 13px;
   font-weight: 600;
   color: #6a3b1b;
+}
+
+.zs-disable-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #8a8a8a;
 }
 </style>

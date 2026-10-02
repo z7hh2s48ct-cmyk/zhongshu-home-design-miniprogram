@@ -74,7 +74,7 @@ const open = async (row: RoleApi.RoleVO) => {
   dialogVisible.value = true
   resetForm()
   // 加载 Menu 列表。注意，必须放在前面，不然下面 setChecked 没数据节点
-  menuOptions.value = handleTree(await MenuApi.getSimpleMenusList())
+  menuOptions.value = handleTree(await filterProjectMenus(await MenuApi.getSimpleMenusList()))
   // 设置数据
   formData.id = row.id
   formData.name = row.name
@@ -89,6 +89,32 @@ const open = async (row: RoleApi.RoleVO) => {
   } finally {
     formLoading.value = false
   }
+}
+
+// 2026-10-02 运营确认：授权树只保留本项目子树（/zs 业务 + /system 系统设置 + /infra 运维支持），
+// 上游 CRM/商城/ERP 等模板节点不再出现在角色配置中；仅影响展示，已勾选的历史权限不受影响。
+const PROJECT_MENU_ROOTS = new Set(['/zs', '/system', '/infra'])
+const filterProjectMenus = async (menus: any[]) => {
+  if (!menus.length) return menus
+  const nodeById = new Map<number, any>()
+  menus.forEach((item) => nodeById.set(item.id, item))
+  const rootIds = new Set(
+    menus
+      .filter((item) => item.parentId === 0 && PROJECT_MENU_ROOTS.has(item.path))
+      .map((item) => item.id)
+  )
+  if (!rootIds.size) return menus
+  const inProject = (item: any) => {
+    let current = item
+    const seen = new Set<number>()
+    while (current && !seen.has(current.id)) {
+      seen.add(current.id)
+      if (rootIds.has(current.id)) return true
+      current = nodeById.get(current.parentId)
+    }
+    return false
+  }
+  return menus.filter(inProject)
 }
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 
