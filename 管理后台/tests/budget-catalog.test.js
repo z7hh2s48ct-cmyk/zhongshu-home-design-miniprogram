@@ -34,7 +34,9 @@ function component({ permission = true, overrides = {} } = {}) {
   const compiled = evaluate(script.content, filename, {
     '@/api/zs/budget': api,
     '@/utils/permission': { checkPermi: () => permission },
-    './catalog-form': formModule
+    './catalog-form': formModule,
+    '@/utils/zsFormat': { fmtTime: (v) => (v ? String(v) : '—') },
+    'element-plus': { ElMessageBox: { prompt: async () => ({ value: '测试原因' }), confirm: async () => true } }
   }, { ...vue, onMounted() {}, useMessage: () => ({ success: value => notices.push(value) }),
     crypto: require('node:crypto').webcrypto })
   const scope = vue.effectScope()

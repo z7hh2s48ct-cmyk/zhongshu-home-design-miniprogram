@@ -81,7 +81,8 @@ public class ExportAuditAdminController {
 
     private Map<String, Object> exportView(cn.iocoder.yudao.module.infra.zhongshu.delivery.ExportJobSnapshot job) {
         String error = job.getError();
-        if (error != null && !java.util.Set.of("EXPORT_ROW_LIMIT", "EXPORT_SIZE_LIMIT", "EXPORT_RETRY_LIMIT", "EXPORT_LEASE_LOST").contains(error)) error = "EXPORT_FAILED";
+        if (error != null && !java.util.Set.of("EXPORT_ROW_LIMIT", "EXPORT_SIZE_LIMIT", "EXPORT_RETRY_LIMIT",
+                "EXPORT_LEASE_LOST", "EXPORT_CANCELLED").contains(error)) error = "EXPORT_FAILED";
         return Map.of("exportJobId", String.valueOf(job.getJobId()), "jobType", job.getJobType(),
                 "status", exportStatus(job), "createdAt", job.getCreateTime() == null ? "" : job.getCreateTime().toString(),
                 "expiresAt", job.getExpiresAt() == null ? "" : job.getExpiresAt().toString(),
@@ -102,6 +103,19 @@ public class ExportAuditAdminController {
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
     public CommonResult<Map<String, Object>> getExportJob(@PathVariable("exportJobId") String exportJobId) {
         return success(exportView(requireOwnedJob(Long.parseLong(exportJobId))));
+    }
+
+    @PostMapping("/export-jobs/{exportJobId}/cancellation")
+    @Operation(summary = "取消本人排队中/生成中的导出任务；已被 worker 认领到尾段的仍可能完成")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.EXPORT_MANAGE + "')")
+    public CommonResult<Boolean> cancelExportJob(@PathVariable("exportJobId") String exportJobId) {
+        long id = Long.parseLong(exportJobId);
+        requireOwnedJob(id);
+        var jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+        int updated = jdbc.update(
+                "UPDATE export_job SET cancel_requested = TRUE, update_time = now() "
+                        + "WHERE id = ? AND status IN ('PENDING','RUNNING')", id);
+        return success(updated == 1);
     }
 
     @PostMapping("/export-jobs/{exportJobId}/download-tickets")
@@ -148,17 +162,35 @@ public class ExportAuditAdminController {
     }
 
     @GetMapping("/audit-events")
-    @Operation(summary = "审计事件分页查询（P1C audit_event）")
+    @Operation(summary = "审计事件分页查询：时间/类型/操作者/业务对象筛选，取证用；detail 原样下发")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.AUDIT_READ + "')")
     public CommonResult<PageResult<Map<String, Object>>> getAuditEvents(
+            @RequestParam(value = "eventType", required = false) String eventType,
+            @RequestParam(value = "actorId", required = false) String actorId,
+            @RequestParam(value = "bizType", required = false) String bizType,
+            @RequestParam(value = "bizId", required = false) String bizId,
+            @RequestParam(value = "from", required = false) String from,
+            @RequestParam(value = "to", required = false) String to,
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
         var jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-        long total = jdbc.queryForObject("SELECT count(*) FROM audit_event", Long.class);
+        var where = new java.util.ArrayList<String>(java.util.List.of("TRUE"));
+        var args = new java.util.ArrayList<Object>();
+        if (eventType != null && !eventType.isBlank()) { where.add("event_type = ?"); args.add(eventType.trim()); }
+        if (actorId != null && !actorId.isBlank()) { where.add("actor_id = ?"); args.add(actorId.trim()); }
+        if (bizType != null && !bizType.isBlank()) { where.add("biz_type = ?"); args.add(bizType.trim()); }
+        if (bizId != null && !bizId.isBlank()) { where.add("biz_id = ?"); args.add(bizId.trim()); }
+        if (from != null && !from.isBlank()) { where.add("create_time >= ?"); args.add(java.sql.Timestamp.from(java.time.Instant.parse(from))); }
+        if (to != null && !to.isBlank()) { where.add("create_time < ?"); args.add(java.sql.Timestamp.from(java.time.Instant.parse(to))); }
+        String filter = " WHERE " + String.join(" AND ", where);
+        long total = jdbc.queryForObject("SELECT count(*) FROM audit_event" + filter, Long.class, args.toArray());
+        var params = new java.util.ArrayList<Object>(args);
+        params.add(Math.min(pageSize, 100));
+        params.add((long) Math.max(pageNo - 1, 0) * Math.min(pageSize, 100));
         var list = jdbc.queryForList(
                 "SELECT id, event_type, actor_type, actor_id, action, biz_type, biz_id, result, "
-                        + "detail::text, create_time FROM audit_event ORDER BY id DESC LIMIT ? OFFSET ?",
-                Math.min(pageSize, 100), (long) Math.max(pageNo - 1, 0) * pageSize);
+                        + "detail::text, create_time FROM audit_event" + filter + " ORDER BY id DESC LIMIT ? OFFSET ?",
+                params.toArray());
         return success(new PageResult<>(list, total));
     }
 

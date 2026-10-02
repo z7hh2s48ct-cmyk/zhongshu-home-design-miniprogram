@@ -23,5 +23,8 @@ export const getPriceRules = (params: {
   pageSize: number
 }): Promise<{ list: GenerationPriceRule[]; total: number }> => request.get({ url: base, params })
 export const createPriceRule = (data: CreateGenerationPrice) => request.post({ url: base, data })
-export const retirePriceRule = (ruleId: string) =>
-  request.patch({ url: `${base}/${encodeURIComponent(ruleId)}/retire` })
+export const retirePriceRule = (ruleId: string, data?: { reason: string }) =>
+  request.patch({ url: `${base}/${encodeURIComponent(ruleId)}/retire`, data })
+// 删除已停用规则（逻辑删除；生效中须先停用，追溯走流水快照）
+export const deletePriceRule = (ruleId: string) =>
+  request.delete({ url: `${base}/${encodeURIComponent(ruleId)}` })

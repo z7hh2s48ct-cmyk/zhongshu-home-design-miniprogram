@@ -23,7 +23,7 @@ function component(submission) {
     URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} },
     useRoute: () => ({ params: { submissionId: '9007199254740993' }, query: {} }),
     useMessage: () => ({ confirm: async () => notices.push('confirm'), error: msg => notices.push(msg), success: msg => notices.push(msg) }),
-    require(name) { if (name === 'vue') return vue; if (name === '@/api/zs') return api; throw Error(name) }
+    require(name) { if (name === 'vue') return vue; if (name === '@/api/zs') return api; if (name === '@/utils/zsFormat') return { fmtTime: (v) => (v ? String(v) : '—') }; if (name === 'element-plus') return { ElMessageBox: { prompt: async () => ({ value: '测试原因' }) } }; throw Error(name) }
   })
   return { state: module.exports.default.setup({}, { expose() {} }), api, calls, notices, template: descriptor.template.content }
 }
@@ -51,8 +51,9 @@ test('退修需要意见，批准不隐式发布，独立发布前确认', async
   assert.equal(app.calls.some(call => call[0] === 'publish'), false)
   sub.allowedActions = ['PUBLISH']
   await app.state.publish()
-  assert.ok(app.notices.includes('confirm'))
+  // D2-4 后发布走 ElMessageBox.prompt 收原因（mock 返回"测试原因"），断言发布调用携带原因
   assert.equal(app.calls.filter(call => call[0] === 'publish').length, 1)
+  assert.equal(app.calls.find(call => call[0] === 'publish')[2], '测试原因')
 })
 
 test('资产失败显示错误并可重试，不用示例图代替', async () => {

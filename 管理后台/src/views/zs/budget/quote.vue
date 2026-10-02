@@ -14,6 +14,14 @@
     </div>
     <el-alert v-if="!canQuery" title="没有预算查询权限" type="warning" :closable="false" />
     <el-alert v-if="error" :title="error" type="error" :closable="false" class="mb-16px" />
+    <el-alert
+      v-if="detail && quotes.length && !currentPublic"
+      title="业主端当前看不到任何报价（草稿未发布或已全部撤回/作废）——如需业主可见，请发布一个报价版本。"
+      type="error"
+      :closable="false"
+      class="mb-16px"
+      show-icon
+    />
     <template v-if="detail">
       <div class="zs-table-card mb-16px">
         <el-descriptions :column="3" border>
@@ -134,9 +142,15 @@
               displayTime(row.publishedAt)
             }}</template></el-table-column
           >
-          <el-table-column label="操作" min-width="190" fixed="right"
+          <el-table-column label="操作" min-width="230" fixed="right"
             ><template #default="{ row }">
-              <el-button link type="primary" @click="selected = row">预览</el-button>
+              <el-button
+                link
+                type="primary"
+                :class="{ 'zs-preview-active': selected && selected.quoteId === row.quoteId }"
+                @click="selected = row"
+                >预览</el-button
+              >
               <el-button
                 v-if="row.status === 'DRAFT'"
                 link
@@ -152,6 +166,14 @@
                 :disabled="saving || !canPublish"
                 @click="openAction(row, 'WITHDRAW')"
                 >撤回</el-button
+              >
+              <el-button
+                v-if="canPublish && row.status === 'DRAFT'"
+                link
+                type="danger"
+                :disabled="saving"
+                @click="discard(row)"
+                >作废</el-button
               >
             </template></el-table-column
           >
@@ -251,6 +273,7 @@ import { checkPermi } from '@/utils/permission'
 import { useUserStore } from '@/store/modules/user'
 import { getTenantId, getVisitTenantId } from '@/utils/auth'
 import { displayTime, errorText, formatCents, validId } from './revision-form'
+import { ElMessageBox } from 'element-plus'
 import { quotePayload } from './quote-form'
 
 defineOptions({ name: 'ZsBudgetQuote' })
@@ -290,7 +313,9 @@ const statusLabel = (quote: BudgetQuote) =>
     ? '待复核草稿'
     : quote.currentPublic
       ? '已公开'
-      : { DRAFT: '草稿', PUBLISHED: '历史已发布', WITHDRAWN: '已撤回' }[quote.status]
+      : { DRAFT: '草稿', PUBLISHED: '历史已发布', WITHDRAWN: '已撤回', DISCARDED: '已作废' }[
+          quote.status
+        ]
 const tagType = (quote: BudgetQuote) =>
   quote.currentPublic
     ? 'success'
@@ -379,9 +404,45 @@ function openAction(quote: BudgetQuote, next: 'PUBLISH' | 'WITHDRAW') {
     return
   actionTarget.value = quote
   action.value = next
-  actionReason.value = ''
+  // E-3 原因一次输入：发布默认带入草稿创建时填写的调价原因，可改
+  actionReason.value = next === 'PUBLISH' ? quote.reason || '' : ''
   actionError.value = ''
   actionVisible.value = true
+}
+// E-3 作废草稿：治理只增不减的草稿堆积；业主端永不展示作废件
+async function discard(quote: BudgetQuote) {
+  if (!canPublish.value || saving.value || quote.status !== 'DRAFT') return
+  let reason = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '作废报价 V' + quote.quoteVersion + ' 草稿？作废后不可恢复，业主端永不展示。原因将写入审计。',
+      '作废报价草稿',
+      {
+        type: 'warning',
+        confirmButtonText: '确认作废',
+        cancelButtonText: '取消',
+        inputPlaceholder: '作废原因（必填）',
+        inputValidator: (v: string) => (v?.trim() ? true : '作废原因必填')
+      }
+    )
+    reason = value.trim()
+  } catch {
+    return
+  }
+  saving.value = true
+  try {
+    await QuoteApi.discardQuote(
+      quote.quoteId,
+      { expectedVersion: quote.version, reason },
+      'discard-' + quote.quoteId + '-' + quote.version
+    )
+    message.success('报价草稿已作废')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '作废失败，请刷新后重试')
+  } finally {
+    saving.value = false
+  }
 }
 async function submitAction() {
   const target = actionTarget.value,
@@ -439,5 +500,12 @@ onMounted(load)
 .quote-actions {
   display: flex;
   justify-content: flex-end;
+}
+</style>
+
+<style lang="scss" scoped>
+.zs-preview-active {
+  font-weight: 700;
+  text-decoration: underline;
 }
 </style>

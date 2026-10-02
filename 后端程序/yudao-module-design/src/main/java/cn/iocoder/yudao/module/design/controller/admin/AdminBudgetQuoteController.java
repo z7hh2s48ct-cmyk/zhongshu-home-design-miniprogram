@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.design.controller.admin;
 
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
+import io.swagger.v3.oas.annotations.Operation;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.design.budget.BudgetQuoteService;
 import cn.iocoder.yudao.module.design.controller.admin.vo.AdminBudgetQuoteVO.Quote;
@@ -57,6 +58,14 @@ public class AdminBudgetQuoteController {
     public CommonResult<Quote> withdraw(@PathVariable String quoteId, @RequestHeader("Idempotency-Key") String key,
                                         @RequestBody Map<String, Object> body) {
         return success(budgetQuoteService.withdraw(actor(), quoteId, key, body));
+    }
+
+    @PostMapping("/budget/quotes/{quoteId}/discard")
+    @Operation(summary = "作废草稿（含 stale 草稿）：仅 DRAFT 可作废，业主端永不展示")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_QUOTE_PUBLISH + "')")
+    public CommonResult<Quote> discard(@PathVariable String quoteId, @RequestHeader("Idempotency-Key") String key,
+                                       @RequestBody Map<String, Object> body) {
+        return success(budgetQuoteService.discard(actor(), quoteId, key, body));
     }
 
     private long actor() {

@@ -103,6 +103,14 @@ public class SubmissionReviewService {
         return rows.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(rows.get(0));
     }
 
+    /** E-5：历轮审核记录（最新在前），供审核员看到上一轮退回原因等完整上下文。 */
+    public java.util.List<java.util.Map<String, Object>> reviewHistory(long submissionId) {
+        return jdbcTemplate.queryForList(
+                "SELECT t.round_no, d.decision, d.comment, d.reviewer_user_id, d.create_time "
+                        + "FROM review_task t LEFT JOIN review_decision d ON d.review_task_id = t.id AND d.deleted = FALSE "
+                        + "WHERE t.submission_id = ? AND t.deleted = FALSE ORDER BY t.round_no DESC", submissionId);
+    }
+
     // ========== 小程序读模型（页面 12 与「我的 → 户型投稿」） ==========
 
     public record SubmissionRow(long submissionId, long projectId, long userId, long resultVersionId, String status,
@@ -392,11 +400,16 @@ public class SubmissionReviewService {
      * 用户被授予的生成参考许可落为案例平面图资产的 GENERATION_REFERENCE 授权（不随审核自动获得）。
      */
     public long publishApprovedAsCase(long submissionId, String operator) {
-        return publishApprovedAsCase(submissionId, operator, null);
+        return publishApprovedAsCase(submissionId, operator, null, null);
     }
 
     /** P1-A（报告 15）：投稿版本面积为小数时不接受静默截断，必须由管理员核定整数面积（confirmedBuildingArea）后发布，核定事实留痕入案例描述。 */
     public long publishApprovedAsCase(long submissionId, String operator, Integer confirmedBuildingArea) {
+        return publishApprovedAsCase(submissionId, operator, confirmedBuildingArea, null);
+    }
+
+    /** D2-4：发布原因随出站事件留痕（对业主可见级操作与预算/报价发布同等留痕强度）。 */
+    public long publishApprovedAsCase(long submissionId, String operator, Integer confirmedBuildingArea, String publishReason) {
         return txTemplate.execute(status -> {
             // Account before submission: a queued admin action cannot republish a closed account.
             var owners = jdbcTemplate.queryForList("SELECT user_id FROM case_submission WHERE id=? AND deleted=FALSE", Long.class, submissionId);
@@ -491,7 +504,11 @@ public class SubmissionReviewService {
             reliableEventPort.append(OutboxEventMessage.builder()
                     .eventType("SUBMISSION_PUBLISHED").bizType("case_submission")
                     .bizId(String.valueOf(submissionId))
-                    .payload(Map.of("submissionId", submissionId, "caseId", caseId, "userId", userId)).build());
+                    .payload(publishReason == null
+                            ? Map.of("submissionId", submissionId, "caseId", caseId, "userId", userId)
+                            : Map.of("submissionId", submissionId, "caseId", caseId, "userId", userId,
+                                    "reason", publishReason))
+                    .build());
             log.info("[publishApprovedAsCase][submission={} → AI 案例 {}]", submissionId, caseId);
             return caseId;
         });

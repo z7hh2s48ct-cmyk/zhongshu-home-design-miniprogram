@@ -4,10 +4,10 @@
       <div
         ><h1 class="zs-page-title">业务积分价格</h1
         ><div class="zs-page-subtitle"
-          >预算按成功测算计费；提示词按模型实际调用计费。新价格仅影响新业务。</div
+          >预算测算、提示词调用等功能的计费标准；调价只影响新业务，历史账单不变。</div
         ></div
       >
-      <el-button v-if="canManage" type="primary" @click="openEditor">新增价格</el-button>
+      <el-button v-if="canManage" type="primary" @click="openEditor()">新增价格</el-button>
     </div>
     <el-alert
       v-if="!canQuery"
@@ -17,7 +17,7 @@
     />
     <div v-else class="zs-table-card">
       <el-alert
-        title="平面图、立面图的 2K / 4K 价格在“生成价格”中单独设置。"
+        title="平面图、立面图的 2K / 4K 价格在「出图定价」中单独设置。"
         type="info"
         :closable="false"
         class="mb-16px"
@@ -45,31 +45,46 @@
         class="mb-16px"
       />
       <el-table v-loading="loading" :data="rows" stripe>
-        <el-table-column label="业务" min-width="190"
-          ><template #default="{ row }">{{ label(row.product) }}</template></el-table-column
+        <el-table-column label="业务" min-width="170"
+          ><template #default="{ row }"
+            >{{ label(row.product) }}
+            <span v-if="isActiveNow(row)" class="zs-tag zs-tag--green zs-current-tag">现价</span>
+          </template></el-table-column
         >
-        <el-table-column label="价格（设计点 / 次）" prop="pointCost" width="180" />
-        <el-table-column label="生效时间" min-width="190"
-          ><template #default="{ row }">{{ dateLabel(row.effectiveAt) }}</template></el-table-column
+        <el-table-column label="价格（设计点 / 次）" prop="pointCost" width="160" />
+        <el-table-column label="生效时间" min-width="170"
+          ><template #default="{ row }">{{ fmtTime(row.effectiveAt) }}</template></el-table-column
         >
-        <el-table-column label="失效时间" min-width="190"
+        <el-table-column label="失效时间" min-width="170"
           ><template #default="{ row }">{{
-            row.expiresAt ? dateLabel(row.expiresAt) : '长期有效'
+            row.expiresAt ? fmtTime(row.expiresAt) : '长期有效'
           }}</template></el-table-column
         >
-        <el-table-column label="状态" width="110"
+        <el-table-column label="状态" width="100"
           ><template #default="{ row }">{{
             row.status === 'ACTIVE' ? '生效中' : '已停用'
           }}</template></el-table-column
         >
-        <el-table-column label="操作" width="100"
+        <el-table-column label="操作" width="150"
           ><template #default="{ row }"
+            ><el-button
+              v-if="canManage && row.status === 'ACTIVE'"
+              link
+              type="primary"
+              @click="openEditor(row)"
+              >调价</el-button
             ><el-button
               v-if="canManage && row.status === 'ACTIVE'"
               link
               type="danger"
               @click="retire(row)"
               >停用</el-button
+            ><el-button
+              v-if="canManage && row.status !== 'ACTIVE'"
+              link
+              type="danger"
+              @click="remove(row)"
+              >删除</el-button
             ></template
           ></el-table-column
         >
@@ -83,7 +98,7 @@
     </div>
     <el-dialog
       v-model="editorOpen"
-      title="新增业务价格"
+      title="新增计费价格"
       width="480px"
       :close-on-click-modal="false"
     >
@@ -122,6 +137,8 @@
 import * as Api from '@/api/zs/usage-pricing'
 import type { UsagePriceRule, UsageProduct } from '@/api/zs/usage-pricing'
 import { checkPermi } from '@/utils/permission'
+import { fmtTime } from '@/utils/zsFormat'
+import { ElMessageBox } from 'element-plus'
 defineOptions({ name: 'ZsUsagePricing' })
 const message = useMessage()
 const canQuery = computed(() => checkPermi(['commerce:usage-price:query']))
@@ -141,7 +158,15 @@ const form = reactive({
 })
 const label = (product: UsageProduct) =>
   product === 'BUDGET_ESTIMATE' ? '预算测算（成功一次）' : '提示词模型调用（每次）'
-const dateLabel = (value: string) => new Date(value).toLocaleString('zh-CN', { hour12: false })
+// D2-7 现价判定：ACTIVE 且当前时间处于生效窗口
+const isActiveNow = (row: UsagePriceRule) => {
+  if (row.status !== 'ACTIVE') return false
+  const now = Date.now()
+  return (
+    new Date(row.effectiveAt).getTime() <= now &&
+    (!row.expiresAt || new Date(row.expiresAt).getTime() > now)
+  )
+}
 // 竞态保护：快速切换筛选时丢弃旧响应，避免旧结果覆盖新结果
 let loadSeq = 0
 async function load() {
@@ -167,10 +192,11 @@ async function load() {
     if (seq === loadSeq) loading.value = false
   }
 }
-function openEditor() {
+function openEditor(row?: UsagePriceRule) {
+  // D2-8 调价预填：从现价行进入时带出旧值（业务为"追加新价"，旧价保留至失效）
   Object.assign(form, {
-    product: 'BUDGET_ESTIMATE',
-    pointCost: undefined,
+    product: row?.product || 'BUDGET_ESTIMATE',
+    pointCost: row?.pointCost,
     effectiveAt: new Date().toISOString(),
     expiresAt: null
   })
@@ -201,15 +227,27 @@ async function save() {
 }
 async function retire(row: UsagePriceRule) {
   if (!canManage.value || saving.value) return
-  // 确认取消与接口失败必须分开处理：停用失败静默会让运营误以为价格已停用（仍在计费）
-  const confirmed = await message
-    .confirm(`停用“${label(row.product)}”当前价格？`)
-    .then(() => true)
-    .catch(() => false)
-  if (!confirmed) return
+  // D2-4 停用原因必填（留审计）；确认取消与接口失败分开处理——停用失败静默会让运营误以为价格已停用（仍在计费）
+  let reason = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `停用“${label(row.product)}”当前价格？停用后相关业务将无法按该价计费。`,
+      '停用业务价格',
+      {
+        type: 'warning',
+        confirmButtonText: '确认停用',
+        cancelButtonText: '取消',
+        inputPlaceholder: '停用原因（必填，将写入审计）',
+        inputValidator: (v: string) => (v?.trim() ? true : '停用原因必填')
+      }
+    )
+    reason = value.trim()
+  } catch {
+    return
+  }
   saving.value = true
   try {
-    await Api.retireRule(row.ruleId)
+    await Api.retireRule(row.ruleId, { reason })
     message.success('价格已停用')
     await load()
   } catch (e: any) {
@@ -218,5 +256,35 @@ async function retire(row: UsagePriceRule) {
     saving.value = false
   }
 }
+async function remove(row: UsagePriceRule) {
+  if (!canManage.value || saving.value || row.status === 'ACTIVE') return
+  try {
+    await message.confirm(
+      '删除该已停用价格？历史扣费金额已快照在点数流水，追溯不受影响；删除后不可恢复。'
+    )
+  } catch {
+    return
+  }
+  saving.value = true
+  try {
+    const ok = await Api.deleteRule(row.ruleId)
+    if (!ok) {
+      message.warning('仅已停用的价格可删除；生效中请先停用')
+      return
+    }
+    message.success('价格已删除')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '删除失败，请重试')
+  } finally {
+    saving.value = false
+  }
+}
 onMounted(load)
 </script>
+
+<style lang="scss" scoped>
+.zs-current-tag {
+  margin-left: 6px;
+}
+</style>

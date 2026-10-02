@@ -26,11 +26,11 @@ function component(permission) {
   const state = module.exports.default.setup({}, { expose() {} })
   return { state, routes, template: descriptor.template.content }
 }
-test('工作台进行中任务与查看全部均进入AI任务，不误入授权码或充值订单', () => {
+test('工作台进行中任务与查看全部均进入流水页生成任务tab，不误入授权码或充值订单', () => {
   const app = component(true)
   app.state.todos.value.find(item => item.label === '进行中任务').go()
   app.state.openJobs()
-  assert.deepEqual(app.routes, ['/zs/ai-job', '/zs/ai-job'])
+  assert.deepEqual(app.routes, ['/zs/point-ledger?tab=jobs', '/zs/point-ledger?tab=jobs'])
   assert.match(app.template, /@click="openJobs"/)
 })
 test('已有预算页面从工作台直接可达，不新增重复页面', () => {

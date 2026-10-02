@@ -7,7 +7,19 @@ const ts = require('typescript')
 const vue = require('vue')
 const { parse, compileScript } = require('vue/compiler-sfc')
 
+const componentCache = new Map()
+function loadComponent(page) {
+  if (componentCache.has(page)) return componentCache.get(page)
+  const built = buildComponent(page)
+  componentCache.set(page, built)
+  return built
+}
+
 function component(page) {
+  return loadComponent(page)
+}
+
+function buildComponent(page) {
   const filename = path.join(__dirname, '../src/views/zs', page, 'index.vue')
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'), { filename })
   const source = compileScript(descriptor, { id: 'pagination' }).content
@@ -32,10 +44,13 @@ function component(page) {
     onMounted() {},
     useMessage: () => ({}),
     useRouter: () => ({}),
+    useRoute: () => ({ query: {} }),
     require(name) {
       if (name === 'vue') return vue
       if (name === '@/api/zs') return api
       if (name === 'element-plus' || name === '@/utils/zsFormat') return {}
+      // ledger 页内嵌 job 组件（编译后按真实路径引用），递归装载同一组件工厂
+      if (name === '@/views/zs/job/index.vue') return loadComponent('job')
       throw new Error(name)
     }
   })

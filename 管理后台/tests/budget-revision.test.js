@@ -38,7 +38,11 @@ function evaluate(source, filename, mocks = {}, globals = {}) {
 const catalogPath = path.join(root, 'src/views/zs/budget/catalog-form.ts')
 const catalog = evaluate(fs.readFileSync(catalogPath, 'utf8'), catalogPath)
 const formPath = path.join(root, 'src/views/zs/budget/revision-form.ts')
-const form = evaluate(fs.readFileSync(formPath, 'utf8'), formPath, { './catalog-form': catalog })
+const form = evaluate(fs.readFileSync(formPath, 'utf8'), formPath, {
+  './catalog-form': catalog,
+  // D2-1 后 displayTime 收敛到 fmtTime；沙箱内以纯函数替身避免真实 Intl 依赖
+  '@/utils/zsFormat': { fmtTime: (v) => (v ? String(v) : '—') }
+})
 function line(changes = {}) {
   return {
     lineId,
@@ -215,6 +219,8 @@ function component(name = 'detail', changes = {}) {
       '@/api/zs/budget-revision': api,
       '@/api/zs/budget': catalogApi,
       './revision-form': form,
+      '@/utils/zsFormat': { fmtTime: (v) => (v ? String(v) : '—') },
+      'element-plus': { ElMessageBox: { prompt: async () => ({ value: '测试原因' }) } },
       '@/utils/permission': {
         checkPermi: (needed) => needed.some((value) => permissions.has(value))
       },

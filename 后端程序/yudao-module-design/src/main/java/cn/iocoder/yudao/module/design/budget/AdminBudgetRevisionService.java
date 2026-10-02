@@ -57,7 +57,7 @@ public class AdminBudgetRevisionService {
     private record RevisionRequest(int expectedVersion, String reason, List<Map<String, Object>> updates,
                                    List<Map<String, Object>> additions, List<String> removals) {}
 
-    public PageResult<Summary> list(String projectId, String completeness, int pageNo, int pageSize) {
+    public PageResult<Summary> list(String projectId, String completeness, String keyword, int pageNo, int pageSize) {
         if (pageNo < 1 || pageSize < 1 || pageSize > 100) invalid();
         Long project = projectId == null ? null : BudgetInputs.positiveId(projectId);
         if (completeness != null && !Set.of("COMPLETE", "INCOMPLETE").contains(completeness)) invalid();
@@ -66,7 +66,22 @@ public class AdminBudgetRevisionService {
             String where = " WHERE b.tenant_id = 0 AND b.model = 'ITEMIZED_V1' AND b.deleted = FALSE AND r.tenant_id = 0 AND r.deleted = FALSE" + VISIBLE_PROJECT;
             if (project != null) { where += " AND b.project_id = ?"; args.add(project); }
             if (completeness != null) { where += " AND r.completeness = ?"; args.add(completeness); }
+            // E-4 模糊搜索：项目名 / 用户昵称；keyword 为纯数字时同时精确匹配项目编号。
+            // JOIN 仅在 keyword 存在时追加：合同测试夹具无 account 表，无条件 JOIN 会破坏基础读契约
             String from = " FROM budget_estimate b JOIN budget_revision r ON r.estimate_id = b.id AND r.revision_no = b.current_revision";
+            if (keyword != null && !keyword.isBlank()) {
+                String value = keyword.trim();
+                where += " AND (bp.name ILIKE ? OR ba.nickname ILIKE ?";
+                args.add("%" + value + "%");
+                args.add("%" + value + "%");
+                if (value.matches("\\d{1,20}")) {
+                    where += " OR b.project_id = ?";
+                    args.add(Long.parseLong(value));
+                }
+                where += ")";
+                from += " JOIN design_project bp ON bp.id = b.project_id AND bp.deleted = FALSE "
+                        + "LEFT JOIN account ba ON ba.id = bp.user_id AND ba.deleted = FALSE";
+            }
             Long total = jdbc.queryForObject("SELECT count(*)" + from + where, Long.class, args.toArray());
             args.add(pageSize); args.add((long) (pageNo - 1) * pageSize);
             var rows = jdbc.queryForList("SELECT b.id" + from + where + " ORDER BY b.id DESC LIMIT ? OFFSET ?", args.toArray());

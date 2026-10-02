@@ -124,6 +124,18 @@ public class UsagePointPriceService implements UsagePricingPort {
         }
     }
 
+    /** 删除已停用规则（逻辑删除）：生效中须先停用；扣费追溯依赖流水快照，不受影响。 */
+    public boolean deleteRule(long ruleId, String operator) {
+        try {
+            return jdbc.update("UPDATE service_usage_price_rule SET deleted = TRUE, updater = ?, update_time = now() "
+                            + "WHERE id = ? AND status = 'RETIRED' AND deleted = FALSE",
+                    operator, ruleId) == 1;
+        } catch (org.springframework.dao.DataAccessException error) {
+            log.error("[deleteRule][业务积分价格删除失败 rule={} operator={}]", ruleId, operator, error);
+            throw error;
+        }
+    }
+
     @Override
     public void prepareCharge(long userId, Snapshot snapshot, String bizType, String bizId) {
         if (userId <= 0 || snapshot == null || bizType == null || bizType.isBlank() || bizId == null || bizId.isBlank()) {

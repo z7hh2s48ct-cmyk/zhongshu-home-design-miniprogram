@@ -3,8 +3,8 @@
  * 后端 Jackson 把 LocalDateTime 统一序列化为 epoch 毫秒，时间列必须经 fmtTime 转换。
  */
 
-/** 毫秒时间戳 / ISO 字符串 → 「yyyy-MM-dd HH:mm」；空值返回 — */
-export const fmtTime = (value: any): string => {
+/** 毫秒时间戳 / ISO 字符串 → 「yyyy-MM-dd HH:mm」；withSeconds 用于审计取证等需要秒级精度的场景 */
+export const fmtTime = (value: any, withSeconds = false): string => {
   if (value === null || value === undefined || value === '') return '—'
   let raw: any = value
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) raw = Number(value.trim())
@@ -18,12 +18,14 @@ export const fmtTime = (value: any): string => {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      ...(withSeconds ? { second: '2-digit' as const } : {}),
       hourCycle: 'h23'
     })
       .formatToParts(date)
       .map((part) => [part.type, part.value])
   )
-  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`
+  const base = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`
+  return withSeconds ? `${base}:${parts.second}` : base
 }
 
 /** 毫秒时间戳 / ISO 字符串 → 「yyyy-MM-dd」 */

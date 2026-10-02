@@ -2,8 +2,12 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">{{ isEdit ? '编辑公司案例' : '新增公司案例' }}</h1>
-        <div class="zs-page-subtitle">参数校核通过后可上架至小程序户型库</div>
+        <h1 class="zs-page-title">{{
+          isEdit ? (isAiCase ? '编辑AI案例参数' : '编辑公司案例') : '新增公司案例'
+        }}</h1>
+        <div class="zs-page-subtitle"
+          >参数校核通过后可上架至小程序户型库；AI 案例也可在此修正参数</div
+        >
       </div>
       <el-button @click="$router.push('/zs/case')">返回列表</el-button>
     </div>
@@ -72,43 +76,54 @@
             <p v-if="publicationStatus === 'PUBLISHED'"
               >此案例已上架：参数与图纸保存后立即对小程序生效（按版本留痕，可随时下架回退展示）。</p
             >
-            <el-checkbox v-model="publicDisplay"
-              >确认公司拥有图片使用权，并允许公开展示</el-checkbox
-            >
-            <el-checkbox v-model="generationReference"
-              >另外允许这些新上传图片用作 AI 设计参考（可不选）</el-checkbox
-            >
-            <div v-for="slot in imageSlots" :key="slot.key" class="case-image-slot">
-              <strong>{{ slot.label }}</strong>
-              <el-image
-                v-if="images[slot.key]?.url"
-                :src="images[slot.key].url"
-                fit="contain"
-                :preview-src-list="[images[slot.key].url]"
-              />
-              <span v-else>{{
-                images[slot.key]?.assetId ? '已关联，预览加载中或失败' : '尚未上传'
-              }}</span>
-              <el-button v-if="images[slot.key]?.error" text @click="previewImage(slot.key)"
-                >重试预览</el-button
+            <el-alert
+              v-if="isAiCase"
+              type="info"
+              :closable="false"
+              title="AI 案例的图纸来自用户投稿的冻结版本、由审核流程管理；此处可修改名称、风格、层数、面积等参数。"
+              style="margin: 8px 0"
+            />
+            <template v-else>
+              <el-checkbox v-model="publicDisplay"
+                >确认公司拥有图片使用权，并允许公开展示</el-checkbox
               >
-              <input
-                type="file"
-                accept="image/jpeg,image/png"
-                :aria-label="`上传${slot.label}`"
-                :disabled="
-                  !isEdit ||
-                  !publicDisplay ||
-                  uploading ||
-                  saving ||
-                  loading ||
-                  !!loadError ||
-                  loadedVersion == null ||
-                  !checkPermi(['design:case:update'])
-                "
-                @change="uploadImage($event, slot)"
-              />
-            </div>
+              <el-checkbox v-model="generationReference"
+                >另外允许这些新上传图片用作 AI 设计参考（可不选）</el-checkbox
+              >
+            </template>
+            <template v-if="!isAiCase"
+              ><div v-for="slot in imageSlots" :key="slot.key" class="case-image-slot">
+                <strong>{{ slot.label }}</strong>
+                <el-image
+                  v-if="images[slot.key]?.url"
+                  :src="images[slot.key].url"
+                  fit="contain"
+                  :preview-src-list="[images[slot.key].url]"
+                />
+                <span v-else>{{
+                  images[slot.key]?.assetId ? '已关联，预览加载中或失败' : '尚未上传'
+                }}</span>
+                <el-button v-if="images[slot.key]?.error" text @click="previewImage(slot.key)"
+                  >重试预览</el-button
+                >
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  :aria-label="`上传${slot.label}`"
+                  :disabled="
+                    !isEdit ||
+                    !publicDisplay ||
+                    uploading ||
+                    saving ||
+                    loading ||
+                    !!loadError ||
+                    loadedVersion == null ||
+                    !checkPermi(['design:case:update'])
+                  "
+                  @change="uploadImage($event, slot)"
+                />
+              </div>
+            </template>
             <p>仅 JPG / PNG，单张不超过 16MB。缺图不使用示例图片代替。</p>
             <p v-if="uploading">正在上传并进行安全校验，请勿重复提交…</p>
             <el-alert v-if="uploadError" :title="uploadError" type="error" :closable="false" />
@@ -149,6 +164,8 @@ const loading = ref(false)
 const loadError = ref('')
 const loadedVersion = ref<number | null>(null)
 const publicationStatus = ref('DRAFT')
+// AI 案例：参数开放编辑（运营纠错），图纸仍由投稿审核流程管理
+const isAiCase = ref(false)
 const publicDisplay = ref(false)
 const generationReference = ref(false)
 const uploading = ref(false)
@@ -268,7 +285,7 @@ const loadCase = async () => {
   try {
     const detail = await ZsApi.getCase(String(route.query.id))
     if (seq !== sequence) return
-    if (detail.sourceType !== 'COMPANY') throw Error('AI案例只能通过投稿审核流程处理')
+    isAiCase.value = detail.sourceType === 'AI'
     for (const key of [
       'title',
       'description',

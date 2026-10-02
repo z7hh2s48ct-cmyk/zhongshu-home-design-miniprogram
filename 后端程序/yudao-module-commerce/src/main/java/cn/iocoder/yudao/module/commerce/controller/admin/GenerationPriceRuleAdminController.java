@@ -41,6 +41,10 @@ public class GenerationPriceRuleAdminController {
     private final PriceRuleService priceRuleService;
     private final AuditPort auditPort;
 
+    /** F-6 档位上限配置化：默认 4，产品扩展档位时改配置即可，无需改代码 */
+    @org.springframework.beans.factory.annotation.Value("${zhongshu.commerce.generation-count-max:4}")
+    private int generationCountMax;
+
     public GenerationPriceRuleAdminController(JdbcTemplate jdbc, PriceRuleService priceRuleService,
                                               AuditPort auditPort) {
         this.jdbc = jdbc;
@@ -87,9 +91,9 @@ public class GenerationPriceRuleAdminController {
         if (request == null || request.effectiveAt() == null
                 || request.unitPointCost() < 1 || request.unitPointCost() > 1_000_000_000L
                 || request.minCount() < 1 || request.maxCount() < request.minCount()
-                || request.maxCount() > 4
+                || request.maxCount() > generationCountMax
                 || request.expiresAt() != null && !request.expiresAt().isAfter(request.effectiveAt())) {
-            throw new ServiceException(400, "计价规则参数无效");
+            throw new ServiceException(400, "计价规则参数无效（单次张数上限当前为 " + generationCountMax + "）");
         }
         GenerationImageOptions options = normalize(request.stage(), request.resolution());
         String stage = request.stage().trim().toUpperCase(java.util.Locale.ROOT);
@@ -111,14 +115,39 @@ public class GenerationPriceRuleAdminController {
     @Operation(summary = "停用出图计价规则；历史任务快照保持不变")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.GENERATION_PRICE_MANAGE + "')")
     @Transactional
-    public CommonResult<Boolean> retireRule(@PathVariable("ruleId") String ruleId) {
+    public CommonResult<Boolean> retireRule(@PathVariable("ruleId") String ruleId,
+            @RequestBody(required = false) Map<String, Object> body) {
         long id = Long.parseLong(ruleId);
         Map<String, Object> detail = jdbc.queryForMap(
                 "SELECT stage,resolution,unit_point_cost,min_count,max_count,effective_at,expires_at,version "
                         + "FROM generation_price_rule WHERE id=?", id);
         boolean retired = priceRuleService.retireRule(id);
-        if (retired) audit(id, "RETIRE", toAuditDetail(detail));
+        if (retired) {
+            Map<String, Object> auditDetail = toAuditDetail(detail);
+            // D2-4 停用原因必填：原因随审计留痕
+            auditDetail.put("reason", body == null || body.get("reason") == null ? "" : String.valueOf(body.get("reason")));
+            audit(id, "RETIRE", auditDetail);
+        }
         return success(retired);
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{ruleId}")
+    @Operation(summary = "删除已停用的出图计价规则（逻辑删除）；生效中规则必须先停用。历史扣费金额已快照在流水，追溯不受影响")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.GENERATION_PRICE_MANAGE + "')")
+    @Transactional
+    public CommonResult<Boolean> deleteRule(@PathVariable("ruleId") String ruleId) {
+        long id = Long.parseLong(ruleId);
+        Map<String, Object> detail = jdbc.queryForMap(
+                "SELECT stage,resolution,unit_point_cost,min_count,max_count,effective_at,expires_at,version,status "
+                        + "FROM generation_price_rule WHERE id=? AND deleted = FALSE", id);
+        int updated = jdbc.update(
+                "UPDATE generation_price_rule SET deleted = TRUE, update_time = now() "
+                        + "WHERE id = ? AND status = 'RETIRED' AND deleted = FALSE", id);
+        boolean deleted = updated == 1;
+        if (deleted) {
+            audit(id, "DELETE", toAuditDetail(detail));
+        }
+        return success(deleted);
     }
 
     private GenerationImageOptions normalize(String stage, String resolution) {

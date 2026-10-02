@@ -791,12 +791,12 @@ class BudgetRevisionT10ContractTest {
         jdbc.update("UPDATE design_result_version SET deleted = TRUE WHERE id = ?", VERSION);
         rejected(RESOURCE_FORBIDDEN, () -> revisions.get(budgetId, null));
         rejected(RESOURCE_FORBIDDEN, () -> revise("replay-after-delete", request));
-        assertThat(revisions.list(null, null, 1, 100).getTotal()).isZero();
+        assertThat(revisions.list(null, null, null, 1, 100).getTotal()).isZero();
         jdbc.update("UPDATE design_result_version SET deleted = FALSE WHERE id = ?", VERSION);
         jdbc.update("UPDATE design_project SET deleted = TRUE WHERE id = ?", PROJECT);
         rejected(RESOURCE_FORBIDDEN, () -> revisions.history(budgetId));
         rejected(RESOURCE_FORBIDDEN, () -> revisions.saveAsTemplate(99, budgetId, customLineId(), "deleted-template", templateRequest(2)));
-        assertThat(revisions.list(Long.toString(PROJECT), null, 1, 100).getTotal()).isZero();
+        assertThat(revisions.list(Long.toString(PROJECT), null, null, 1, 100).getTotal()).isZero();
         assertThat(count("budget_catalog_command")).isEqualTo(1);
     }
 

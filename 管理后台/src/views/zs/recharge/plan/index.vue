@@ -55,6 +55,15 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination
+        class="mt-16px"
+        layout="total, sizes, prev, pager, next"
+        :total="total"
+        v-model:page-size="query.pageSize"
+        @size-change="load"
+        v-model:current-page="query.pageNo"
+        @current-change="load"
+      />
     </div>
   </div>
 </template>
@@ -71,13 +80,17 @@ const loading = ref(false)
 /** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
 const loadError = ref(false)
 const list = ref<any[]>([])
+const total = ref(0)
+// E-17 分页加载：不再一次硬拉 50 条
+const query = reactive({ pageNo: 1, pageSize: 20 })
 
 const load = async () => {
   loading.value = true
   loadError.value = false
   try {
-    const res = await ZsApi.getPlanPage({ pageNo: 1, pageSize: 50 })
+    const res = await ZsApi.getPlanPage({ ...query })
     list.value = res?.list || res || []
+    total.value = Number(res?.total || (res?.list || res || []).length)
   } catch {
     // 加载失败必须与"尚未配置方案"区分，避免运营误以为档位被清空
     list.value = []

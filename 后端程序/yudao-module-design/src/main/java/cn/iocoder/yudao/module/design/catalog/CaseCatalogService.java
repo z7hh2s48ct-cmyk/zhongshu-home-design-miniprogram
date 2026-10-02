@@ -93,7 +93,7 @@ public class CaseCatalogService {
                 throw exception(RESOURCE_FORBIDDEN);
             }
             Map<String, Object> c = caseRows.get(0);
-            if (!"COMPANY".equals(c.get("source_type"))) throw exception(RESOURCE_FORBIDDEN);
+            // 2026-10-02 运营决策：AI 案例同样可编辑参数（运营纠错）；已上架免下架直接编辑（版本 CAS 留痕，即时生效）
             Long currentVersionId = ((Number) c.get("current_version_id")).longValue();
             Long currentVersion = jdbcTemplate.queryForObject(
                     "SELECT version FROM design_case_version WHERE id = ?", Long.class, currentVersionId);
@@ -132,8 +132,10 @@ public class CaseCatalogService {
     /** 上传前后都校验状态与版本，避免慢扫描期间发生覆盖。 */
     public CaseDetail requireImageEditable(long caseId, long expectedVersion, String role, Integer floorNo) {
         var detail = getAdminCase(caseId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
+        // 图纸更换仍限公司案例（AI 案例图纸来自投稿冻结版本，走审核链）；
+        // 2026-10-02 决策②：已上架免下架直接换图（版本化替换留痕，即时生效）
         if (!"COMPANY".equals(detail.sourceType()))
-            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "Only company cases may replace images");
+            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "AI 案例图纸由投稿审核流程管理，此处仅支持编辑参数");
         if (detail.version() != expectedVersion) throw exception(STATE_VERSION_CONFLICT);
         if (role == null || !List.of("COVER", "ELEVATION", "FLOOR_PLAN").contains(role)
                 || ("FLOOR_PLAN".equals(role) ? floorNo == null || floorNo < 1 || floorNo > detail.floorCount() : floorNo != null))

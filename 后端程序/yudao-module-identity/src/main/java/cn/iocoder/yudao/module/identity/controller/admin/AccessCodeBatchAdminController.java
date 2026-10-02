@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,6 +35,44 @@ public class AccessCodeBatchAdminController {
 
     @Resource
     private AccessCodeService accessCodeService;
+
+    @jakarta.annotation.Resource
+    private javax.sql.DataSource dataSource;
+
+    @GetMapping
+    @Operation(summary = "批次分页（F-1 批次视图）：数量/已兑换/明文暴露/用途；兑换数按兑换事实统计")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_MANAGE + "')")
+    public CommonResult<cn.iocoder.yudao.framework.common.pojo.PageResult<java.util.Map<String, Object>>> getBatchPage(
+            @org.springframework.web.bind.annotation.RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
+            @org.springframework.web.bind.annotation.RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        var jdbc = new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+        int size = Math.min(Math.max(pageSize, 1), 100);
+        Long total = jdbc.queryForObject("SELECT count(*) FROM design_access_code_batch WHERE deleted = FALSE", Long.class);
+        var rows = jdbc.queryForList(
+                "SELECT b.id, b.quantity, b.delivery_mode, b.exposed_count, b.issued_by, b.purpose_note, "
+                        + "b.expires_at, b.create_time, "
+                        + "(SELECT count(*) FROM access_code_redemption r WHERE r.code_id IN "
+                        + "  (SELECT c.id FROM design_access_code c WHERE c.batch_id = b.id)) AS redeemed_count "
+                        + "FROM design_access_code_batch b WHERE b.deleted = FALSE ORDER BY b.id DESC LIMIT ? OFFSET ?",
+                size, (long) Math.max(pageNo - 1, 0) * size);
+        var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(java.time.ZoneId.of("Asia/Shanghai"));
+        var list = rows.stream().map(r -> {
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<String, Object>();
+            item.put("id", String.valueOf(((Number) r.get("id")).longValue()));
+            item.put("quantity", ((Number) r.get("quantity")).intValue());
+            item.put("redeemedCount", ((Number) r.get("redeemed_count")).intValue());
+            item.put("deliveryMode", r.get("delivery_mode"));
+            item.put("exposedCount", ((Number) r.get("exposed_count")).intValue());
+            item.put("issuedBy", r.get("issued_by"));
+            item.put("purposeNote", r.get("purpose_note"));
+            item.put("expiresAt", r.get("expires_at") == null ? null
+                    : formatter.format(((java.sql.Timestamp) r.get("expires_at")).toInstant()));
+            item.put("createdAt", formatter.format(((java.sql.Timestamp) r.get("create_time")).toInstant()));
+            return item;
+        }).toList();
+        return success(new cn.iocoder.yudao.framework.common.pojo.PageResult<>(list, total == null ? 0 : total));
+    }
 
     @PostMapping
     @Operation(summary = "创建授权码批次；INLINE 在响应返回完整码，TICKET 走一次性交付票据")

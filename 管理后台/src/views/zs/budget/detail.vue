@@ -14,6 +14,26 @@
         ><el-button :disabled="saving" :loading="loading" @click="refresh">刷新</el-button></div
       >
     </div>
+    <!-- E-11 顶部版本切换：不再需要滚动到页面底部找历史修订 -->
+    <div v-if="canQuery && revisions.length" class="zs-revision-switch zs-table-card">
+      <span style="font-size: 13px; font-weight: 600; color: #6a3b1b">版本切换</span>
+      <el-select
+        :model-value="detail?.revisionId"
+        size="small"
+        style="width: 360px"
+        placeholder="切换查看历史修订"
+        @change="(id: string) => (id === detail?.revisionId ? viewRevision() : viewRevision(id))"
+      >
+        <el-option
+          v-for="row in revisions"
+          :key="row.revisionId"
+          :value="row.revisionId"
+          :label="`修订 ${row.revisionNo} · ${row.changeReason || '（无原因）'} · ${
+            row.revisionId === detail?.revisionId ? '当前' : ''
+          }`"
+        />
+      </el-select>
+    </div>
     <el-alert
       v-if="!canQuery"
       title="没有预算查询权限，请联系管理员授权"
@@ -116,11 +136,39 @@
             ><el-button link @click="loadCatalog">重试目录</el-button></template
           ></el-alert
         >
+        <!-- E-2 批量排除：整组不要时无需逐行进弹窗 -->
+        <div v-if="canEdit" class="zs-line-toolbar">
+          <span style="font-size: 12px; color: #8a8a8a"
+            >已选 {{ selectedLines.length }} 行；数量可直接改，保存前可随时预览</span
+          >
+          <el-button
+            size="small"
+            type="warning"
+            plain
+            :disabled="!selectedLines.length || saving"
+            @click="bulkExclude"
+            >批量排除</el-button
+          >
+          <el-button
+            size="small"
+            plain
+            :disabled="!selectedLines.length || saving"
+            @click="bulkRestore"
+            >恢复参与计价</el-button
+          >
+        </div>
         <el-table
           :data="lines"
           stripe
           :row-class-name="({ row }) => (row.removed ? 'removed-line' : '')"
+          @selection-change="(rows: any[]) => (selectedLines = rows)"
         >
+          <el-table-column
+            v-if="canEdit"
+            type="selection"
+            width="42"
+            :selectable="(row) => !row.removed"
+          />
           <el-table-column label="预算项 / 来源" min-width="230"
             ><template #default="{ row }"
               ><div>{{ row.publicName || '未填写名称' }} · {{ row.itemCode }}</div
@@ -138,13 +186,23 @@
               }}</div></template
             ></el-table-column
           >
-          <el-table-column label="数量 / 单价（元）" min-width="180"
+          <el-table-column label="数量 / 单价（元）" min-width="200"
             ><template #default="{ row }"
               ><div
-                >{{
-                  isAutomatic(row, 'quantity') ? '保存时按规则核定' : row.quantityText || '待补量'
-                }}
-                {{ unitLabel(row.unit) }}</div
+                ><template v-if="canEdit && !isAutomatic(row, 'quantity') && !row.removed"
+                  ><el-input
+                    v-model="row.quantityText"
+                    size="small"
+                    style="width: 110px"
+                    maxlength="12"
+                    :placeholder="'待补量'"
+                  /><span style="margin-left: 6px">{{ unitLabel(row.unit) }}</span></template
+                ><template v-else
+                  >{{
+                    isAutomatic(row, 'quantity') ? '保存时按规则核定' : row.quantityText || '待补量'
+                  }}
+                  {{ unitLabel(row.unit) }}</template
+                ></div
               ><div>{{
                 isAutomatic(row, 'price') ? '保存时按地区查价' : row.priceYuan || '待补价'
               }}</div></template
@@ -185,19 +243,33 @@
                 @click="openLine(row)"
                 >编辑</el-button
               ><el-button
+                v-if="!row.removed"
+                link
+                :type="row.excludedReason ? 'primary' : 'warning'"
+                :disabled="saving"
+                @click="quickExclude(row)"
+                >{{ row.excludedReason ? '恢复计价' : '排除' }}</el-button
+              ><el-button
                 v-if="row.original?.source !== 'STANDARD'"
                 link
                 :type="row.removed ? 'primary' : 'danger'"
                 :disabled="saving"
                 @click="toggleRemove(row)"
                 >{{ row.removed ? '撤销移除' : '移除' }}</el-button
-              ><el-button
+              ><el-tooltip
                 v-if="canTemplate && row.original?.source === 'PROJECT_CUSTOM' && !row.removed"
-                link
-                type="primary"
-                :disabled="saving || dirty"
-                @click="openTemplate(row)"
-                >另存模板</el-button
+                :disabled="!dirty"
+                content="请先保存或放弃本次修改，再另存模板（模板保存的是服务端已保存行）"
+                placement="top"
+                ><span
+                  ><el-button
+                    link
+                    type="primary"
+                    :disabled="saving || dirty"
+                    @click="openTemplate(row)"
+                    >另存模板</el-button
+                  ></span
+                ></el-tooltip
               ></template
             ></el-table-column
           >
@@ -267,9 +339,7 @@
               >{{ row.actorType }} · {{ row.actorId || '系统' }}</template
             ></el-table-column
           ><el-table-column label="时间" min-width="180"
-            ><template #default="{ row }">{{
-              displayTime(row.createdAt)
-            }}</template></el-table-column
+            ><template #default="{ row }">{{ fmtTime(row.createdAt) }}</template></el-table-column
           ><el-table-column label="已计价小计（元）" min-width="140"
             ><template #default="{ row }">{{
               formatCents(row.pricedSubtotalCents)
@@ -491,6 +561,25 @@
         ></template
       ></el-dialog
     >
+    <!-- E-2 吸底保存条：长列表编辑后无需滚回页尾 -->
+    <div v-if="canEdit && dirty && detail && !detail.readOnly" class="zs-sticky-save">
+      <span class="zs-sticky-hint">有未保存的修订修改</span>
+      <el-input
+        v-model="reason"
+        :disabled="saving"
+        maxlength="500"
+        style="flex: 1; max-width: 420px"
+        placeholder="修订原因（必填，与下方表单同值）"
+      />
+      <el-button :disabled="saving || !dirty" @click="discard">放弃本次修改</el-button>
+      <el-button
+        type="primary"
+        :disabled="!dirty || loading || !!previewError"
+        :loading="saving"
+        @click="save"
+        >保存为新修订</el-button
+      >
+    </div>
   </div>
 </template>
 
@@ -500,12 +589,13 @@ import * as CatalogApi from '@/api/zs/budget'
 import type { BudgetDetail, BudgetLine, RevisionRef } from '@/api/zs/budget-revision'
 import type { CatalogRow } from '@/api/zs/budget'
 import { checkPermi } from '@/utils/permission'
+import { fmtTime } from '@/utils/zsFormat'
+import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getTenantId, getVisitTenantId } from '@/utils/auth'
 import { onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import {
   differences,
-  displayTime,
   eligibleOptions,
   errorText,
   fieldLabel,
@@ -778,11 +868,12 @@ async function loadCatalog() {
   try {
     const fetchAll = async (kind: 'items' | 'options') => {
       const all: CatalogRow[] = []
-      for (let pageNo = 1; ; pageNo++) {
+      for (let pageNo = 1; pageNo <= 50; pageNo++) {
         const response = await CatalogApi.getCatalogPage(kind, { pageNo, pageSize: 100 })
         all.push(...response.list)
         if (all.length >= response.total || !response.list.length) return all
       }
+      return all
     }
     const result = await Promise.all([fetchAll('items'), fetchAll('options')])
     if (requestId === catalogSequence && scope === actor() && canEdit.value) {
@@ -817,6 +908,55 @@ const editorAutomatic = computed(
       (!!editing.value.original &&
         editing.value.optionId !== (editing.value.original.optionId || '')))
 )
+const selectedLines = ref<WorkLine[]>([])
+// E-2 快捷排除/批量排除：非空 excludedReason 即明确排除，清空恢复参与计价
+async function quickExclude(row: WorkLine) {
+  if (!editable()) return
+  if (row.excludedReason) {
+    row.excludedReason = ''
+    return
+  }
+  try {
+    const { value } = await ElMessageBox.prompt('该行将不参与计价；原因会写入明细。', '排除该行', {
+      type: 'warning',
+      confirmButtonText: '确认排除',
+      cancelButtonText: '取消',
+      inputPlaceholder: '排除原因（必填）',
+      inputValidator: (v: string) => (v?.trim() ? true : '排除原因必填')
+    })
+    row.excludedReason = value.trim()
+  } catch {
+    /* 用户取消 */
+  }
+}
+async function bulkExclude() {
+  if (!editable()) return
+  const targets = selectedLines.value.filter((row) => !row.removed)
+  if (!targets.length) return
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `将选中的 ${targets.length} 行明确排除计价。`,
+      '批量排除',
+      {
+        type: 'warning',
+        confirmButtonText: '确认排除',
+        cancelButtonText: '取消',
+        inputPlaceholder: '排除原因（必填）',
+        inputValidator: (v: string) => (v?.trim() ? true : '排除原因必填')
+      }
+    )
+    targets.forEach((row) => (row.excludedReason = value.trim()))
+    message.success(`已标记 ${targets.length} 行排除，保存后生效`)
+  } catch {
+    /* 用户取消 */
+  }
+}
+function bulkRestore() {
+  if (!editable()) return
+  const targets = selectedLines.value.filter((row) => !row.removed && row.excludedReason)
+  targets.forEach((row) => (row.excludedReason = ''))
+  if (targets.length) message.success(`已恢复 ${targets.length} 行参与计价，保存后生效`)
+}
 function openLine(line: WorkLine) {
   if (!editable() || line.removed) return
   editing.value = { ...line, original: line.original ? { ...line.original } : null }
@@ -1036,5 +1176,45 @@ onMounted(load)
 :deep(.removed-line) {
   color: #999;
   text-decoration: line-through;
+}
+</style>
+
+<style lang="scss" scoped>
+.zs-line-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.zs-revision-switch {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.zs-sticky-save {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid #e6e0d4;
+  border-radius: 8px;
+  box-shadow: 0 -4px 12px rgb(0 0 0 / 8%);
+}
+
+.zs-sticky-hint {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a0561f;
+  white-space: nowrap;
 }
 </style>

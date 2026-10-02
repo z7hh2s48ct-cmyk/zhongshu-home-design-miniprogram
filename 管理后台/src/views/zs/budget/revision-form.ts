@@ -7,6 +7,7 @@ import type {
   RevisionCommand
 } from '@/api/zs/budget-revision'
 import type { CatalogRow } from '@/api/zs/budget'
+import { fmtTime } from '@/utils/zsFormat'
 import { formatCents, parsePrice, quantityKeys, units } from './catalog-form'
 
 export { formatCents, units }
@@ -55,8 +56,8 @@ export const validId = (value: unknown): value is string =>
   /^[1-9]\d{0,18}$/.test(value) &&
   (value.length < 19 || value <= '9223372036854775807')
 export const errorText = (error: any) => error?.msg || error?.message || '请求失败，请重试'
-export const displayTime = (value: string) =>
-  value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—'
+// D2-1 时间统一：收敛到 fmtTime（上海时区，分钟精度），不再随浏览器时区漂移
+export const displayTime = (value: string) => fmtTime(value)
 const optional = (value: string, label: string) => {
   if (value.length > 500) throw Error(`${label}不能超过500字`)
   return value.trim() || null

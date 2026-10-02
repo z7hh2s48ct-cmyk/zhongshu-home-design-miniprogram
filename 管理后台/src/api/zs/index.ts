@@ -37,8 +37,11 @@ export const getSubmission = (submissionId) =>
   request.get({ url: `${BASE}/submissions/${submissionId}` })
 export const reviewDecision = (submissionId, data) =>
   request.post({ url: `${BASE}/submissions/${submissionId}/review-decisions`, data })
-export const publishSubmission = (submissionId) =>
-  request.post({ url: `${BASE}/submissions/${submissionId}/publication-commands` })
+export const publishSubmission = (submissionId, reason?: string) =>
+  request.post({
+    url: `${BASE}/submissions/${submissionId}/publication-commands`,
+    data: reason ? { reason } : undefined
+  })
 export const getSubmissionAsset = async (submissionId, assetId): Promise<Blob> => {
   const base = `${BASE}/submissions/${submissionId}/assets/${assetId}`
   const result = await request.post({ url: `${base}/preview-tickets` })
@@ -64,6 +67,9 @@ export const exportByTicket = (batchId, ticket) =>
   request.post({ url: `${BASE}/access-code-batches/${batchId}/delivery-exports`, data: { ticket } })
 export const revokeAccessGrant = (grantId) =>
   request.post({ url: `${BASE}/access-grants/${grantId}/revocations` })
+
+// F-1 授权码批次视图（分页，含每批次已兑换数）
+export const getBatchPage = (params) => request.get({ url: `${BASE}/access-code-batches`, params })
 
 // ---------- 充值方案 ----------
 export const getPlanPage = (params) => request.get({ url: `${BASE}/recharge-plans`, params })
@@ -117,4 +123,11 @@ export const createExportDownloadTicket = (exportJobId) =>
   request.post({ url: `${BASE}/export-jobs/${exportJobId}/download-tickets` })
 export const downloadExportFile = (exportJobId, ticket) =>
   request.download({ url: `${BASE}/export-jobs/${exportJobId}/content`, params: { ticket } })
+// F-5 取消本人排队中/生成中的导出任务
+export const cancelExportJob = (exportJobId) =>
+  request.post({ url: `${BASE}/export-jobs/${exportJobId}/cancellation` })
 export const getAuditEvents = (params) => request.get({ url: `${BASE}/audit-events`, params })
+
+// ---------- F-2 运营公告 ----------
+export const createAnnouncement = (data: { title: string; content: string }) =>
+  request.post({ url: `${BASE}/announcements`, data })

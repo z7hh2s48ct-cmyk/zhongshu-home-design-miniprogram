@@ -12,7 +12,7 @@ function component({ permission = true, overrides = {} } = {}) {
   const api = {
     getPriceRules: async () => ({ list: [], total: 0 }),
     createPriceRule: async body => { calls.push(['create', body]); return { ruleId: '123' } },
-    retirePriceRule: async id => { calls.push(['retire', id]); return true },
+    retirePriceRule: async (id, data) => { calls.push(['retire', id, data]); return true },
     ...overrides
   }
   const filename = path.resolve(__dirname, '../src/views/zs/generation-pricing/index.vue')
@@ -27,6 +27,8 @@ function component({ permission = true, overrides = {} } = {}) {
     require(name) {
       if (name === '@/api/zs/generation-pricing') return api
       if (name === '@/utils/permission') return { checkPermi: () => permission }
+      if (name === '@/utils/zsFormat') return { fmtTime: (v) => (v ? String(v) : '—') }
+      if (name === 'element-plus') return { ElMessageBox: { prompt: async () => ({ value: '测试停用原因' }) } }
       return require(name)
     }
   }, { filename })
