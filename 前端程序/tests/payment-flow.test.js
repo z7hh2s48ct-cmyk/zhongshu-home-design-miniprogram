@@ -57,7 +57,7 @@ function runtime(initial = {}) {
     const module = { exports: {} };
     modules.set(filename, module);
     vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
-      module, wx, console, getApp: () => ({ globalData: {} }), getCurrentPages: () => [],
+      module, wx, console, setTimeout, getApp: () => ({ globalData: {} }), getCurrentPages: () => [],
       Page(value) { definition = value; },
       require(specifier) {
         if (specifier.endsWith('/access')) return { protectedPage(value) { definition = value; } };
@@ -129,6 +129,7 @@ test('支付被用户取消时弹「继续支付」并复位 paying，不当失�
   const page = await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9：fail 后轮询查单 2 次才进入后续分支
   assert.equal(page.data.paying, false);
   const modal = tag(env.calls, 'modal');
   assert.equal(modal.length, 1);
@@ -140,6 +141,7 @@ test('支付参数签名失效时提示过期并允许继续支付', async () =>
   const page = await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail 支付参数已失效' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9 轮询
   assert.equal(page.data.paying, false);
   assert.ok(tag(env.calls, 'toast').some(c => /过期/.test(c[1].title)));
   assert.equal(tag(env.calls, 'modal').length, 1);
@@ -150,6 +152,7 @@ test('支付网络错误只提示从充值记录继续，不自动弹窗重领�
   const page = await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail 网络异常' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9 轮询
   assert.equal(page.data.paying, false);
   assert.ok(tag(env.calls, 'toast').some(c => /充值记录/.test(c[1].title)));
   assert.equal(tag(env.calls, 'modal').length, 0);
@@ -160,6 +163,7 @@ test('继续支付确认后走独立端点重领 payParams，不重复建单，�
   await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9：fail 后轮询查单 2 次才进入后续分支
   tag(env.calls, 'modal')[0][1].success({ confirm: true });
   await flush();
   assert.deepEqual(tag(env.calls, 'getPayParams').map(c => c[1]), [orderId]);
@@ -172,6 +176,7 @@ test('继续支付弹窗选择稍后再说则不重领 payParams', async () => {
   await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9：fail 后轮询查单 2 次才进入后续分支
   tag(env.calls, 'modal')[0][1].success({ confirm: false });
   await flush();
   assert.equal(tag(env.calls, 'getPayParams').length, 0);
@@ -182,6 +187,7 @@ test('支付弹窗取消但订单已到账时直接进成功页，不再弹继�
   const page = await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9：fail 后轮询查单 2 次才进入后续分支
   assert.deepEqual(tag(env.calls, 'getRechargeOrder').map(c => c[1]), [orderId]);
   assert.equal(tag(env.calls, 'modal').length, 0);
   assert.ok(tag(env.calls, 'navigateTo').some(c => c[1].url.includes('payment/success')));
@@ -192,6 +198,7 @@ test('重领 payParams 失败时提示订单状态已变更并复位 paying', as
   const page = await paidPage(env);
   tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
   await flush();
+  await new Promise(r => setTimeout(r, 1900)); // P3-9：fail 后轮询查单 2 次才进入后续分支
   tag(env.calls, 'modal')[0][1].success({ confirm: true });
   await flush();
   assert.equal(page.data.paying, false);
