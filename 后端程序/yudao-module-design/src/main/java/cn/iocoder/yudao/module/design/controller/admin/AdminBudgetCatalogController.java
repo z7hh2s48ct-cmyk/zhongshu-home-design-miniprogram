@@ -121,10 +121,11 @@ public class AdminBudgetCatalogController {
     @GetMapping("/account-prices")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_QUERY + "')")
     public CommonResult<PageResult<BudgetAccountPriceService.AdminAccountPrice>> accountPrices(@RequestParam long accountId,
+            @RequestParam String regionCode,
             @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
         actor();
         // T14 审计视图 + F-4 干预入口：仅查看列表在此，代用户改价走下方 PUT（price-publish 权限）
-        return success(accountPriceService.pageByAccount(accountId, pageNo, pageSize));
+        return success(accountPriceService.pageByAccount(accountId, regionCode, pageNo, pageSize));
     }
 
     @PutMapping("/account-prices")
@@ -140,7 +141,10 @@ public class AdminBudgetCatalogController {
         if (price == null || "".equals(price)) {
             return success(accountPriceService.reset(accountId, regionCode, optionId));
         }
-        return success(accountPriceService.upsert(accountId, regionCode, optionId, body));
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("unitPriceCents", price);
+        if (body.containsKey("reason")) payload.put("reason", body.get("reason"));
+        return success(accountPriceService.upsert(accountId, regionCode, optionId, payload));
     }
 
     private long actor() {
