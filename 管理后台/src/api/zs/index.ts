@@ -96,6 +96,9 @@ export const reviewManualAdjustment = (adjustmentId, data) =>
 // ---------- C 端用户 ----------
 export const getAccountPage = (params) => request.get({ url: `${BASE}/accounts`, params })
 export const getAccount = (accountId) => request.get({ url: `${BASE}/accounts/${accountId}` })
+// 停用账号：状态置 DISABLED 并立即撤销全部有效授权（identity:account:disable）
+export const disableAccount = (accountId) =>
+  request.patch({ url: `${BASE}/accounts/${accountId}`, data: { action: 'disable' } })
 
 // ---------- AI 任务 ----------
 export const getAiJobPage = (params) => request.get({ url: `${BASE}/ai-jobs`, params })
