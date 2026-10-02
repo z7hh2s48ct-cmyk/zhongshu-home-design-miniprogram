@@ -79,6 +79,12 @@ const zsRouter: RouteRecordRaw[] = [
         meta: { title: '授权码管理', icon: 'ep:key', noCache: true, group: 'auth' }
       },
       {
+        path: 'access-code-batches',
+        component: () => import('@/views/zs/accesscode/batches.vue'),
+        name: 'ZsAccessCodeBatches',
+        meta: { title: '授权码批次', icon: 'ep:box', noCache: true, group: 'auth' }
+      },
+      {
         path: 'access-code/batch',
         component: () => import('@/views/zs/accesscode/batch.vue'),
         name: 'ZsAccessCodeBatch',
@@ -202,6 +208,12 @@ const zsRouter: RouteRecordRaw[] = [
         component: () => import('@/views/zs/audit/index.vue'),
         name: 'ZsAudit',
         meta: { title: '审计事件', icon: 'ep:document-checked', group: 'ops' }
+      },
+      {
+        path: 'announcement',
+        component: () => import('@/views/zs/announcement/index.vue'),
+        name: 'ZsAnnouncement',
+        meta: { title: '运营公告', icon: 'ep:message', group: 'ops' }
       },
       {
         path: 'privacy',

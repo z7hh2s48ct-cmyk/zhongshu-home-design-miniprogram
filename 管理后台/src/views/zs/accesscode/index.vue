@@ -33,6 +33,16 @@
       </el-tabs>
 
       <el-alert
+        v-if="batchFilter"
+        type="info"
+        :closable="true"
+        style="margin-bottom: 12px"
+        @close="clearBatchFilter"
+        ><template #title
+          >正在按批次 <b>{{ batchFilter }}</b> 过滤授权码（来自授权码批次视图）</template
+        ></el-alert
+      >
+      <el-alert
         v-if="loadError"
         type="error"
         :closable="false"
@@ -294,7 +304,15 @@ const list = ref<any[]>([])
 const total = ref(0)
 // 掩码搜索入口已暂时移除：后端 AccessCodeAdminController 声明了 codeMask 但未实现过滤（P3B 与查询索引一起补），
 // 输入不生效属误导性 UI；待后端过滤落地后再恢复搜索框。
+const route = useRoute()
+// F-1 从批次视图跳入时按批次过滤
+const batchFilter = ref(String(route.query.batchId || ''))
 const query = reactive({ status: '', pageNo: 1, pageSize: 10 })
+
+function clearBatchFilter() {
+  batchFilter.value = ''
+  load()
+}
 
 const stats = ref([
   { label: '未使用', value: 0, icon: 'ep:ticket', color: '#2d68c4' },
@@ -345,7 +363,10 @@ const load = async () => {
   loading.value = true
   loadError.value = false
   try {
-    const res = await ZsApi.getAccessCodePage({ ...query })
+    const res = await ZsApi.getAccessCodePage({
+      ...query,
+      batchId: batchFilter.value || undefined
+    })
     list.value = res?.list || []
     total.value = res?.total || 0
   } catch {

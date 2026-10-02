@@ -4,6 +4,7 @@ const businessPermissions: Record<string, string> = {
   review: 'design:submission:review',
   account: 'identity:account:query',
   'access-code': 'identity:access-code:manage',
+  'access-code-batches': 'identity:access-code:manage',
   'point-adjustments': 'commerce:points:query',
   recharge: 'commerce:recharge-order:query',
   'point-ledger': 'commerce:points:query',
@@ -16,7 +17,8 @@ const businessPermissions: Record<string, string> = {
   audit: 'design:audit:query',
   // 此前遗漏该键，导致「隐私申请」页因 permission 恒为 falsy 而永不出现在菜单（只能手输 URL）。
   // 权限码与后端 PrivacyAdminController 类级 @PreAuthorize 保持一致。
-  privacy: 'identity:privacy:manage'
+  privacy: 'identity:privacy:manage',
+  announcement: 'design:announcement:send'
 }
 
 // 业务菜单分组：与路由 meta.group 对应，顺序即侧边栏顺序（户型最上、隐私在最后组末尾）。
