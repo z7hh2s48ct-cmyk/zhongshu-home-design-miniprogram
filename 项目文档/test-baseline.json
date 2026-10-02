@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "asOf": "2026-10-02",
-  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。同日追加 CDN 迁移前置门禁（scripts/verify-cdn.js）与暂存副本删除守卫（scripts/prune-cdn-staging.js）及其用例，mini 29 文件/281 调用。2026-09-29 修 PointsP4AContractTest 并发守恒断言时补了 1 条确定性用例，backend 口径 +1 方法（ordinary 574 / contract 343）。2026-09-29 T15 设计需求输入联动：mini +design-inputs 用例、backend +T15 契约用例、e2e +输入快照检查点。同日 UX 整改（我的方案列表/方案记录详情 + 生成页候选内联呈现与页内选择）：mini 30 文件/290 调用、backend 55/582、contract 37/351、e2e 59。2026-09-29 COS 图片存储、2K/4K 横竖出图、分档计价与管理后台价格配置补齐测试：mini 32 文件/308 调用、backend 56/587、contract 37/352、admin 13/79，e2e 保持 59。 后续补充 Spring 构造器与最新生效价格校验回归，backend 方法数最终 588。2026-10-01 授权码复制删除与扣点确认/清晰度定价功能补测：mini 310 调用、backend ordinary 590。同日 P3-9 补「取消但已到账直进成功页」用例，mini 311。 2026-10-02 管理后台三方匹配清理：api.js 移除 6 个无页面调用封装（preferences/点数流水/单条报价/同意协议/两类进度查询），对应删 1 个端点用例并精简 2 个，mini 310。 同日包体积整改与 UX 补测：主包 6.94MB→1.6MB（清理零引用死资源/压缩图片/TDesign 图标字体按用子集化，加 icon-subset 守卫 4 用例）；补记录删除手势与下拉刷新用例 5 条（前后端含删除接口合同用例 2 条），mini 34 文件/320 调用、backend ordinary 592、contract 37/356。 上线修复第四阶段追加真实旧库升级、首次生成恢复、旧预算并发幂等和三个页面生命周期回归；清单仅反映声明数，退款参数化两例以实际 Surefire 结果计数。 第七阶段为B07任务扣费命名域/收据绑定与CW05版本修订完整基底增加3个隔离数据库回归方法，ordinary声明数623→626；未删除原有测试，运行及跳过数以实际报告为准。 2026-10-02 管理后台批次A+D1（菜单六组重组/案例库详情与免下架/授权码单次生成与详情抽屉/价格缺陷修复/系统入口裁剪），admin 14 文件/82 用例。 2026-10-02 DEF批（审计取证筛选/报价作废/预算行内编辑与新页三处/审核历轮/价格留痕强化），admin 14 文件/82 用例（断言更新，未新增用例）。",
+  "note": "本基线为受控口径，必须与实际一致。2026-09-28 复核发现基线自 2026-09-13 起已漂移（main@b32f92c 上 mini 少记 1 文件/6 调用、backend 少记 1 文件/9 方法/1 契约文件、e2e 少记 4 检查点），本次一并校正并叠加整改分支新增测试。同日追加 CDN 迁移前置门禁（scripts/verify-cdn.js）与暂存副本删除守卫（scripts/prune-cdn-staging.js）及其用例，mini 29 文件/281 调用。2026-09-29 修 PointsP4AContractTest 并发守恒断言时补了 1 条确定性用例，backend 口径 +1 方法（ordinary 574 / contract 343）。2026-09-29 T15 设计需求输入联动：mini +design-inputs 用例、backend +T15 契约用例、e2e +输入快照检查点。同日 UX 整改（我的方案列表/方案记录详情 + 生成页候选内联呈现与页内选择）：mini 30 文件/290 调用、backend 55/582、contract 37/351、e2e 59。2026-09-29 COS 图片存储、2K/4K 横竖出图、分档计价与管理后台价格配置补齐测试：mini 32 文件/308 调用、backend 56/587、contract 37/352、admin 13/79，e2e 保持 59。 后续补充 Spring 构造器与最新生效价格校验回归，backend 方法数最终 588。2026-10-01 授权码复制删除与扣点确认/清晰度定价功能补测：mini 310 调用、backend ordinary 590。同日 P3-9 补「取消但已到账直进成功页」用例，mini 311。 2026-10-02 管理后台三方匹配清理：api.js 移除 6 个无页面调用封装（preferences/点数流水/单条报价/同意协议/两类进度查询），对应删 1 个端点用例并精简 2 个，mini 310。 同日包体积整改与 UX 补测：主包 6.94MB→1.6MB（清理零引用死资源/压缩图片/TDesign 图标字体按用子集化，加 icon-subset 守卫 4 用例）；补记录删除手势与下拉刷新用例 5 条（前后端含删除接口合同用例 2 条），mini 34 文件/320 调用、backend ordinary 592、contract 37/356。 上线修复第四阶段追加真实旧库升级、首次生成恢复、旧预算并发幂等和三个页面生命周期回归；清单仅反映声明数，退款参数化两例以实际 Surefire 结果计数。 第七阶段为B07任务扣费命名域/收据绑定与CW05版本修订完整基底增加3个隔离数据库回归方法，ordinary声明数623→626；未删除原有测试，运行及跳过数以实际报告为准。 2026-10-02 管理后台批次A+D1（菜单六组重组/案例库详情与免下架/授权码单次生成与详情抽屉/价格缺陷修复/系统入口裁剪），admin 14 文件/82 用例。 2026-10-02 DEF批（审计取证筛选/报价作废/预算行内编辑与新页三处/审核历轮/价格留痕强化），admin 14 文件/82 用例（断言更新，未新增用例）。 2026-10-02 立面参考落地：立面任务输入快照在有授权前提下追加案例立面图（uk_design_case_asset 每版本至多一张），P5 契约 +1 用例，同一 @Test 同时计入两口径（ordinary 626→627、contract 360→361）。",
   "inventory": {
     "mini": {
       "executableFiles": 39,
@@ -9,10 +9,10 @@
     },
     "backend": {
       "ordinaryFiles": 65,
-      "declaredOrdinaryTestMethods": 626,
+      "declaredOrdinaryTestMethods": 627,
       "excludedRealAcceptanceFiles": 3,
       "contractFiles": 37,
-      "testMethods": 360,
+      "testMethods": 361,
       "parameterizedMethods": 0
     },
     "admin": {

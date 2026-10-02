@@ -120,6 +120,9 @@ class DesignProjectP5ContractTest {
     private void seedPriceRule() {
         jdbc.update("INSERT INTO generation_price_rule (id, stage, unit_point_cost, min_count, max_count, "
                 + "effective_at) VALUES (9101, 'FLAT', 10, 1, 4, now() - interval '1 minute')");
+        // 立面参考用例走完整扣点链，需要 ELEVATION 规则
+        jdbc.update("INSERT INTO generation_price_rule (id, stage, unit_point_cost, min_count, max_count, "
+                + "effective_at) VALUES (9102, 'ELEVATION', 15, 1, 4, now() - interval '1 minute')");
     }
 
     @Test
@@ -453,5 +456,66 @@ class DesignProjectP5ContractTest {
         jdbc.update("UPDATE ai_job SET status='CANCELLED' WHERE id=?", job);
         projects.deleteProject(USER_A, projectId);
         assertThat(projects.getProject(projectId, USER_A)).isEmpty();
+    }
+
+    // ========== 6. 案例立面参考：立面任务输入 = 已选平面 + 有授权的案例立面图 ==========
+    // uk_design_case_asset 决定每个案例版本至多一张立面图，授权/未授权两条路径各用一个案例验证
+
+    private long seedCaseElevationAsset(long caseId, boolean grant) {
+        long versionId = jdbc.queryForObject(
+                "SELECT current_version_id FROM design_case WHERE id = ?", Long.class, caseId);
+        long assetId = com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
+        jdbc.update("INSERT INTO design_case_asset (id, case_version_id, asset_id, asset_role) "
+                        + "VALUES (?,?,?,'ELEVATION')",
+                com.baomidou.mybatisplus.core.toolkit.IdWorker.getId(), versionId, assetId);
+        jdbc.update("INSERT INTO asset (id, object_key, owner_user_id, asset_type, source_type, sha256, "
+                        + "declared_mime, size_bytes, upload_status, security_scan_status, moderation_status) "
+                        + "VALUES (?,?,?,'CASE_IMAGE','COMPANY','seed','image/png',10,'ACCEPTED','PASSED','PASSED')",
+                assetId, "company-cases/" + assetId + ".png", ADMIN);
+        if (grant) {
+            rights.createGrant(ADMIN, assetId, "GENERATION_REFERENCE", "平台", "*", "*",
+                    Instant.now(), null);
+        }
+        return assetId;
+    }
+
+    @Test
+    void caseElevationReferencesJoinElevationJobInput() throws Exception {
+        long grantedCase = seedPublishedCase(true);
+        long grantedElevation = seedCaseElevationAsset(grantedCase, true);
+        long ungrantedCase = seedPublishedCase(true);
+        long ungrantedElevation = seedCaseElevationAsset(ungrantedCase, false);
+
+        points.credit(USER_A, "RECHARGE_BASE_CREDIT", 200, "recharge_order", "r6", "k-seed-elev", null, null);
+        for (long caseId : List.of(grantedCase, ungrantedCase)) {
+            long projectId = projects.createProject(USER_A, "CASE_REFERENCE", caseId, null, null);
+            var flat = projects.createFlatJob(USER_A, projectId, 2, "flat-elev-" + caseId, confirmed("FLAT"));
+            runProviderToSettled(flat.jobId(), 2, 2);
+            var candidates = projects.promoteCandidates(USER_A, projectId, flat.jobId());
+            projects.selectFlatCandidate(USER_A, projectId, candidates.get(0).candidateId());
+
+            var elev = projects.createElevationJob(USER_A, projectId, 2, "elev-ref-" + caseId,
+                    Map.of("styleCode", "MODERN"), confirmed("ELEVATION"));
+            Map<String, Object> input = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                    jdbc.queryForObject("SELECT input_snapshot::text FROM ai_job WHERE id=?",
+                            String.class, elev.jobId()), Map.class);
+            @SuppressWarnings("unchecked")
+            List<String> frozenAssetIds = (List<String>) input.get("assetIds");
+            // 顺序契约：已选平面（空间约束基准）在前；案例立面图有授权才随后进入，未授权的被排除
+            // （若未授权资产混入输入，运行期会被 RUNTIME_INPUT_RIGHTS 拒单）
+            if (caseId == grantedCase) {
+                assertThat(frozenAssetIds).containsExactly(
+                        String.valueOf(candidates.get(0).assetId()), String.valueOf(grantedElevation));
+            } else {
+                assertThat(frozenAssetIds).containsExactly(
+                        String.valueOf(candidates.get(0).assetId()));
+                assertThat(frozenAssetIds).doesNotContain(String.valueOf(ungrantedElevation));
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> sourceFlat = (Map<String, Object>) input.get("sourceFlat");
+            assertThat(sourceFlat).containsEntry("assetId", String.valueOf(candidates.get(0).assetId()));
+            // 结清立面任务再进入下一案例：避免 QUEUED 任务被下一轮 claim 误领
+            runProviderToSettled(elev.jobId(), 2, 2);
+        }
     }
 }
