@@ -80,9 +80,9 @@ const zsRouter: RouteRecordRaw[] = [
       },
       {
         path: 'access-code-batches',
-        component: () => import('@/views/zs/accesscode/batches.vue'),
-        name: 'ZsAccessCodeBatches',
-        meta: { title: '授权码批次', icon: 'ep:box', noCache: true, group: 'auth' }
+        redirect: '/zs/access-code?view=batches',
+        name: 'ZsAccessCodeBatchesLegacy',
+        meta: { hidden: true, group: 'auth', activeMenu: '/zs/access-code' }
       },
       {
         path: 'access-code/batch',
@@ -101,7 +101,7 @@ const zsRouter: RouteRecordRaw[] = [
         path: 'point-adjustments',
         component: () => import('@/views/zs/points/adjustments.vue'),
         name: 'ZsPointAdjustments',
-        meta: { title: '人工调点单', icon: 'ep:edit', noCache: true, group: 'auth' }
+        meta: { title: '调点复核', icon: 'ep:finished', noCache: true, group: 'auth' }
       },
       // —— 资金与点数 fund ——
       {
@@ -193,9 +193,9 @@ const zsRouter: RouteRecordRaw[] = [
       // —— 运营与合规 ops ——
       {
         path: 'ai-job',
-        component: () => import('@/views/zs/job/index.vue'),
-        name: 'ZsAiJob',
-        meta: { title: 'AI任务', icon: 'ep:cpu', group: 'ops' }
+        redirect: '/zs/point-ledger?tab=jobs',
+        name: 'ZsAiJobLegacy',
+        meta: { hidden: true, group: 'ops', activeMenu: '/zs/point-ledger' }
       },
       {
         path: 'export',

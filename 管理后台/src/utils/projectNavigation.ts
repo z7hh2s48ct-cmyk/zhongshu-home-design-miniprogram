@@ -4,7 +4,6 @@ const businessPermissions: Record<string, string> = {
   review: 'design:submission:review',
   account: 'identity:account:query',
   'access-code': 'identity:access-code:manage',
-  'access-code-batches': 'identity:access-code:manage',
   'point-adjustments': 'commerce:points:query',
   recharge: 'commerce:recharge-order:query',
   'point-ledger': 'commerce:points:query',
@@ -12,7 +11,6 @@ const businessPermissions: Record<string, string> = {
   'budget-estimates': 'design:budget:query',
   'generation-pricing': 'commerce:generation-price:query',
   'usage-pricing': 'commerce:usage-price:query',
-  'ai-job': 'aiorchestration:job:query',
   export: 'design:export:manage',
   audit: 'design:audit:query',
   // 此前遗漏该键，导致「隐私申请」页因 permission 恒为 falsy 而永不出现在菜单（只能手输 URL）。

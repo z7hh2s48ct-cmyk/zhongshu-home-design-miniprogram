@@ -110,7 +110,7 @@ const today = new Date().toLocaleDateString('zh-CN', {
 })
 
 const $router = useRouter()
-const openJobs = () => $router.push('/zs/ai-job')
+const openJobs = () => $router.push('/zs/point-ledger?tab=jobs')
 const summaryReady = ref(false)
 const summaryError = ref(false)
 const jobsError = ref(false)
