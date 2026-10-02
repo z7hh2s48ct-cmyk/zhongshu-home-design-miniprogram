@@ -84,7 +84,7 @@
           />
         </el-select>
         <el-select
-          v-if="kind === 'prices'"
+          v-if="kind === 'prices' || kind === 'account-prices'"
           v-model="regionFilter"
           filterable
           placeholder="选择建造地区"
@@ -126,7 +126,7 @@
         v-loading="loading"
         stripe
         :empty-text="
-          kind === 'prices' && !regionFilter
+          (kind === 'prices' || kind === 'account-prices') && !regionFilter
             ? '请先选择建造地区'
             : kind === 'account-prices' && !accountFilter
               ? '请输入账号 ID 查询'
@@ -605,7 +605,7 @@ async function openAccountPriceEditor(row: any) {
     await BudgetApi.setAccountPriceForUser({
       accountId: accountFilter.value,
       optionId: String(row.optionId),
-      regionCode: row.regionCode || '',
+      regionCode: regionFilter.value,
       unitPriceCents: cents,
       reason: '管理端代改：' + (row.reason || '运营调整')
     })
@@ -625,7 +625,7 @@ async function resetAccountPrice(row: any) {
     await BudgetApi.setAccountPriceForUser({
       accountId: accountFilter.value,
       optionId: String(row.optionId),
-      regionCode: row.regionCode || '',
+      regionCode: regionFilter.value,
       unitPriceCents: null,
       reason: '管理端恢复默认'
     })
@@ -667,7 +667,7 @@ async function load() {
     loading.value = false
     return
   }
-  if (kind.value === 'account-prices' && !accountFilter.value.trim()) {
+  if (kind.value === 'account-prices' && (!accountFilter.value.trim() || !regionFilter.value)) {
     loading.value = false
     return
   }
@@ -676,6 +676,7 @@ async function load() {
     if (kind.value === 'account-prices') {
       const result = await BudgetApi.getAccountPrices({
         accountId: accountFilter.value.trim(),
+        regionCode: regionFilter.value,
         pageNo: pageNo.value,
         pageSize: 20
       })
