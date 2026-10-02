@@ -115,13 +115,19 @@ public class GenerationPriceRuleAdminController {
     @Operation(summary = "停用出图计价规则；历史任务快照保持不变")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.GENERATION_PRICE_MANAGE + "')")
     @Transactional
-    public CommonResult<Boolean> retireRule(@PathVariable("ruleId") String ruleId) {
+    public CommonResult<Boolean> retireRule(@PathVariable("ruleId") String ruleId,
+            @RequestBody(required = false) Map<String, Object> body) {
         long id = Long.parseLong(ruleId);
         Map<String, Object> detail = jdbc.queryForMap(
                 "SELECT stage,resolution,unit_point_cost,min_count,max_count,effective_at,expires_at,version "
                         + "FROM generation_price_rule WHERE id=?", id);
         boolean retired = priceRuleService.retireRule(id);
-        if (retired) audit(id, "RETIRE", toAuditDetail(detail));
+        if (retired) {
+            Map<String, Object> auditDetail = toAuditDetail(detail);
+            // D2-4 停用原因必填：原因随审计留痕
+            auditDetail.put("reason", body == null || body.get("reason") == null ? "" : String.valueOf(body.get("reason")));
+            audit(id, "RETIRE", auditDetail);
+        }
         return success(retired);
     }
 

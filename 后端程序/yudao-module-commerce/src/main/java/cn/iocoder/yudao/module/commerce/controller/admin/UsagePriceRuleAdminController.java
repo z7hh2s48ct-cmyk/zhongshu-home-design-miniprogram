@@ -73,13 +73,16 @@ public class UsagePriceRuleAdminController {
     @PatchMapping("/{ruleId}/retire")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.USAGE_PRICE_MANAGE + "')")
     @org.springframework.transaction.annotation.Transactional
-    public CommonResult<Boolean> retire(@PathVariable long ruleId) {
+    public CommonResult<Boolean> retire(@PathVariable long ruleId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        // D2-4 停用原因必填：原因随审计留痕，便于回溯调价决策
+        String reason = body == null || body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
         boolean changed = prices.retireRule(ruleId, String.valueOf(SecurityFrameworkUtils.getLoginUserId()));
         if (changed) audit.record(AuditEventMessage.builder().eventType("USAGE_PRICE_RULE")
                 .actorType(AuditEventMessage.ActorType.ADMIN)
                 .actorId(String.valueOf(SecurityFrameworkUtils.getLoginUserId())).action("RETIRE")
                 .bizType("service_usage_price_rule").bizId(String.valueOf(ruleId))
-                .result(AuditEventMessage.AuditResult.SUCCESS).detail(Map.of()).build());
+                .result(AuditEventMessage.AuditResult.SUCCESS).detail(Map.of("reason", reason)).build());
         return success(changed);
     }
 

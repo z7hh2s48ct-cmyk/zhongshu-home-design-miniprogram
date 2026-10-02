@@ -141,7 +141,11 @@ public class SubmissionAdminController {
         if (body != null && body.get("confirmedBuildingArea") instanceof Number n && n.intValue() > 0) {
             confirmedArea = n.intValue();
         }
-        long caseId = submissionReviewService.publishApprovedAsCase(Long.parseLong(submissionId), operator, confirmedArea);
+        // D2-4：发布原因随事件留痕
+        String reason = body == null || body.get("reason") == null ? null
+                : String.valueOf(body.get("reason"));
+        long caseId = submissionReviewService.publishApprovedAsCase(Long.parseLong(submissionId), operator,
+                confirmedArea, reason);
         return success(Map.of("submissionId", submissionId, "publishedCaseId", String.valueOf(caseId)));
     }
 
