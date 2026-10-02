@@ -47,11 +47,11 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
   )
   // 隐藏路由（详情/编辑/旧充值路由）不进菜单
   assert.deepEqual(Array.from(result[1].children, child => child.path), ['/zs/case', '/zs/review'])
-  assert.deepEqual(Array.from(result[2].children, child => child.path), ['/zs/account', '/zs/access-code', '/zs/point-adjustments'])
+  assert.deepEqual(Array.from(result[2].children, child => child.path), ['/zs/account', '/zs/access-code', '/zs/access-code-batches', '/zs/point-adjustments'])
   assert.deepEqual(Array.from(result[3].children, child => child.path), ['/zs/recharge', '/zs/point-ledger'])
   assert.deepEqual(Array.from(result[4].children, child => child.path), ['/zs/budget', '/zs/budget-estimates'])
   assert.deepEqual(Array.from(result[5].children, child => child.path), ['/zs/generation-pricing', '/zs/usage-pricing'])
-  assert.deepEqual(Array.from(result[6].children, child => child.path), ['/zs/ai-job', '/zs/export', '/zs/audit', '/zs/privacy'])
+  assert.deepEqual(Array.from(result[6].children, child => child.path), ['/zs/ai-job', '/zs/export', '/zs/audit', '/zs/announcement', '/zs/privacy'])
   assert.equal(JSON.stringify({ base, business, authorized }), before)
   // R7：管理员账号与菜单管理已从入口裁剪，系统设置首项为角色管理
   assert.equal(result[7].children.some(c => ['user', 'menu'].includes(c.path)), false)
@@ -60,7 +60,7 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
 })
 
 test('保留全部业务入口且子项为绝对路径，可直接导航', () => {
-  for (const target of ['case', 'review', 'access-code', 'point-adjustments', 'recharge', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy', 'generation-pricing', 'usage-pricing']) {
+  for (const target of ['case', 'review', 'access-code', 'access-code-batches', 'point-adjustments', 'recharge', 'budget', 'budget-estimates', 'point-ledger', 'account', 'ai-job', 'export', 'audit', 'privacy', 'announcement', 'generation-pricing', 'usage-pricing']) {
     assert.ok(values(menus(), `/zs/${target}`).includes(`/zs/${target}`), target)
   }
 })

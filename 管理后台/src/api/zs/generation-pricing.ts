@@ -23,5 +23,5 @@ export const getPriceRules = (params: {
   pageSize: number
 }): Promise<{ list: GenerationPriceRule[]; total: number }> => request.get({ url: base, params })
 export const createPriceRule = (data: CreateGenerationPrice) => request.post({ url: base, data })
-export const retirePriceRule = (ruleId: string) =>
-  request.patch({ url: `${base}/${encodeURIComponent(ruleId)}/retire` })
+export const retirePriceRule = (ruleId: string, data?: { reason: string }) =>
+  request.patch({ url: `${base}/${encodeURIComponent(ruleId)}/retire`, data })

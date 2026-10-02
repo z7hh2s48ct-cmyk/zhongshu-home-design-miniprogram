@@ -67,8 +67,11 @@
         class="mb-16px"
       />
       <el-table v-loading="loading" :data="list" stripe>
-        <el-table-column label="阶段" width="120"
-          ><template #default="{ row }">{{ stageLabel(row.stage) }}</template></el-table-column
+        <el-table-column label="阶段" width="140"
+          ><template #default="{ row }"
+            >{{ stageLabel(row.stage) }}
+            <span v-if="isActiveNow(row)" class="zs-tag zs-tag--green zs-current-tag">现价</span>
+          </template></el-table-column
         >
         <el-table-column label="清晰度" prop="resolution" width="90" />
         <el-table-column label="设计点 / 张" prop="unitPointCost" width="130" />
@@ -77,11 +80,13 @@
             >{{ row.minCount }}–{{ row.maxCount }}</template
           ></el-table-column
         >
-        <el-table-column label="生效时间" min-width="180"
-          ><template #default="{ row }">{{ dateLabel(row.effectiveAt) }}</template></el-table-column
+        <el-table-column label="生效时间" min-width="160"
+          ><template #default="{ row }">{{ fmtTime(row.effectiveAt) }}</template></el-table-column
         >
-        <el-table-column label="失效时间" min-width="180"
-          ><template #default="{ row }">{{ dateLabel(row.expiresAt) }}</template></el-table-column
+        <el-table-column label="失效时间" min-width="160"
+          ><template #default="{ row }">{{
+            row.expiresAt ? fmtTime(row.expiresAt) : '长期有效'
+          }}</template></el-table-column
         >
         <el-table-column label="状态" width="100"
           ><template #default="{ row }">{{
@@ -169,6 +174,8 @@
 import * as PricingApi from '@/api/zs/generation-pricing'
 import type { GenerationPriceRule, CreateGenerationPrice } from '@/api/zs/generation-pricing'
 import { checkPermi } from '@/utils/permission'
+import { fmtTime } from '@/utils/zsFormat'
+import { ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'ZsGenerationPricing' })
 const message = useMessage()
@@ -193,8 +200,15 @@ const form = reactive({
 // 调价来源行：非空表示从已有价格进入（生成新版本而非覆盖）
 const editingSource = ref<GenerationPriceRule | null>(null)
 const stageLabel = (stage: string) => (stage === 'FLAT' ? '平面方案' : '立面方案')
-const dateLabel = (value: string | null) =>
-  value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '长期有效'
+// D2-7 现价判定：ACTIVE 且当前时间处于生效窗口
+const isActiveNow = (row: GenerationPriceRule) => {
+  if (row.status !== 'ACTIVE') return false
+  const now = Date.now()
+  return (
+    new Date(row.effectiveAt).getTime() <= now &&
+    (!row.expiresAt || new Date(row.expiresAt).getTime() > now)
+  )
+}
 let loadSequence = 0
 async function load() {
   if (!canQuery.value) return
@@ -288,16 +302,27 @@ async function save() {
 }
 async function retire(row: GenerationPriceRule) {
   if (!canManage.value || saving.value || row.status !== 'ACTIVE') return
+  // D2-4 停用原因必填（留审计），与预算/报价发布的留痕强度一致
+  let reason = ''
   try {
-    await message.confirm(
-      `停用${stageLabel(row.stage)} ${row.resolution} 的这条价格？停用后如无其他有效价格，将无法创建该档位任务。`
+    const { value } = await ElMessageBox.prompt(
+      `停用${stageLabel(row.stage)} ${row.resolution} 的这条价格？停用后如无其他有效价格，将无法创建该档位任务。`,
+      '停用出图价格',
+      {
+        type: 'warning',
+        confirmButtonText: '确认停用',
+        cancelButtonText: '取消',
+        inputPlaceholder: '停用原因（必填，将写入审计）',
+        inputValidator: (v: string) => (v?.trim() ? true : '停用原因必填')
+      }
     )
+    reason = value.trim()
   } catch {
     return
   }
   saving.value = true
   try {
-    await PricingApi.retirePriceRule(row.ruleId)
+    await PricingApi.retirePriceRule(row.ruleId, { reason })
     message.success('价格已停用')
     await load()
   } catch (e: any) {
@@ -308,3 +333,9 @@ async function retire(row: GenerationPriceRule) {
 }
 onMounted(load)
 </script>
+
+<style lang="scss" scoped>
+.zs-current-tag {
+  margin-left: 6px;
+}
+</style>

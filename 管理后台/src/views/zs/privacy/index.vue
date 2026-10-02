@@ -7,7 +7,33 @@
       title="关闭账号前须确认数据留存规则并处理余额、订单、退款与生成任务。关闭会吊销全部会话、撤回作品公开展示；账务和审计记录保留。"
     />
     <div class="zs-table-card">
-      <el-button @click="load" :loading="loading">刷新申请</el-button>
+      <div
+        style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap"
+      >
+        <el-select
+          v-model="query.requestType"
+          clearable
+          placeholder="全部类型"
+          style="width: 140px"
+          @change="search"
+        >
+          <el-option label="资料导出" value="EXPORT" />
+          <el-option label="关闭账号" value="CLOSE_ACCOUNT" />
+        </el-select>
+        <el-select
+          v-model="query.status"
+          clearable
+          placeholder="全部状态"
+          style="width: 140px"
+          @change="search"
+        >
+          <el-option label="待处理" value="PENDING" />
+          <el-option label="已完成" value="COMPLETED" />
+          <el-option label="已驳回" value="REJECTED" />
+        </el-select>
+        <el-button @click="load" :loading="loading">刷新申请</el-button>
+        <el-switch v-model="autoPoll" active-text="30s 自动刷新" />
+      </div>
       <el-alert v-if="error" type="error" :closable="false" :title="error" />
       <el-table :data="rows" v-loading="loading">
         <el-table-column prop="requestId" label="申请号" min-width="190" />
@@ -62,10 +88,11 @@
 </template>
 <script setup lang="ts">
 import * as api from '@/api/zs'
+import { fmtTime } from '@/utils/zsFormat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 defineOptions({ name: 'ZsPrivacy' })
 const rows = ref<any[]>([])
-const query = reactive({ pageNo: 1, pageSize: 20 })
+const query = reactive({ pageNo: 1, pageSize: 20, requestType: '', status: '' })
 const total = ref(0)
 const loading = ref(false)
 const busy = ref(false)
@@ -74,18 +101,29 @@ const stateText: Record<string, string> = {
   PENDING: '待处理',
   PROCESSING: '处理中',
   COMPLETED: '已完成',
-  REJECTED: '未完成'
+  REJECTED: '已驳回'
 }
-const displayTime = (value: string) =>
-  value ? new Date(value).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '—'
+const displayTime = (value: string) => (value ? fmtTime(value, true) : '—')
 let sequence = 0
 let closed = false
+const search = () => {
+  query.pageNo = 1
+  void load()
+}
+// E-8 待办轮询：页面可见时每 30s 静默刷新
+const autoPoll = ref(true)
+let pollTimer: ReturnType<typeof setInterval> | undefined
 const load = async () => {
   const seq = ++sequence
   loading.value = true
   error.value = ''
   try {
-    const response = await api.getPrivacyRequestPage({ ...query })
+    const response = await api.getPrivacyRequestPage({
+      pageNo: query.pageNo,
+      pageSize: query.pageSize,
+      requestType: query.requestType || undefined,
+      status: query.status || undefined
+    })
     if (closed || seq !== sequence) return
     rows.value = response.list || []
     total.value = Number(response.total || 0)
@@ -122,9 +160,15 @@ const decide = async (id: string, approve: boolean) => {
     if (!closed) busy.value = false
   }
 }
-onMounted(load)
+onMounted(() => {
+  void load()
+  pollTimer = setInterval(() => {
+    if (autoPoll.value && !document.hidden && !busy.value) void load()
+  }, 30000)
+})
 onBeforeUnmount(() => {
   closed = true
   sequence++
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>

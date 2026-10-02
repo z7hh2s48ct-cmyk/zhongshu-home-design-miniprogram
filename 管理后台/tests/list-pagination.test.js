@@ -32,6 +32,7 @@ function component(page) {
     onMounted() {},
     useMessage: () => ({}),
     useRouter: () => ({}),
+    useRoute: () => ({ query: {} }),
     require(name) {
       if (name === 'vue') return vue
       if (name === '@/api/zs') return api
