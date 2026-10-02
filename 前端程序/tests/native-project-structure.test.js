@@ -42,7 +42,7 @@ for (const configPath of ['project.config.json', 'miniprogram/project.config.jso
 
 // T13-08：发布工程 AppID 统一——外层（DevTools 推荐发布根）与内层（本机单独导入）必须登记同一正式 AppID，
 //   且不得回退到 touristappid 占位符：占位符无法通过微信审核发布，历史上外层曾遗留 touristappid 造成内外层不一致（B02）。
-const RELEASE_APPID = 'wx5753299f05a5c138';
+const RELEASE_APPID = 'wxfa0a79d4e68cdb80';
 for (const configPath of ['project.config.json', 'miniprogram/project.config.json']) {
   const config = JSON.parse(read(configPath));
   assert.strictEqual(config.appid, RELEASE_APPID, `${configPath} 必须登记众墅之家正式 AppID，不得为 touristappid 占位符或与内层不一致`);
