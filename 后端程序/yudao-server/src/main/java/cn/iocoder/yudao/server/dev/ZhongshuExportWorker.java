@@ -31,6 +31,9 @@ public class ZhongshuExportWorker {
     public void tick() {
         if (!enabled) return;
         try {
+            // 先收口已请求取消的任务（F-5）：置 FAILED/EXPORT_CANCELLED，与业务失败同一展示通道
+            jdbc.update("UPDATE export_job SET status='FAILED',error='EXPORT_CANCELLED',lease_token=NULL,lease_expires_at=NULL,update_time=now() "
+                    + "WHERE cancel_requested AND status IN ('PENDING','RUNNING')");
             var pending = jdbc.queryForList("SELECT id FROM export_job WHERE status='PENDING' "
                     + "OR (status='RUNNING' AND (lease_expires_at IS NULL OR lease_expires_at < now())) ORDER BY id LIMIT 5", Long.class);
             for (Long id : pending) processClaim(id);
@@ -123,8 +126,15 @@ public class ZhongshuExportWorker {
             header = new String[]{"用户编号","昵称","状态","注册时间（UTC）","可用点数","授权状态"};
         }
         final String[] rowKeys = keys;
+        // E-14：追加北京时间列（页面对账口径），UTC ISO 列保留供程序消费
+        selectColumns = selectColumns + ",to_char(create_time AT TIME ZONE 'Asia/Shanghai','YYYY-MM-DD HH24:MI:SS') AS create_time_bj";
+        var allKeys = new ArrayList<String>(Arrays.asList(rowKeys));
+        allKeys.add("create_time_bj");
+        var allHeader = new ArrayList<String>(Arrays.asList(header));
+        allHeader.add("北京时间");
         // 表头在派生列计算完成后写入，保证批次/用户清单带上附加列
-        out.writeBytes(new byte[]{(byte)0xef,(byte)0xbb,(byte)0xbf}); appendRow(out,(Object[])header);
+        out.writeBytes(new byte[]{(byte)0xef,(byte)0xbb,(byte)0xbf}); appendRow(out,allHeader.toArray());
+        final var finalKeys = allKeys;
         long cursor=0; int total=0;
         while (true) {
             renew(jobId,token);
@@ -132,7 +142,7 @@ public class ZhongshuExportWorker {
             var page = jdbc.queryForList("SELECT "+selectColumns+" FROM "+table+" WHERE "+where+" AND id>? ORDER BY id LIMIT ?",pageArgs.toArray());
             for (var row : page) {
                 if (++total>MAX_ROWS) throw new ExportLimit("EXPORT_ROW_LIMIT");
-                appendRow(out,Arrays.stream(rowKeys).map(c->row.get(c)).toArray());
+                appendRow(out,finalKeys.stream().map(c->row.get(c)).toArray());
                 cursor=((Number)row.get("id")).longValue();
             }
             if (page.size()<PAGE_SIZE) return out.toByteArray();

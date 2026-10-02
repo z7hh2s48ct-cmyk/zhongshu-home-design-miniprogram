@@ -103,6 +103,14 @@ public class SubmissionReviewService {
         return rows.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(rows.get(0));
     }
 
+    /** E-5：历轮审核记录（最新在前），供审核员看到上一轮退回原因等完整上下文。 */
+    public java.util.List<java.util.Map<String, Object>> reviewHistory(long submissionId) {
+        return jdbcTemplate.queryForList(
+                "SELECT t.round_no, d.decision, d.comment, d.reviewer_user_id, d.create_time "
+                        + "FROM review_task t LEFT JOIN review_decision d ON d.review_task_id = t.id AND d.deleted = FALSE "
+                        + "WHERE t.submission_id = ? AND t.deleted = FALSE ORDER BY t.round_no DESC", submissionId);
+    }
+
     // ========== 小程序读模型（页面 12 与「我的 → 户型投稿」） ==========
 
     public record SubmissionRow(long submissionId, long projectId, long userId, long resultVersionId, String status,

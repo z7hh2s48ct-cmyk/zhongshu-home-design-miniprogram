@@ -76,13 +76,14 @@ public class SubmissionAdminController {
     }
 
     @GetMapping("/{submissionId}")
-    @Operation(summary = "投稿审核详情（含最新一轮审核意见与轮次）")
+    @Operation(summary = "投稿审核详情（含最新一轮审核意见、轮次与历轮审核记录）")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.SUBMISSION_REVIEW + "')")
     public CommonResult<AppSubmissionRespVO> getSubmission(@PathVariable("submissionId") String submissionId) {
         var row = submissionReviewService.getAdminSubmission(Long.parseLong(submissionId))
                 .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("投稿不存在"));
         var vo = toVo(row);
         vo.setPreviewAssets(submissionReviewService.previewAssets(row.resultVersionId()));
+        vo.setReviewHistory(submissionReviewService.reviewHistory(row.submissionId()));
         return success(vo);
     }
 

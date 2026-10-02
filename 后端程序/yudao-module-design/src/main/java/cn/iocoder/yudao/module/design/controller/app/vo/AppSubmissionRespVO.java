@@ -47,4 +47,7 @@ public class AppSubmissionRespVO {
     @Schema(description = "冻结版本图纸（审核详情使用，不包含下载凭证）")
     private List<cn.iocoder.yudao.module.design.submission.SubmissionReviewService.PreviewAsset> previewAssets;
 
+    @Schema(description = "历轮审核记录（轮次/决定/意见/审核人/时间；仅管理端详情下发）")
+    private List<java.util.Map<String, Object>> reviewHistory;
+
 }

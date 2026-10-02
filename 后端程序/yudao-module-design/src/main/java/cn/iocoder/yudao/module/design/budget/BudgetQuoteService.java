@@ -114,6 +114,30 @@ public class BudgetQuoteService {
         return transition(actor, quoteId, key, body, false);
     }
 
+    /** 作废草稿：仅 DRAFT（含 stale 草稿）可作废；业主端列表只取 PUBLISHED/WITHDRAWN，作废件永不外泄。 */
+    public Quote discard(long actor, String quoteId, String key, Map<String, Object> body) {
+        long id = BudgetInputs.positiveId(quoteId);
+        fields(body, "expectedVersion", "reason");
+        int expected = positiveInt(body.get("expectedVersion"));
+        String reason = text(body.get("reason"), 500);
+        Map<String, Object> observed = requireQuote(id, false);
+        long budget = number(observed, "estimate_id");
+        return command(actor, "QUOTE_DISCARD", budget, key, Map.of("quoteId", quoteId, "body", body), Quote.class, () -> {
+            Map<String, Object> master = requireBudget(budget, true);
+            Map<String, Object> row = requireQuote(id, true);
+            if (((Number) row.get("version")).intValue() != expected) throw exception(STATE_VERSION_CONFLICT);
+            if (!"DRAFT".equals(row.get("status"))) throw exception(STATE_VERSION_CONFLICT);
+            Timestamp now = jdbc.queryForObject("SELECT now()", Timestamp.class);
+            jdbc.update("UPDATE budget_quote SET status = 'DISCARDED', version = version + 1, withdrawal_reason = ?, updater = ?, update_time = ? WHERE tenant_id = 0 AND id = ?",
+                    reason, String.valueOf(actor), now, id);
+            audit(actor, "BUDGET_QUOTE_CHANGED", "DISCARD", id,
+                    Map.of("budgetId", String.valueOf(budget), "reason", reason));
+            Map<String, Object> changed = requireQuote(id, false);
+            int latest = Optional.ofNullable(jdbc.queryForObject("SELECT coalesce(max(quote_version), 0) FROM budget_quote WHERE tenant_id = 0 AND estimate_id = ? AND deleted = FALSE", Integer.class, budget)).orElse(0);
+            return quote(changed, currentRevisionId(master), latest, currentPublicQuoteId(budget));
+        });
+    }
+
     public List<AppBudgetQuoteRespVO> appList(long userId, String projectId) {
         long project = BudgetInputs.positiveId(projectId);
         return transaction(() -> {

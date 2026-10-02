@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.design.budget.BudgetAccountPriceService;
 import cn.iocoder.yudao.module.design.budget.BudgetCatalogService;
 import cn.iocoder.yudao.module.design.controller.admin.vo.AdminBudgetCatalogVO.*;
 import cn.iocoder.yudao.module.design.enums.PermissionConstants;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -122,8 +123,24 @@ public class AdminBudgetCatalogController {
     public CommonResult<PageResult<BudgetAccountPriceService.AdminAccountPrice>> accountPrices(@RequestParam long accountId,
             @RequestParam(defaultValue = "1") int pageNo, @RequestParam(defaultValue = "20") int pageSize) {
         actor();
-        // T14: 只读审计视图；用户覆盖价的干预（重置/清空）不在本期开放
+        // T14 审计视图 + F-4 干预入口：仅查看列表在此，代用户改价走下方 PUT（price-publish 权限）
         return success(accountPriceService.pageByAccount(accountId, pageNo, pageSize));
+    }
+
+    @PutMapping("/account-prices")
+    @Operation(summary = "F-4 代用户设置/清除覆盖价：body {accountId, regionCode, optionId, unitPriceCents?, reason}；金额留空即恢复默认")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_PRICE_PUBLISH + "')")
+    public CommonResult<Object> setAccountPriceForUser(@RequestBody Map<String, Object> body) {
+        actor();
+        long accountId = Long.parseLong(String.valueOf(body.get("accountId")));
+        long optionId = cn.iocoder.yudao.module.design.budget.BudgetInputs.positiveId(
+                String.valueOf(body.get("optionId")));
+        String regionCode = String.valueOf(body.get("regionCode"));
+        Object price = body.get("unitPriceCents");
+        if (price == null || "".equals(price)) {
+            return success(accountPriceService.reset(accountId, regionCode, optionId));
+        }
+        return success(accountPriceService.upsert(accountId, regionCode, optionId, body));
     }
 
     private long actor() {

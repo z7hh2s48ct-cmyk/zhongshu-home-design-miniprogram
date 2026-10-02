@@ -27,10 +27,11 @@ public class AdminBudgetRevisionController {
     @GetMapping
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.BUDGET_QUERY + "')")
     public CommonResult<PageResult<Summary>> list(@RequestParam(required = false) String projectId,
-            @RequestParam(required = false) String completeness, @RequestParam(defaultValue = "1") int pageNo,
+            @RequestParam(required = false) String completeness, @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "20") int pageSize) {
         actor();
-        return success(adminBudgetRevisionService.list(projectId, completeness, pageNo, pageSize));
+        return success(adminBudgetRevisionService.list(projectId, completeness, keyword, pageNo, pageSize));
     }
 
     @GetMapping("/{budgetId}")

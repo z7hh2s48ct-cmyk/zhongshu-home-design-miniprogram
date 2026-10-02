@@ -41,6 +41,10 @@ public class GenerationPriceRuleAdminController {
     private final PriceRuleService priceRuleService;
     private final AuditPort auditPort;
 
+    /** F-6 档位上限配置化：默认 4，产品扩展档位时改配置即可，无需改代码 */
+    @org.springframework.beans.factory.annotation.Value("${zhongshu.commerce.generation-count-max:4}")
+    private int generationCountMax;
+
     public GenerationPriceRuleAdminController(JdbcTemplate jdbc, PriceRuleService priceRuleService,
                                               AuditPort auditPort) {
         this.jdbc = jdbc;
@@ -87,9 +91,9 @@ public class GenerationPriceRuleAdminController {
         if (request == null || request.effectiveAt() == null
                 || request.unitPointCost() < 1 || request.unitPointCost() > 1_000_000_000L
                 || request.minCount() < 1 || request.maxCount() < request.minCount()
-                || request.maxCount() > 4
+                || request.maxCount() > generationCountMax
                 || request.expiresAt() != null && !request.expiresAt().isAfter(request.effectiveAt())) {
-            throw new ServiceException(400, "计价规则参数无效");
+            throw new ServiceException(400, "计价规则参数无效（单次张数上限当前为 " + generationCountMax + "）");
         }
         GenerationImageOptions options = normalize(request.stage(), request.resolution());
         String stage = request.stage().trim().toUpperCase(java.util.Locale.ROOT);
