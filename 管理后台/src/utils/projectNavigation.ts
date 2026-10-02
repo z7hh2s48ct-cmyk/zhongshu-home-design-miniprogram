@@ -29,10 +29,10 @@ const businessGroups = [
   { key: 'ops', title: '运营与合规', icon: 'ep:document-checked' }
 ] as const
 
+// 2026-10-02 运营确认：管理员账号、菜单管理不属本业务后台，从入口裁剪；
+// 上游 CRM/商城等模块菜单行的唯一可见入口即「菜单管理」页，随之不可见（底层数据保留不删）。
 const supportPaths = new Set([
-  '/system/user',
   '/system/role',
-  '/system/menu',
   '/system/log/operate-log',
   '/system/log/login-log',
   '/infra/config',
@@ -54,9 +54,7 @@ const supportMenus = (routes: AppRouteRecordRaw[], parent = '/'): AppRouteRecord
     const path = fullPath(parent, route.path)
     const children = supportMenus(route.children || [], path)
     if (!children.length && (route.children?.length || !supportPaths.has(path))) return []
-    const title = { '/system': '系统设置', '/infra': '运维支持', '/system/user': '管理员账号' }[
-      path
-    ]
+    const title = { '/system': '系统设置', '/infra': '运维支持' }[path]
     return [
       {
         ...route,

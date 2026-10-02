@@ -53,7 +53,9 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
   assert.deepEqual(Array.from(result[5].children, child => child.path), ['/zs/generation-pricing', '/zs/usage-pricing'])
   assert.deepEqual(Array.from(result[6].children, child => child.path), ['/zs/ai-job', '/zs/export', '/zs/audit', '/zs/privacy'])
   assert.equal(JSON.stringify({ base, business, authorized }), before)
-  assert.equal(result[7].children[0].meta.title, '管理员账号')
+  // R7：管理员账号与菜单管理已从入口裁剪，系统设置首项为角色管理
+  assert.equal(result[7].children.some(c => ['user', 'menu'].includes(c.path)), false)
+  assert.equal(result[7].children[0].name, 'role')
   assert.equal(result[8].redirect, '/infra/config')
 })
 
