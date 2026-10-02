@@ -43,10 +43,9 @@ public class AccessCodeAdminController {
             @RequestParam(value = "codeMask", required = false) String codeMask,
             @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
             @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
-        // codeMask 过滤在 P3B 与查询索引一起补（掩码不可反查明文，仅模糊过滤展示）
         PageResult<AdminAccessCodeRespVO> result = new PageResult<>();
-        result.setTotal(accessCodeService.countCodes(batchId, status));
-        var rows = accessCodeService.pageCodes(batchId, status, pageNo, pageSize).stream().map(row -> {
+        result.setTotal(accessCodeService.countCodes(batchId, status, codeMask));
+        var rows = accessCodeService.pageCodes(batchId, status, codeMask, pageNo, pageSize).stream().map(row -> {
             AdminAccessCodeRespVO vo = new AdminAccessCodeRespVO();
             vo.setId(String.valueOf(row.id()));
             vo.setCodeMask(row.codeMask());

@@ -20,7 +20,7 @@ protectedPage({
           selectedId: '', selectDone: false, selecting: false, nextLabel: '', regenerating: false,
           resolution: flatDefaults.resolution, orientation: flatDefaults.orientation, outputPixels: flatDefaults.outputPixels },
   onLoad(query) {
-    this._token = http.getToken();
+    this._token = http.captureSession ? http.captureSession() : http.getToken();
     this._jobId = getApp().globalData.jobId;
     this._pageStart = Date.now();
     this._statusAt = {};
@@ -124,28 +124,42 @@ protectedPage({
       list.forEach(function (c) {
         if (merged.some(function (item) { return String(item.candidateId) === String(c.candidateId); })) return;
         merged.push({ candidateId: String(c.candidateId), assetId: c.assetId,
-          slot: c.slotNo || (merged.length + 1), name: '方案 ' + String.fromCharCode(65 + merged.length), url: '' });
+          slot: c.slotNo || (merged.length + 1), name: '方案 ' + String.fromCharCode(65 + merged.length), url: '', imageError: '', imageLoading: false });
         added = true;
       });
       const pendingSlots = self.data.finished ? 0 : Math.max(0, (self.data.count || 0) - merged.length);
       self.setData({ candidates: merged, pendingSlots: pendingSlots, candidatesError: '',
         resolution: selected.resolution, orientation: selected.orientation, outputPixels: selected.outputPixels });
-      if (!added) return;
-      merged.forEach(function (item, index) {
-        if (item.url || !item.assetId) return;
-        assets.fetchAssetDataUrl(item.assetId).then(function (url) {
-          if (self._stopped) return;
-          const target = self.data.candidates[index];
-          if (target && target.assetId === item.assetId && !target.url) {
-            self.setData({ ['candidates[' + index + '].url']: url });
-          }
-        }).catch(function () { /* 单图加载失败保留占位 */ });
-      });
+
+      merged.forEach(function (item) { if (!item.url && !item.imageLoading) self.loadCandidateImage(item.candidateId); });
     }).catch(function () {
       // 候选拉取失败不打断进度轮询，下轮重试；但若已到终态，必须给用户显式重试出口而不是空页面
       if (self._stopped || !self.current(self._token)) return;
       if (self.data.finished && !self.data.candidates.length) self.setData({ candidatesError: '候选读取失败，可重试加载' });
     });
+  },
+  loadCandidateImage(candidateId) {
+    const index = this.data.candidates.findIndex(item => String(item.candidateId) === String(candidateId));
+    if (index < 0) return;
+    const item = this.data.candidates[index], jobId = this._jobId;
+    if (!item.assetId || item.imageLoading) return;
+    this.setData({ ['candidates[' + index + '].imageLoading']: true, ['candidates[' + index + '].imageError']: '' });
+    const apply = patch => {
+      if (this._stopped || !this.current(this._token) || jobId !== this._jobId) return;
+      const target = this.data.candidates[index];
+      if (!target || target.candidateId !== item.candidateId || target.assetId !== item.assetId) return;
+      const update = {};
+      Object.keys(patch).forEach(key => { update['candidates[' + index + '].' + key] = patch[key]; });
+      this.setData(update);
+    };
+    return assets.fetchAssetDataUrl(item.assetId).then(url => apply({ url, imageLoading: false, imageError: '' }))
+      .catch(() => apply({ url: '', imageLoading: false, imageError: '图片加载失败，点击重试' }));
+  },
+  retryCandidateImage(event) { return this.loadCandidateImage(event.currentTarget.dataset.id); },
+  candidateImageError(event) {
+    const index = this.data.candidates.findIndex(item => String(item.candidateId) === String(event.currentTarget.dataset.id));
+    if (index >= 0) this.setData({ ['candidates[' + index + '].url']: '', ['candidates[' + index + '].imageLoading']: false,
+      ['candidates[' + index + '].imageError']: '图片已失效，点击重新加载' });
   },
   current(token) { return http.isSameSession ? http.isSameSession(token) : token === http.getToken(); },
   // 页内选择：与主/恢复两路径共用（选择页已收敛到本页内联候选）
@@ -216,17 +230,31 @@ protectedPage({
     const fallback = generationOptions.defaults(stage === 'plane' ? 'FLAT' : 'ELEVATION');
     const resolution = this.data.resolution || fallback.resolution;
     const orientation = this.data.orientation || fallback.orientation;
-    const idemKey = stage + '-regen-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    const attempts = require('../../utils/generation-attempt');
+    const slot = 'regenerate:' + projectId + ':' + this._jobId;
+    const payload = { projectId: projectId, stage: stage, count: count, resolution: resolution, orientation: orientation,
+      config: stage === 'elevation' ? Object.assign({}, getApp().globalData.elevationConfig) : null };
+    if (payload.config) delete payload.config.priceConfirmation;
+    let attempt;
+    try { attempt = attempts.begin(slot, payload); }
+    catch (error) { this._regenerating = false; wx.showToast({ title: error.msg || '无法保存请求', icon: 'none' }); return; }
+    const idemKey = attempt.key;
     this.setData({ regenerating: true });
-    return require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count, '', { resolution: resolution }).then(function (price) {
+    const priceRequest = attempt.confirmedPrice ? Promise.resolve(attempt.confirmedPrice)
+      : require('../../utils/generation-price').confirm(stage === 'plane' ? 'FLAT' : 'ELEVATION', count, '', { resolution: resolution });
+    return priceRequest.then(function (price) {
+      attempt.confirmedPrice = price; attempts.save(slot, attempt);
+      attempts.submitted(slot, attempt);
       if (stage === 'plane') return api.createFlatJob(projectId, count, idemKey, price, { resolution: resolution, orientation: orientation });
       const config = Object.assign({}, getApp().globalData.elevationConfig, { count: count, resolution: resolution, orientation: orientation, priceConfirmation: price });
       return api.createElevationJob(projectId, config, idemKey);
     }).then(function (job) {
       if (self._stopped) return;
+      attempts.complete(slot, attempt);
       getApp().globalData.jobId = job.jobId;
       wx.redirectTo({ url: '/pages/ai-design/generating?stage=' + stage + '&count=' + count });
     }).catch(function (err) {
+      try { attempts.failed(slot, attempt, err); } catch (stale) { /* Session changed. */ }
       if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '重新生成失败', icon: 'none' });
       self._regenerating = false;
       self.setData({ regenerating: false });

@@ -73,7 +73,7 @@ public class WechatPaymentAdapter implements PaymentPort {
     private static final Map<String, String> REFUND_STATE_MAP = Map.of(
             "SUCCESS", "SUCCEEDED",
             "PROCESSING", "PROCESSING",
-            "ABNORMAL", "FAILED",
+            "ABNORMAL", "ABNORMAL",
             "CLOSED", "FAILED"
     );
 
@@ -309,6 +309,14 @@ public class WechatPaymentAdapter implements PaymentPort {
             WxPayRefundQueryV3Result result = wxPayService.refundQueryV3(channelRefundId);
             return new ChannelRefundResult(REFUND_STATE_MAP.getOrDefault(result.getStatus(), "UNKNOWN"));
         } catch (WxPayException e) {
+            // A missing refund is different from an unknown query/transport outcome.
+            // RESOURCE_NOT_EXISTS can also describe certificates: require refund-specific context.
+            String detail = e.getErrCodeDes();
+            if ("RESOURCE_NOT_EXISTS".equals(e.getErrCode()) && detail != null
+                    && (detail.matches(".*退款.*不存在.*")
+                        || detail.toLowerCase(java.util.Locale.ROOT).matches(".*refund.*not exist.*"))) {
+                return new ChannelRefundResult("NOT_FOUND");
+            }
             throw new IllegalStateException("微信支付退款查询失败: errCode=" + e.getErrCode(), e);
         }
     }

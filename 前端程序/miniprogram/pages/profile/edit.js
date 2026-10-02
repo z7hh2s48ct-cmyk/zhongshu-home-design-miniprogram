@@ -10,7 +10,7 @@ protectedPage({
   onLoad() { this.load(); },
   onUnload() { this._closed = true; },
   load() {
-    const token = this._token = http.getToken();
+    const token = this._token = http.captureSession ? http.captureSession() : http.getToken();
     this.setData({ loading: true, error: '' });
     return api.getProfile().then(p => {
       if (this._closed || !(http.isSameSession ? http.isSameSession(token) : token === http.getToken())) return;

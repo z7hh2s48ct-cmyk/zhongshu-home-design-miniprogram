@@ -10,7 +10,9 @@
       <el-button @click="$router.back()">返回</el-button>
     </div>
 
-    <div class="zs-table-card zs-form">
+    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
+    <el-button v-if="loadError" @click="loadPlan">重新加载</el-button>
+    <div class="zs-table-card zs-form" v-loading="loading">
       <el-form label-width="120px" label-position="left">
         <el-form-item label="方案名称" required>
           <el-input
@@ -21,13 +23,25 @@
           />
         </el-form-item>
         <el-form-item label="金额(元)" required>
-          <el-input-number v-model="amountYuan" :min="1" :max="100000" />
+          <el-input-number v-model="amountYuan" :min="1" :max="100000" :disabled="isEdit" />
         </el-form-item>
         <el-form-item label="基础设计点" required>
-          <el-input-number v-model="form.basePoints" :min="0" :max="1000000" :step="100" />
+          <el-input-number
+            v-model="form.basePoints"
+            :min="0"
+            :max="1000000"
+            :step="100"
+            :disabled="isEdit"
+          />
         </el-form-item>
         <el-form-item label="赠送设计点">
-          <el-input-number v-model="form.bonusPoints" :min="0" :max="1000000" :step="50" />
+          <el-input-number
+            v-model="form.bonusPoints"
+            :min="0"
+            :max="1000000"
+            :step="50"
+            :disabled="isEdit"
+          />
         </el-form-item>
         <el-form-item label="推荐位">
           <el-switch v-model="form.recommended" />
@@ -36,7 +50,13 @@
           <el-input-number v-model="form.sort" :min="0" :max="999" />
         </el-form-item>
         <el-form-item>
-          <el-button class="zs-btn-primary" :loading="saving" @click="save">保存</el-button>
+          <el-button
+            class="zs-btn-primary"
+            :loading="saving"
+            :disabled="loading || !!loadError"
+            @click="save"
+            >保存</el-button
+          >
         </el-form-item>
       </el-form>
     </div>
@@ -52,6 +72,9 @@ const route = useRoute()
 const isEdit = computed(() => !!route.query.id)
 const saving = ref(false)
 
+const loading = ref(false)
+const loadError = ref('')
+let original: Record<string, any> | null = null
 const amountYuan = ref(50)
 const form = reactive({
   name: '',
@@ -62,7 +85,34 @@ const form = reactive({
   enabled: true
 })
 
+const loadPlan = async () => {
+  if (!isEdit.value) return
+  loading.value = true
+  loadError.value = ''
+  original = null
+  try {
+    const plan = await ZsApi.getPlan(String(route.query.id))
+    if (!plan || String(plan.id) !== String(route.query.id)) throw new Error('方案不存在')
+    amountYuan.value = Number(plan.amountCents) / 100
+    Object.assign(form, {
+      name: plan.name,
+      basePoints: plan.basePoints,
+      bonusPoints: plan.bonusPoints,
+      recommended: plan.recommended,
+      sort: plan.sort,
+      enabled: plan.enabled
+    })
+    original = { ...form }
+  } catch (error: any) {
+    loadError.value = error?.msg || error?.message || '加载方案失败，请重试'
+  } finally {
+    loading.value = false
+  }
+}
+onMounted(loadPlan)
+
 const save = async () => {
+  if (loading.value || loadError.value || (isEdit.value && !original)) return
   if (!form.name) {
     message.error('请填写方案名称')
     return
@@ -70,7 +120,11 @@ const save = async () => {
   saving.value = true
   try {
     if (isEdit.value) {
-      await ZsApi.updatePlan(String(route.query.id), form)
+      const changes: Record<string, any> = {}
+      for (const field of ['name', 'recommended', 'sort'] as const) {
+        if (form[field] !== original![field]) changes[field] = form[field]
+      }
+      if (Object.keys(changes).length) await ZsApi.updatePlan(String(route.query.id), changes)
     } else {
       await ZsApi.createPlan({ ...form, amountCents: amountYuan.value * 100 })
     }

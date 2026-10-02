@@ -114,6 +114,40 @@ public class DesignProjectService {
         });
     }
 
+    public long createProjectWithKey(long userId, String source, Long caseId, Long sketchId,
+                                     Map<String,Object> inputs, String key) {
+        if (key == null || key.isBlank()) return createProject(userId, source, caseId, sketchId, inputs);
+        if (key.length() > 128) throw new IllegalArgumentException("Request key too long");
+        return txTemplate.execute(status -> {
+            if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
+            var intent = new java.util.LinkedHashMap<String,Object>();
+            intent.put("source",source); intent.put("caseId",caseId); intent.put("sketchId",sketchId); intent.put("inputs",inputs);
+            String fingerprint;
+            try {
+                var mapper = new com.fasterxml.jackson.databind.ObjectMapper().configure(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS,true);
+                fingerprint = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(mapper.writeValueAsBytes(intent)));
+            } catch (Exception error) { throw new IllegalArgumentException("Invalid project input",error); }
+            jdbcTemplate.update("INSERT INTO design_project_request(user_id,request_key,request_hash) VALUES(?,?,?) ON CONFLICT DO NOTHING",userId,key,fingerprint);
+            var receipt = jdbcTemplate.queryForMap("SELECT request_hash,project_id FROM design_project_request WHERE user_id=? AND request_key=? FOR UPDATE",userId,key);
+            if (!fingerprint.equals(receipt.get("request_hash"))) throw new cn.iocoder.yudao.framework.common.exception.ServiceException(409,"同一请求号不能用于不同项目输入");
+            if (receipt.get("project_id") != null) return ((Number)receipt.get("project_id")).longValue();
+            long projectId = createProject(userId,source,caseId,sketchId,inputs);
+            jdbcTemplate.update("UPDATE design_project_request SET project_id=? WHERE user_id=? AND request_key=?",projectId,userId,key);
+            return projectId;
+        });
+    }
+
+    public String initialGenerationKey(long projectId, long userId) {
+        var keys = jdbcTemplate.queryForList("SELECT request_key FROM design_project_request WHERE project_id=? AND user_id=?", String.class, projectId, userId);
+        return keys.isEmpty() ? null : keys.get(0);
+    }
+
+    public Long selectedJobId(long projectId, String phase) {
+        var ids = jdbcTemplate.queryForList("SELECT c.job_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id "
+                + "WHERE s.project_id=? AND s.stage=? AND s.active=TRUE AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,projectId,phase);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+
     /**
      * T15：参考案例模式下用户未显式给出的尺寸/层数，用案例版本值兜底——
      * 保证 runtime 提示词始终携带真实尺度；用户显式输入永远优先于案例默认。
@@ -244,7 +278,17 @@ public class DesignProjectService {
         if ("CASE_REFERENCE".equals(project.sourceType())) {
             ensureGenerationReference(project);
         }
-        long jobId = aiJobPort.createFlatJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation, options);
+        String operationKey = idempotencyKey;
+        if (idempotencyKey!=null && !idempotencyKey.isBlank()) {
+            var references=jdbcTemplate.queryForList("SELECT project_ref,phase FROM ai_job WHERE user_id=? AND idempotency_key=?",userId,idempotencyKey);
+            if (!references.isEmpty() && (!String.valueOf(projectId).equals(references.get(0).get("project_ref")) || !"FLAT".equals(references.get(0).get("phase"))))
+                throw exception(cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
+        }
+        if (aiJobPort.latestJob(userId, projectId, "FLAT").isEmpty()) {
+            String creationKey = initialGenerationKey(projectId, userId);
+            if (creationKey != null) operationKey = creationKey;
+        }
+        long jobId = aiJobPort.createFlatJob(userId, count, operationKey, String.valueOf(projectId), confirmation, options);
         boolean created = aiJobPort.freezeInput(jobId, runtimeInput(project, "FLAT", null, options, count));
         jdbcTemplate.update(
                 "UPDATE design_project SET update_time = now() WHERE id = ?", projectId);
@@ -292,7 +336,7 @@ public class DesignProjectService {
                 project.projectId(), grantId, rightsVersion, snapshot.size());
     }
 
-    /** 任务终态后晋升 ACCEPTED 结果为资产+候选（幂等；返回该项目全部候选） */
+    /** 任务终态后晋升 ACCEPTED 结果为资产+候选，仅返回指定任务的候选。 */
     public List<CandidateRow> promoteCandidates(long userId, long projectId, long jobId) {
         ProjectSnapshot project = getProject(projectId)
                 .orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
@@ -301,7 +345,8 @@ public class DesignProjectService {
         }
         AiJobPort.JobView job = aiJobPort.getJob(jobId)
                 .orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
-        if (job.userId() != userId) {
+        if (job.userId() != userId || !String.valueOf(projectId).equals(job.projectRef())
+                || !("FLAT".equals(job.phase()) || "ELEVATION".equals(job.phase()))) {
             throw exception(RESOURCE_FORBIDDEN);
         }
         String status = job.status();
@@ -309,7 +354,7 @@ public class DesignProjectService {
             throw new IllegalStateException("任务未终态: " + status);
         }
         promoteAcceptedResults(userId, projectId, jobId);
-        return listCandidates(projectId);
+        return listCandidates(projectId).stream().filter(candidate -> candidate.jobId()==jobId).toList();
     }
 
     /**
@@ -322,6 +367,8 @@ public class DesignProjectService {
     }
 
     private void promoteAcceptedResults(long userId, long projectId, long jobId) {
+        requireOwner(userId,projectId);
+        requireScopedJob(userId,projectId,jobId,null);
         for (AiJobPort.CandidateView result : aiJobPort.listAcceptedResults(jobId)) {
             if (!result.objectKey().startsWith("accepted/ai/")) throw new IllegalStateException("LEGACY_AI_OUTPUT_REQUIRES_REVALIDATION");
             byte[] bytes=quarantineObjectPort.getObject(result.objectKey());
@@ -332,6 +379,8 @@ public class DesignProjectService {
             final int size=bytes.length;
             try {
                 txTemplate.execute(s -> {
+                    var writable=jdbcTemplate.queryForList("SELECT id FROM design_project WHERE id=? AND user_id=? AND deleted=FALSE FOR UPDATE",projectId,userId);
+                    if (writable.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
                     // 使用校验后独立的 accepted/ai 对象晋升用户资产，并校对实际摘要与大小。
                     long assetId = registerPromotedAsset(userId, result, size);
                     jdbcTemplate.update(
@@ -379,6 +428,8 @@ public class DesignProjectService {
             throw exception(RESOURCE_FORBIDDEN);
         }
         return txTemplate.execute(status -> {
+            lockOwnedProject(userId,projectId);
+            validateSelectionCandidate(userId,projectId,candidateId,"FLAT");
             // 与立面选择对称（审查遗留项）：同候选幂等返回；不同候选=轮换（旧选择失效，可继续生成立面）
             List<Long> actives = jdbcTemplate.query(
                     "SELECT id, candidate_id FROM design_selection WHERE project_id = ? AND stage = 'FLAT' "
@@ -393,20 +444,6 @@ public class DesignProjectService {
                 jdbcTemplate.update(
                         "UPDATE design_selection SET active = FALSE, update_time = now() WHERE id = ?",
                         actives.get(0));
-            }
-            Map<String, Object> candidate;
-            try {
-                candidate = jdbcTemplate.queryForMap(
-                        "SELECT job_id FROM design_candidate WHERE id = ? AND project_id = ? "
-                                + "AND deleted = FALSE",
-                        candidateId, projectId);
-            } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-                throw exception(RESOURCE_FORBIDDEN);
-            }
-            long jobId = ((Number) candidate.get("job_id")).longValue();
-            AiJobPort.JobView job = aiJobPort.getJob(jobId).orElseThrow();
-            if (!isTerminal(job.status())) {
-                throw new IllegalStateException("任务未终态，不可选择");
             }
             long selectionId = IdWorker.getId();
             jdbcTemplate.update(
@@ -439,6 +476,13 @@ public class DesignProjectService {
                                              Map<String, Object> elevationConfig,
                                              cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmation,
                                              cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options) {
+        return createElevationJob(userId,projectId,count,idempotencyKey,elevationConfig,confirmation,options,null,false);
+    }
+
+    private FlatJobCreated createElevationJob(long userId,long projectId,int count,String idempotencyKey,
+                                              Map<String,Object> elevationConfig,
+                                              cn.iocoder.yudao.module.infra.zhongshu.api.PricingPort.PriceConfirmation confirmation,
+                                              cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options,Long sourceSelection,boolean completeRequirements) {
         return txTemplate.execute(transaction -> {
         if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
         jdbcTemplate.queryForMap("SELECT id FROM design_project WHERE id=? FOR UPDATE",projectId);
@@ -448,33 +492,22 @@ public class DesignProjectService {
             throw exception(RESOURCE_FORBIDDEN);
         }
         // 守卫为「存在 FLAT 有效选择」而非阶段值：调整链在 ELEVATION 阶段仍可再生成
-        Long flatSelection = jdbcSelectActive(projectId, "FLAT");
+        Long flatSelection = sourceSelection==null ? jdbcSelectActive(projectId, "FLAT") : sourceSelection;
         if (flatSelection == null) {
             throw exception(DESIGN_STAGE_CONFLICT); // 未选定平面不得生成立面
         }
         Map<String, Object> validatedConfig = BudgetInputs.validateRequirementInputs(elevationConfig);
-        // P1-B（报告 15）：供应商出图方向跟随输入参考图，立面输出的实际方向与已选平面一致；
-        // 引擎却按任务 imageOptions 的期望尺寸强校验，方向不一致时必然 PROVIDER_IMAGE_SIZE_MISMATCH。
-        // 默认值组合（平面竖版 + 立面横版）恰好踩中，故此处一律以平面任务的方向为准对齐。
-        // 查询容错：ai_job 归属 ai-orchestration，设计模块单测（aiJobPort 为 mock、schema 为子集）
-        // 或表结构差异时静默跳过对齐，保持原有行为。
-        cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions aligned = options;
-        try {
-            String flatOrientation = jdbcTemplate.queryForObject(
-                    "SELECT input_snapshot -> 'imageOptions' ->> 'orientation' FROM ai_job "
-                            + "WHERE project_ref = ? AND phase = 'FLAT' AND deleted = FALSE "
-                            + "ORDER BY create_time DESC LIMIT 1", String.class, String.valueOf(projectId));
-            if (flatOrientation != null && !flatOrientation.isBlank()
-                    && !flatOrientation.equalsIgnoreCase(options.orientation())) {
-                aligned = cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions.normalize(
-                        "ELEVATION", options.resolution(), flatOrientation);
-            }
-        } catch (org.springframework.dao.DataAccessException e) {
-            // 保持 options 原值（不对齐）
-        }
-        final cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions alignedOptions = aligned;
+        var flatJobs=jdbcTemplate.queryForList("SELECT c.job_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.id=? AND s.project_id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,flatSelection,projectId);
+        Long flatJobId=flatJobs.isEmpty()?null:flatJobs.get(0);
+        if (flatJobId==null) throw exception(DESIGN_STAGE_CONFLICT);
+        requireScopedJob(userId,projectId,flatJobId,"FLAT");
+        var alignedOptions=cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions.normalize(
+                "ELEVATION",options.resolution(),jobImageOptions(flatJobId).orientation());
         long jobId = aiJobPort.createElevationJob(userId, count, idempotencyKey, String.valueOf(projectId), confirmation, alignedOptions);
-        if (!aiJobPort.freezeInput(jobId,runtimeInput(project,"ELEVATION",validatedConfig, alignedOptions, count))) return new FlatJobCreated(jobId,false);
+        var frozen=runtimeInput(project,"ELEVATION",validatedConfig,alignedOptions,count,flatSelection,completeRequirements);
+        frozen.put("requestedImageOptions",Map.of("resolution",options.resolution(),"orientation",options.orientation()));
+        frozen.put("requestConfig",validatedConfig==null?Map.of():validatedConfig);
+        if (!aiJobPort.freezeInput(jobId,frozen)) return new FlatJobCreated(jobId,false);
         jdbcTemplate.update(
                 "INSERT INTO design_requirement_snapshot (id, project_id, input_version, inputs) "
                         + "SELECT ?, ?, COALESCE(MAX(input_version), 0) + 1, CAST(? AS jsonb) "
@@ -506,6 +539,8 @@ public class DesignProjectService {
             throw exception(RESOURCE_FORBIDDEN);
         }
         return txTemplate.execute(status -> {
+            lockOwnedProject(userId,projectId);
+            long jobId=validateSelectionCandidate(userId,projectId,candidateId,"ELEVATION");
             // 幂等：重复选择同一候选返回既有版本；不同候选=调整轮换（旧 selection 失效，生成新版本）
             Long activeSelection = jdbcSelectActive(projectId, "ELEVATION");
             if (activeSelection != null) {
@@ -524,24 +559,10 @@ public class DesignProjectService {
                         "UPDATE design_selection SET active = FALSE, update_time = now() WHERE id = ?",
                         activeSelection);
             }
-            Map<String, Object> candidate;
-            try {
-                candidate = jdbcTemplate.queryForMap(
-                        "SELECT job_id FROM design_candidate WHERE id = ? AND project_id = ? "
-                                + "AND deleted = FALSE", candidateId, projectId);
-            } catch (org.springframework.dao.EmptyResultDataAccessException e) {
-                throw exception(RESOURCE_FORBIDDEN);
-            }
-            long jobId = ((Number) candidate.get("job_id")).longValue();
-            AiJobPort.JobView job = aiJobPort.getJob(jobId).orElseThrow();
-            if (!isTerminal(job.status())) {
-                throw new IllegalStateException("任务未终态，不可选择");
-            }
-            // 平面选择与其候选集（同项目、FLAT 阶段有效选择）
-            Long flatSelection = jdbcSelectActive(projectId, "FLAT");
-            if (flatSelection == null) {
-                throw exception(DESIGN_STAGE_CONFLICT);
-            }
+            // Source and configuration belong to the selected elevation job, even if the
+            // current flat selection or a newer generation changed after this job started.
+            Map<String,Object> input=jobInput(jobId);
+            Long flatSelection=sourceFlatSelection(userId,projectId,jobId,input);
             List<Long> flatCandidates = jdbcTemplate.queryForList(
                     "SELECT candidate_id FROM design_selection WHERE id = ? AND project_id = ? AND stage='FLAT' AND deleted=FALSE",
                     Long.class, flatSelection, projectId);
@@ -562,7 +583,7 @@ public class DesignProjectService {
                             + "elevation_selection_id, flat_candidate_ids, elevation_candidate_id, config_snapshot) "
                             + "VALUES (?, ?, ?, ?, ?, CAST(? AS jsonb), ?, CAST(? AS jsonb))",
                     versionId, projectId, version, flatSelection, selectionId,
-                    toJsonList(flatCandidates), candidateId, latestConfig(projectId));
+                    toJsonList(flatCandidates), candidateId, versionConfig(input,jobId));
             // 旧版本标记 superseded（不可变：内容不改，只改活跃标记）
             if (version > 1) {
                 jdbcTemplate.update(
@@ -636,11 +657,28 @@ public class DesignProjectService {
             throw exception(DESIGN_STAGE_CONFLICT); // 尚无最终版本，无从调整（先拒后建，不扣点）
         }
         Long latestVersionId = versionRows.get(0);
+        var sourceVersion=jdbcTemplate.queryForMap("SELECT flat_selection_id,config_snapshot::text FROM design_result_version WHERE id=? AND project_id=? AND deleted=FALSE",latestVersionId,projectId);
+        var inherited=new java.util.LinkedHashMap<String,Object>();
+        Object rawConfig=sourceVersion.get("config_snapshot");
+        if (rawConfig!=null) {
+            try { inherited.putAll(new com.fasterxml.jackson.databind.ObjectMapper().readValue(rawConfig.toString(),Map.class)); }
+            catch (java.io.IOException error) { throw new IllegalStateException("INVALID_VERSION_CONFIG",error); }
+        }
+        inherited.remove("imageOptions");inherited.remove("originJobId");inherited.remove("sourceFlat");
+        if (configUpdates!=null) inherited.putAll(configUpdates);
         // 调整 = 基于已选平面的新一轮立面任务（旧版本保留只读）
         var options = revisionOptions(projectId, resolution, orientation);
-        var job = createElevationJob(userId, projectId, count, idempotencyKey, configUpdates, confirmation, options);
-        var old = jdbcTemplate.queryForList("SELECT id FROM design_revision_request WHERE new_job_id=? ORDER BY id LIMIT 1",Long.class,job.jobId());
-        if (!old.isEmpty()) return new RevisionCreated(old.get(0),job.jobId());
+        var job = createElevationJob(userId, projectId, count, idempotencyKey, inherited, confirmation, options,((Number)sourceVersion.get("flat_selection_id")).longValue(),true);
+        var old = jdbcTemplate.queryForList("SELECT id,reason,config_updates::text FROM design_revision_request WHERE new_job_id=? ORDER BY id LIMIT 1",job.jobId());
+        if (!old.isEmpty()) {
+            String expected=configUpdates==null?null:toStringJson(configUpdates);
+            try {
+                var mapper=new com.fasterxml.jackson.databind.ObjectMapper();Object existing=old.get(0).get("config_updates");
+                if (!java.util.Objects.equals(reason,old.get(0).get("reason")) || !java.util.Objects.equals(existing==null?null:mapper.readTree(existing.toString()),expected==null?null:mapper.readTree(expected)))
+                    throw exception(cn.iocoder.yudao.framework.common.exception.ZhongshuErrorCodeConstants.IDEMPOTENCY_KEY_REUSED);
+            } catch (java.io.IOException error) { throw new IllegalStateException("INVALID_REVISION_CONFIG",error); }
+            return new RevisionCreated(((Number)old.get(0).get("id")).longValue(),job.jobId());
+        }
         long requestId = IdWorker.getId();
         jdbcTemplate.update(
                 "INSERT INTO design_revision_request (id, project_id, from_version_id, reason, "
@@ -654,24 +692,92 @@ public class DesignProjectService {
     private Map<String,Object> runtimeInput(ProjectSnapshot project, String phase, Map<String,Object> overrides,
                                             cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options,
                                             int count) {
+        return runtimeInput(project,phase,overrides,options,count,null,false);
+    }
+
+    private Map<String,Object> runtimeInput(ProjectSnapshot project,String phase,Map<String,Object> overrides,
+                                             cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions options,
+                                             int count,Long sourceSelection,boolean completeRequirements) {
         var requirements = new java.util.LinkedHashMap<String,Object>();
-        for (String value : jdbcTemplate.queryForList("SELECT inputs::text FROM design_requirement_snapshot WHERE project_id=? AND deleted=FALSE ORDER BY input_version",String.class,project.projectId())) {
+        // A revision supplies its selected version's complete frozen basis. Missing
+        // keys must stay absent, rather than inheriting unrelated later requests.
+        if (!completeRequirements) for (String value : jdbcTemplate.queryForList("SELECT inputs::text FROM design_requirement_snapshot WHERE project_id=? AND deleted=FALSE ORDER BY input_version",String.class,project.projectId())) {
             if (value != null) try { requirements.putAll(new com.fasterxml.jackson.databind.ObjectMapper().readValue(value,Map.class)); }
             catch (java.io.IOException e) { throw new IllegalStateException("INVALID_REQUIREMENT_SNAPSHOT"); }
         }
         if (overrides != null) requirements.putAll(overrides);
         List<Long> assetIds;
         if ("ELEVATION".equals(phase)) {
-            assetIds=jdbcTemplate.queryForList("SELECT c.asset_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id WHERE s.project_id=? AND s.stage='FLAT' AND s.active=TRUE AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,project.projectId());
+            assetIds=jdbcTemplate.queryForList("SELECT c.asset_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.project_id=? AND s.id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,project.projectId(),sourceSelection);
         } else if ("CASE_REFERENCE".equals(project.sourceType())) {
             assetIds=jdbcTemplate.queryForList("SELECT a.asset_id FROM design_case_asset a JOIN design_project p ON p.ref_version_id=a.case_version_id WHERE p.id=? AND a.asset_role='FLOOR_PLAN' AND a.deleted=FALSE ORDER BY a.id LIMIT 8",Long.class,project.projectId());
         } else {
             assetIds=jdbcTemplate.queryForList("SELECT sketch_asset_id FROM design_requirement_snapshot WHERE project_id=? AND sketch_asset_id IS NOT NULL AND deleted=FALSE ORDER BY input_version DESC LIMIT 1",Long.class,project.projectId());
         }
-        return Map.of("schemaVersion",1,"phase",phase,"projectId",String.valueOf(project.projectId()),
+        var snapshot=new java.util.LinkedHashMap<String,Object>(Map.of("schemaVersion",1,"phase",phase,"projectId",String.valueOf(project.projectId()),
                 "sourceType",project.sourceType(),"requirements",requirements,
                 "imageOptions",Map.of("resolution",options.resolution(),"orientation",options.orientation()),
-                "candidateCount",count,"assetIds",assetIds.stream().map(String::valueOf).toList());
+                "candidateCount",count,"assetIds",assetIds.stream().map(String::valueOf).toList()));
+        if ("ELEVATION".equals(phase)) {
+            var source=jdbcTemplate.queryForMap("SELECT s.id AS selection_id,c.id AS candidate_id,c.asset_id,c.job_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.project_id=? AND s.id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE",project.projectId(),sourceSelection);
+            snapshot.put("sourceFlat",Map.of("selectionId",String.valueOf(source.get("selection_id")),"candidateId",String.valueOf(source.get("candidate_id")),
+                    "assetId",String.valueOf(source.get("asset_id")),"jobId",String.valueOf(source.get("job_id"))));
+        }
+        return snapshot;
+    }
+
+    private void lockOwnedProject(long userId,long projectId) {
+        if (accountStatePort != null) accountStatePort.requireActiveForWrite(userId);
+        var rows=jdbcTemplate.queryForList("SELECT id FROM design_project WHERE id=? AND user_id=? AND deleted=FALSE FOR UPDATE",projectId,userId);
+        if (rows.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
+    }
+
+    private AiJobPort.JobView requireScopedJob(long userId,long projectId,long jobId,String phase) {
+        var job=aiJobPort.getJob(jobId).orElseThrow(()->exception(RESOURCE_FORBIDDEN));
+        if (job.userId()!=userId || !String.valueOf(projectId).equals(job.projectRef())
+                || !("FLAT".equals(job.phase()) || "ELEVATION".equals(job.phase()))
+                || phase!=null && !phase.equals(job.phase())) throw exception(RESOURCE_FORBIDDEN);
+        if (!isTerminal(job.status())) throw new IllegalStateException("任务未终态，不可选择或晋升");
+        return job;
+    }
+
+    private long validateSelectionCandidate(long userId,long projectId,long candidateId,String phase) {
+        var rows=jdbcTemplate.queryForList("SELECT job_id FROM design_candidate WHERE id=? AND project_id=? AND deleted=FALSE",candidateId,projectId);
+        if (rows.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
+        long jobId=((Number)rows.get(0).get("job_id")).longValue();requireScopedJob(userId,projectId,jobId,phase);return jobId;
+    }
+
+    private Map<String,Object> jobInput(long jobId) {
+        String json=jdbcTemplate.queryForObject("SELECT input_snapshot::text FROM ai_job WHERE id=? AND deleted=FALSE",String.class,jobId);
+        if (json==null) throw new IllegalStateException("AI_INPUT_SNAPSHOT_MISSING");
+        try { return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json,Map.class); }
+        catch (java.io.IOException error) { throw new IllegalStateException("INVALID_AI_INPUT_SNAPSHOT",error); }
+    }
+
+    private Long sourceFlatSelection(long userId,long projectId,long jobId,Map<String,Object> input) {
+        java.util.List<Map<String,Object>> rows;
+        if (input.get("sourceFlat") instanceof Map<?,?> source) {
+            rows=jdbcTemplate.queryForList("SELECT s.id,c.job_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.id=? AND s.project_id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE AND c.id=? AND c.asset_id=? AND c.job_id=?",
+                    Long.parseLong(String.valueOf(source.get("selectionId"))),projectId,Long.parseLong(String.valueOf(source.get("candidateId"))),
+                    Long.parseLong(String.valueOf(source.get("assetId"))),Long.parseLong(String.valueOf(source.get("jobId"))));
+        } else {
+            // Old snapshots already froze the exact reference asset. Resolve its historical
+            // selection as of job creation; never substitute today's active selection.
+            if (!(input.get("assetIds") instanceof List<?> assets) || assets.size()!=1) throw new IllegalStateException("AI_SOURCE_FLAT_MISSING");
+            rows=jdbcTemplate.queryForList("SELECT s.id,c.job_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id JOIN ai_job j ON j.id=? WHERE s.project_id=? AND s.stage='FLAT' AND c.asset_id=? AND s.deleted=FALSE AND c.deleted=FALSE AND s.create_time<=j.create_time ORDER BY s.create_time DESC,s.id DESC LIMIT 1",
+                    jobId,projectId,Long.parseLong(String.valueOf(assets.get(0))));
+        }
+        if (rows.isEmpty()) throw exception(RESOURCE_FORBIDDEN);
+        requireScopedJob(userId,projectId,((Number)rows.get(0).get("job_id")).longValue(),"FLAT");
+        return ((Number)rows.get(0).get("id")).longValue();
+    }
+
+    private String versionConfig(Map<String,Object> input,long jobId) {
+        if (!(input.get("requirements") instanceof Map<?,?> requirements)) throw new IllegalStateException("AI_REQUIREMENTS_MISSING");
+        var config=new java.util.LinkedHashMap<String,Object>();requirements.forEach((key,value)->config.put(String.valueOf(key),value));
+        config.put("imageOptions",input.get("imageOptions"));config.put("originJobId",String.valueOf(jobId));
+        if (input.containsKey("sourceFlat")) config.put("sourceFlat",input.get("sourceFlat"));
+        return toStringJson(config);
     }
 
     private cn.iocoder.yudao.module.infra.zhongshu.api.GenerationImageOptions revisionOptions(
@@ -679,13 +785,12 @@ public class DesignProjectService {
         String inheritedResolution = null;
         String inheritedOrientation = null;
         List<String> rows = jdbcTemplate.queryForList(
-                "SELECT input_snapshot::text FROM ai_job WHERE project_ref=? AND phase='ELEVATION' "
-                        + "AND input_snapshot IS NOT NULL AND deleted=FALSE ORDER BY create_time DESC,id DESC LIMIT 1",
-                String.class, String.valueOf(projectId));
+                "SELECT COALESCE(v.config_snapshot->'imageOptions',j.input_snapshot->'imageOptions')::text FROM design_result_version v JOIN design_candidate c ON c.id=v.elevation_candidate_id AND c.project_id=v.project_id JOIN ai_job j ON j.id=c.job_id WHERE v.project_id=? AND v.deleted=FALSE AND c.deleted=FALSE AND j.deleted=FALSE ORDER BY v.version DESC LIMIT 1",
+                String.class, projectId);
         if (!rows.isEmpty()) {
             try {
                 Map<String, Object> snapshot = new com.fasterxml.jackson.databind.ObjectMapper().readValue(rows.get(0), Map.class);
-                Object raw = snapshot.get("imageOptions");
+                Object raw = snapshot;
                 if (raw instanceof Map<?, ?> imageOptions) {
                     inheritedResolution = stringValue(imageOptions.get("resolution"));
                     inheritedOrientation = stringValue(imageOptions.get("orientation"));

@@ -59,14 +59,19 @@ public class AppDesignProjectController {
     @Operation(summary = "创建设计项目（参考案例或自主设计；仅案例可见不代表可作生成参考，创建任务时再验授权）")
     public CommonResult<AppDesignProjectRespVO> createProject(
             @Valid @RequestBody(required = false) AppDesignProjectCreateReqVO reqVO,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestHeader(value = "Idempotency-Key", required = false) String requestKey) {
         long userId = requireAccountId(authorization);
         AppDesignProjectCreateReqVO req = reqVO == null ? new AppDesignProjectCreateReqVO() : reqVO;
-        long projectId = designProjectService.createProject(userId,
+        long projectId = designProjectService.createProjectWithKey(userId,
                 req.getSourceType() == null ? "SELF_UPLOAD" : req.getSourceType(),
                 parseIdOrNull(req.getRefCaseId()), parseIdOrNull(req.getSketchAssetId()),
-                req.getRequirementInputs());
+                req.getRequirementInputs(), requestKey);
         return success(toProjectVo(designProjectService.getProject(projectId).orElseThrow(), null, null));
+    }
+
+    public CommonResult<AppDesignProjectRespVO> createProject(AppDesignProjectCreateReqVO reqVO, String authorization) {
+        return createProject(reqVO, authorization, null);
     }
 
     @GetMapping
@@ -270,6 +275,7 @@ public class AppDesignProjectController {
                                                List<DesignProjectService.CandidateRow> candidates) {
         AppDesignProjectRespVO vo = new AppDesignProjectRespVO();
         vo.setProjectId(String.valueOf(project.projectId()));
+        vo.setInitialGenerationKey(designProjectService.initialGenerationKey(project.projectId(), project.userId()));
         vo.setSourceType(project.sourceType());
         vo.setRefCaseId(project.refCaseId() == null ? null : String.valueOf(project.refCaseId()));
         vo.setStage(project.stage());
@@ -306,13 +312,21 @@ public class AppDesignProjectController {
         Long flatAsset = designProjectService.selectedFlatAssetId(project.projectId());
         vo.setSelectedFlatAssetId(flatAsset == null ? null : String.valueOf(flatAsset));
         String action;
-        if (elevation != null) action = "VIEW_RESULT";
+        Long selectedJob = designProjectService.selectedJobId(project.projectId(), "ELEVATION");
+        boolean selectedCurrent = currentJob != null && selectedJob != null && selectedJob == currentJob.jobId();
+        if (elevation != null && (currentJob == null || selectedCurrent)) action = "VIEW_RESULT";
         else if (currentJob != null && !List.of("SUCCEEDED", "PARTIALLY_SUCCEEDED", "FAILED", "CANCELLED").contains(currentJob.status())) {
             action = "POLL_JOB";
             vo.setAllowedActions(List.of("POLL_JOB", "CANCEL_JOB"));
         } else if (currentJob != null && List.of("SUCCEEDED", "PARTIALLY_SUCCEEDED").contains(currentJob.status())) {
             action = flat == null ? "SELECT_FLAT" : "SELECT_ELEVATION";
         } else action = flat == null ? "CREATE_FLAT_JOB" : "CREATE_ELEVATION_JOB";
+        if (elevation != null && !selectedCurrent && currentJob != null) {
+            var actions = new java.util.ArrayList<String>(vo.getAllowedActions());
+            if (!actions.contains(action)) actions.add(action);
+            if (!actions.contains("VIEW_RESULT")) actions.add("VIEW_RESULT");
+            vo.setAllowedActions(actions);
+        }
         vo.setResumeAction(action);
         vo.setRequirements(designProjectService.latestDesignInputs(project.projectId()));
         return vo;

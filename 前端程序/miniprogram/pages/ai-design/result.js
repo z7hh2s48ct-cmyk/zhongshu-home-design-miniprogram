@@ -29,7 +29,7 @@ protectedPage({
     return false;
   },
   loadVersions() {
-    const seq = this._seq = (this._seq || 0) + 1; this._token = http.getToken();
+    const seq = this._seq = (this._seq || 0) + 1; this._token = http.captureSession ? http.captureSession() : http.getToken();
     this.setData({ loading: false, error: '', latest: null, versions: [], imageUrl: '', flatImageUrl: '', imageError: '',
       resolution: resultDefaults.resolution, orientation: resultDefaults.orientation, outputPixels: resultDefaults.outputPixels, optionsReady: false, optionsError: false });
     if (!this._projectId || this._invalidVersion || !this._token) { this.setData({ error: '方案信息无效，请从「我的方案」重新进入' }); return; }
@@ -93,21 +93,28 @@ protectedPage({
     const selected = generationOptions.selection('ELEVATION', this.data);
     const resolution = selected.resolution;
     const orientation = selected.orientation;
-    return require('../../utils/generation-price').confirm('ELEVATION', 2, '原方案保留，本次重新生成立面，不包含局部修改。', { resolution: resolution }).then(priceConfirmation => {
-        if (!this.current(seq)) throw { cancelled: true };
-        const payload = { reason: '用户发起重新生成立面', count: 2, resolution: resolution, orientation: orientation, priceConfirmation: priceConfirmation };
-        const signature = JSON.stringify(payload);
-        if (signature !== this._revisionBody) {
-          this._revisionBody = signature;
-          this._revisionKey = 'revision-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-        }
-        return api.createRevisionRequest(this._projectId, payload, this._revisionKey).then(vo => {
-          if (!this.current(seq)) return;
-          if (!vo || !view.id(vo.jobId)) throw Error('任务编号无效');
-          Object.assign(getApp().globalData, { projectId: this._projectId, jobId: vo.jobId });
-          wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=2' });
-        });
-    }).catch(error => { if (this.current(seq) && !error.cancelled) wx.showToast({ title: view.errorText(error), icon: 'none' }); })
-      .then(() => { if (this.current(seq)) this.setData({ regenerating: false }); });
+    const attempts = require('../../utils/generation-attempt');
+    const slot = 'revision:' + this._projectId + ':' + this.data.latest.versionId;
+    const payload = { reason: '用户请求重新生成整张立面', count: 2, resolution, orientation };
+    let attempt;
+    try { attempt = attempts.begin(slot, payload); }
+    catch (error) { this.setData({ regenerating: false }); wx.showToast({ title: view.errorText(error), icon: 'none' }); return; }
+    const quote = attempt.confirmedPrice ? Promise.resolve(attempt.confirmedPrice)
+      : require('../../utils/generation-price').confirm('ELEVATION', 2, '原方案保留。按原尺寸与材质重新生成整张立面，不是局部修改。', { resolution });
+    return quote.then(priceConfirmation => {
+      if (!this.current(seq)) throw { cancelled: true };
+      attempt.confirmedPrice = priceConfirmation; attempts.save(slot, attempt);
+      attempts.submitted(slot, attempt);
+      return api.createRevisionRequest(this._projectId, { ...payload, priceConfirmation }, attempt.key);
+    }).then(vo => {
+      if (!this.current(seq)) return;
+      if (!vo || !view.id(vo.jobId)) throw Error('任务编号无效');
+      attempts.complete(slot, attempt);
+      Object.assign(getApp().globalData, { projectId: this._projectId, jobId: vo.jobId });
+      wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=2' });
+    }).catch(error => {
+      try { attempts.failed(slot, attempt, error); } catch (stale) { /* Session changed. */ }
+      if (this.current(seq) && !error.cancelled) wx.showToast({ title: view.errorText(error), icon: 'none' });
+    }).then(() => { if (this.current(seq)) this.setData({ regenerating: false }); });
   }
 });

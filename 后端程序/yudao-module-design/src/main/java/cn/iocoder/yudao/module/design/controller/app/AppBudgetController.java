@@ -91,11 +91,12 @@ public class AppBudgetController {
     public CommonResult<AppBudgetEstimateRespVO> createEstimate(
             @PathVariable("projectId") String projectId,
             @Valid @RequestBody AppBudgetEstimateCreateReqVO reqVO,
+            @RequestHeader("Idempotency-Key") String key,
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         long userId = requireAccountId(authorization);
         var estimate = budgetService.createEstimate(userId, Long.parseLong(projectId),
                 reqVO.getRegionCode(), reqVO.getStructureType(), reqVO.getMaterialGrade(),
-                reqVO.getBuildingArea(), reqVO.getResultVersionId(), reqVO.getUsageConfirmation());
+                reqVO.getBuildingArea(), reqVO.getResultVersionId(), reqVO.getUsageConfirmation(), key);
         return success(toVo(estimate));
     }
 

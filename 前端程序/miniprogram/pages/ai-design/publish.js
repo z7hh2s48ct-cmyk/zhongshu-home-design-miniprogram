@@ -14,7 +14,7 @@ protectedPage({
   onLoad() {
     const global = getApp().globalData;
     this._projectId = view.id(global.projectId); this._versionId = view.id(global.resultVersionId);
-    this._token = http.getToken(); this._closed = false;
+    this._token = http.captureSession ? http.captureSession() : http.getToken(); this._closed = false;
     const ready = !!(this._projectId && this._versionId && this._token);
     if (ready) this.loadVersion();
     else wx.showToast({ title: '请先完成方案设计', icon: 'none' });

@@ -2,6 +2,7 @@
 
 const { openFeature, protectedPage } = require('../../utils/access');
 const api = require('../../utils/api');
+const http = require('../../utils/request');
 const assets = require('../../utils/assets');
 const format = require('../../utils/format');
 
@@ -24,10 +25,14 @@ protectedPage({
     ]
   },
   onLoad() { this.loadPage(true); },
+  onUnload() { this._unloaded = true; this._listSeq = (this._listSeq || 0) + 1; },
   onReachBottom() { if (this.data.hasMore && !this.data.loading) this.loadPage(false); },
   loadPage(reset) {
-    if (this.data.loading) return;
+    if (this.data.loading && !reset) return;
+    const seq = this._listSeq = (this._listSeq || 0) + (reset ? 1 : 0);
     const self = this;
+    const session = http.captureSession ? http.captureSession() : http.getToken();
+    const current = () => seq === self._listSeq && !self._unloaded && (http.isSameSession ? http.isSameSession(session) : session === http.getToken());
     const cursor = reset ? null : this.data.cursor;
     self.setData({ loading: true });
     const filters = this.data.filters;
@@ -37,7 +42,8 @@ protectedPage({
       styleCode: filters.styleCode || undefined,
       floorCount: filters.floorCount || undefined
     };
-    api.listCases(params).then(function (page) {
+    return api.listCases(params).then(function (page) {
+      if (!current()) return;
       const startIndex = reset ? 0 : self.data.cases.length;
       const newCases = (page.list || []).map(function (c) {
         const tag = format.styleLabel(c.styleCode);
@@ -59,8 +65,9 @@ protectedPage({
         if (!item.coverAssetId) return;
         assets.fetchAssetDataUrl(item.coverAssetId).then(function (url) {
           // 回调期间可能已切换筛选/翻页：仅在索引仍有效且同一封面时回写
-          const current = self.data.cases[startIndex + i];
-          if (!current || current.coverAssetId !== item.coverAssetId) return;
+          if (!current()) return;
+          const coverTarget = self.data.cases[startIndex + i];
+          if (!coverTarget || coverTarget.coverAssetId !== item.coverAssetId) return;
           const update = {};
           update['cases[' + (startIndex + i) + '].image'] = url;
           self.setData(update);
@@ -68,6 +75,7 @@ protectedPage({
         }).catch(function () { /* 封面加载失败保留空态 */ });
       });
     }).catch(function () {
+      if (!current()) return;
       self.setData({ loading: false });
       wx.showToast({ title: '加载失败', icon: 'none' });
     });

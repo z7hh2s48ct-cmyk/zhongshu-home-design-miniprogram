@@ -110,7 +110,10 @@ function foregroundInvalidateNav(silent, token, epoch, code) {
 
 function sessionChanged() { return { code: 'SESSION_CHANGED', msg: '登录身份已变化，请重新进入' }; }
 
+function captureSession() { return getToken() ? { epoch: sessionEpoch } : null; }
+
 function isSameSession(token) {
+  if (token && typeof token === 'object') return !!getToken() && token.epoch === sessionEpoch;
   return !!token && (getToken() === token || !!(lastRotation && lastRotation.access === token
     && lastRotation.nextAccess === getToken() && lastRotation.nextGeneration === sessionGeneration));
 }
@@ -209,6 +212,7 @@ module.exports = {
   rawRequest: rawRequest,
   getToken: getToken,
   isSameSession: isSameSession,
+  captureSession: captureSession,
   setTokens: setTokens,
   clearTokens: clearTokens,
   config: config

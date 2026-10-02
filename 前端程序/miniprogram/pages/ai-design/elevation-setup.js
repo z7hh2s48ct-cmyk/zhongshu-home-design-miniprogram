@@ -39,6 +39,17 @@ protectedPage({
   },
   onShow() {
     const global = getApp().globalData;
+    try {
+      const saved = require('../../utils/generation-attempt').read('elevation:' + global.projectId);
+      if (saved && saved.payload && saved.payload.config) {
+        const config = saved.payload.config;
+        const options = generationOptions.selection('ELEVATION', config);
+        this.setData({ count: config.count, style: config.styleCode, roof: config.roofType,
+          wall: config.material, accent: config.color, resolution: options.resolution,
+          orientation: options.orientation, outputPixels: options.outputPixels,
+          orientations: generationOptions.orientations(options.resolution) });
+      }
+    } catch (error) { /* No authenticated persisted attempt. */ }
     this.setData({ flatLabel: global.flatLabel || '已选平面方案' });
     this.refreshPoints();
     require('../../utils/generation-price').refresh(this, 'ELEVATION');
@@ -83,7 +94,8 @@ protectedPage({
     const self = this;
     const imageOptions = generationOptions.selection('ELEVATION', this.data);
     self.setData({ creating: true });
-    const idemKey = 'elev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    const attempts = require('../../utils/generation-attempt');
+    const slot = 'elevation:' + projectId;
     const config = {
       count: self.data.count,
       styleCode: self.data.style,
@@ -91,16 +103,27 @@ protectedPage({
       material: self.data.wall,
       color: self.data.accent
     };
-    return require('../../utils/generation-price').confirm('ELEVATION', self.data.count, '', { resolution: imageOptions.resolution }).then(function (price) {
+    config.resolution = imageOptions.resolution; config.orientation = imageOptions.orientation;
+    let attempt;
+    try { attempt = attempts.begin(slot, { projectId: projectId, config: config }); }
+    catch (error) { self.setData({ creating: false }); wx.showToast({ title: error.msg || '无法保存请求', icon: 'none' }); return; }
+    const priceRequest = attempt.confirmedPrice ? Promise.resolve(attempt.confirmedPrice)
+      : require('../../utils/generation-price').confirm('ELEVATION', self.data.count, '', { resolution: imageOptions.resolution });
+    return priceRequest.then(function (price) {
+      attempt.confirmedPrice = price; attempts.save(slot, attempt);
       config.resolution = imageOptions.resolution;
       config.orientation = imageOptions.orientation;
       config.priceConfirmation = price;
       getApp().globalData.elevationConfig = Object.assign({}, config);
-      return api.createElevationJob(projectId, config, idemKey);
+      attempts.submitted(slot, attempt);
+      return api.createElevationJob(projectId, config, attempt.key);
     }).then(function (job) {
+      attempts.assertCurrent(attempt);
+      attempts.complete(slot, attempt);
       getApp().globalData.jobId = job.jobId;
       wx.redirectTo({ url: '/pages/ai-design/generating?stage=elevation&count=' + config.count });
     }).catch(function (err) {
+      try { attempts.failed(slot, attempt, err); } catch (stale) { /* Session changed. */ }
       if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '创建立面任务失败', icon: 'none' });
       self.setData({ creating: false });
     });

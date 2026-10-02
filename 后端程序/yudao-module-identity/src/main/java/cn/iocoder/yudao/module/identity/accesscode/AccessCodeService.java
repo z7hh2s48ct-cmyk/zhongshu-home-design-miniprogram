@@ -230,18 +230,16 @@ public class AccessCodeService {
 
     /** 掩码分页查询：任何路径都不返回明文或完整 hash */
     public List<AccessCodeRow> pageCodes(Long batchId, String status, int pageNo, int pageSize) {
-        StringBuilder where = new StringBuilder(" WHERE c.deleted = FALSE");
-        List<Object> args = new ArrayList<>();
-        if (batchId != null) {
-            where.append(" AND c.batch_id = ?");
-            args.add(batchId);
-        }
-        if (status != null && !status.isBlank()) {
-            where.append(" AND c.status = ?");
-            args.add(status);
-        }
-        args.add(pageSize);
-        args.add((long) Math.max(pageNo - 1, 0) * pageSize);
+        return pageCodes(batchId, status, null, pageNo, pageSize);
+    }
+
+    public List<AccessCodeRow> pageCodes(Long batchId, String status, String codeMask, int pageNo, int pageSize) {
+        CodeFilter filter = codeFilter(batchId, status, codeMask);
+        String where = filter.where();
+        List<Object> args = new ArrayList<>(filter.args());
+        int size = Math.max(1, Math.min(pageSize, 100));
+        args.add(size);
+        args.add((long) Math.max(pageNo - 1, 0) * size);
         return jdbcTemplate.query(
                 "SELECT c.id, c.batch_id, c.code_mask, c.status, "
                         + "(c.status = 'ACTIVE' AND (c.expires_at IS NULL OR c.expires_at > now()) "
@@ -264,19 +262,38 @@ public class AccessCodeService {
     }
 
     public long countCodes(Long batchId, String status) {
-        StringBuilder where = new StringBuilder(" WHERE deleted = FALSE");
+        return countCodes(batchId, status, null);
+    }
+
+    public long countCodes(Long batchId, String status, String codeMask) {
+        CodeFilter filter = codeFilter(batchId, status, codeMask);
+        Long n = jdbcTemplate.queryForObject("SELECT count(*) FROM design_access_code c "
+                        + "JOIN design_access_code_batch b ON b.id=c.batch_id AND b.deleted=FALSE" + filter.where(),
+                Long.class, filter.args().toArray());
+        return n == null ? 0 : n;
+    }
+
+    private record CodeFilter(String where, List<Object> args) { }
+
+    private CodeFilter codeFilter(Long batchId, String status, String codeMask) {
+        StringBuilder where = new StringBuilder(" WHERE c.deleted = FALSE");
         List<Object> args = new ArrayList<>();
         if (batchId != null) {
-            where.append(" AND batch_id = ?");
+            where.append(" AND c.batch_id = ?");
             args.add(batchId);
         }
         if (status != null && !status.isBlank()) {
-            where.append(" AND status = ?");
-            args.add(status);
+            where.append(" AND c.status = ?");
+            args.add(status.trim());
         }
-        Long n = jdbcTemplate.queryForObject("SELECT count(*) FROM design_access_code" + where,
-                Long.class, args.toArray());
-        return n == null ? 0 : n;
+        if (codeMask != null && !codeMask.isBlank()) {
+            String mask = codeMask.trim();
+            if (mask.length() > 64) throw new IllegalArgumentException("授权码展示过滤最多64字符");
+            // Literal substring: %, _ and SQL syntax are never wildcards or executable code.
+            where.append(" AND POSITION(lower(?) IN lower(c.code_mask)) > 0");
+            args.add(mask);
+        }
+        return new CodeFilter(where.toString(), args);
     }
 
     /**

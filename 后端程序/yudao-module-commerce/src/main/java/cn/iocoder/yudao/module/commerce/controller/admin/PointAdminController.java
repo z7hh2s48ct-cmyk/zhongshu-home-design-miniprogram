@@ -51,6 +51,7 @@ public class PointAdminController {
         result.setList(pointAccountService.pageLedger(userId, type, pageNo, pageSize).stream().map(row -> {
             AppPointLedgerItemRespVO vo = new AppPointLedgerItemRespVO();
             vo.setLedgerId(String.valueOf(row.id()));
+            vo.setUserId(String.valueOf(row.userId()));
             vo.setType(row.type());
             vo.setDelta((int) row.delta());
             vo.setBalanceAfter((int) (row.availableAfter() + row.reservedAfter()));

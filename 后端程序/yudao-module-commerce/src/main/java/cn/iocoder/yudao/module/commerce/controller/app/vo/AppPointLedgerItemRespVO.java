@@ -12,6 +12,9 @@ public class AppPointLedgerItemRespVO {
     @Schema(description = "流水编号")
     private String ledgerId;
 
+    @Schema(description = "流水所属用户编号，字符串避免雪花 ID 精度损失")
+    private String userId;
+
     @Schema(description = "流水类型：RECHARGE_BASE_CREDIT/RECHARGE_BONUS_CREDIT/FLAT_GENERATION_DEBIT/ELEVATION_GENERATION_DEBIT/TASK_SETTLEMENT_REFUND/MANUAL_CREDIT/MANUAL_DEBIT")
     private String type;
 

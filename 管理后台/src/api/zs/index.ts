@@ -67,6 +67,7 @@ export const revokeAccessGrant = (grantId) =>
 
 // ---------- 充值方案 ----------
 export const getPlanPage = (params) => request.get({ url: `${BASE}/recharge-plans`, params })
+export const getPlan = (planId) => request.get({ url: `${BASE}/recharge-plans/${planId}` })
 export const createPlan = (data) => request.post({ url: `${BASE}/recharge-plans`, data })
 export const updatePlan = (planId, data) =>
   request.patch({ url: `${BASE}/recharge-plans/${planId}`, data })

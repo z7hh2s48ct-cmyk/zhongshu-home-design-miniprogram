@@ -20,7 +20,7 @@ protectedPage({
     return false;
   },
   refresh() {
-    this.stop(); this._token = http.getToken(); this._attempts = 0;
+    this.stop(); this._token = http.captureSession ? http.captureSession() : http.getToken(); this._attempts = 0;
     this.setData({ canPay: false, price: '—', base: '—', bonus: '—', total: '—', paymentState: '', fulfillmentState: '', paymentStateText: '正在查询', paymentTitle: '订单详情', paymentHint: '到账结果以服务端确认为准', error: '' });
     if (!this.data.orderId || !this._token) { this.setData({ error: '订单信息缺失或登录已失效，请从充值记录重新进入' }); return; }
     this.setData({ polling: true }); return this.poll();

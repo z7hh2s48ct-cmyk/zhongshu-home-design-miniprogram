@@ -5,21 +5,22 @@ const path = require('node:path');
 const vm = require('node:vm');
 const view = require('../miniprogram/utils/record-view');
 
-function page(file, api, price) {
-  let definition; const state = { token: 'A', calls: [], global: { jobId: '71', projectId: '91' }, timers: [] };
+function page(file, api, price, shared) {
+  const attempts = shared ? shared.attempts : require('./helpers/generation-attempt')();
+  let definition; const state = shared ? shared.state : { token: 'A', calls: [], global: { jobId: '71', projectId: '91' }, timers: [] };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../miniprogram/pages/ai-design', file), 'utf8'), {
     require(name) { return {
       '../../utils/access': { protectedPage: value => { definition = value; } }, '../../utils/api': api,
       '../../utils/request': { getToken: () => state.token, isSameSession: token => token === state.token },
       '../../utils/record-view': view, '../../utils/assets': { fetchProfileAvatar: async id => 'asset://' + id,
-      fetchAssetDataUrl: async id => 'data:image/png;base64,' + id },
-      '../../utils/generation-price': price,
+      fetchAssetDataUrl: async id => state.assetLoader ? state.assetLoader(id) : 'data:image/png;base64,' + id },
+      '../../utils/generation-price': price, '../../utils/generation-attempt': attempts,
       '../../utils/generation-options': require('../miniprogram/utils/generation-options')
     }[name]; }, getApp: () => ({ globalData: state.global }),
     wx: Object.fromEntries(['redirectTo', 'navigateBack', 'navigateTo', 'showToast', 'showModal'].map(key => [key, value => state.calls.push([key, value])])),
     setTimeout: callback => { state.timers.push(callback); return state.timers.length; }, clearTimeout() {}, setInterval: () => 0, clearInterval() {}
   });
-  return { state, api, page: { ...definition, data: structuredClone(definition.data), setData(patch) {
+  return { state, api, attempts, page: { ...definition, data: structuredClone(definition.data), setData(patch) {
     // 与真机 setData 对齐：支持 'a[0].b' 路径键
     for (const [key, value] of Object.entries(patch)) {
       if (!/[\[.]/.test(key)) { this.data[key] = value; continue; }
@@ -126,4 +127,34 @@ test('结果页规格读取失败时不按默认2K重生，重试成功后才开
   fail = false; await e.page.loadGenerationOptions();
   assert.equal(e.page.data.optionsReady, true); assert.equal(e.page.data.resolution, '4K');
   await e.page.regenerate(); assert.equal(revisions, 1);
+});
+
+test('explicit revision price rejection keeps operation key but reconfirms v2 rather than replaying rejected v1', async () => {
+  const requests=[];let version=1;
+  const e=page('result.js',{getResultVersions:async()=>({list:[{versionId:'19',version:1,superseded:false}]}),
+    getProject:async()=>({resolution:'4K',orientation:'PORTRAIT'}),
+    createRevisionRequest:async(...args)=>{requests.push(args);if(requests.length===1)throw {code:1072000001};return {jobId:'72'};}},
+    {confirm:async()=>({ruleId:'fixture',ruleVersion:version})});
+  e.page.onLoad({projectId:'91'});await tick();await tick();await e.page.regenerate();version=2;await e.page.regenerate();
+  assert.equal(requests[0][2],requests[1][2]);assert.equal(requests[0][1].priceConfirmation.ruleVersion,1);assert.equal(requests[1][1].priceConfirmation.ruleVersion,2);
+});
+
+test('ambiguous elevation reload displays frozen MODERN/2K/four candidates and replays same operation', async () => {
+  const requests=[];let fail=true;const api={getPointAccount:async()=>({availablePoints:1000}),createElevationJob:async(...args)=>{requests.push(args);if(fail)throw Error('lost response');return{jobId:'72'};}};
+  const price={refresh() {},confirm:async()=>({ruleId:'fixture',ruleVersion:1})};
+  let e=page('elevation-setup.js',api,price);e.page.setData({quoteReady:true,style:'MODERN',roof:'FLAT_ROOF',wall:'GREY_STONE',accent:'BLACK',count:4,resolution:'2K',orientation:'PORTRAIT'});
+  await e.page.generate();e=page('elevation-setup.js',api,price,e);e.page.onShow();
+  assert.equal(e.page.data.style,'MODERN');assert.equal(e.page.data.resolution,'2K');assert.equal(e.page.data.count,4);assert.equal(e.page.data.roof,'FLAT_ROOF');
+  e.page.setData({quoteReady:true});fail=false;await e.page.generate();
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[0])),JSON.parse(JSON.stringify(requests[1])));
+});
+
+test('candidate ticket and decode failures retry original asset without another paid job',async()=>{
+  let reads=0;const e=page('generating.js',{getAiJob:async()=>({jobId:'71',projectId:'91',phase:'FLAT',status:'SUCCEEDED',requestedCount:1,acceptedCount:1}),
+    getProject:async()=>({candidates:[{candidateId:'c1',jobId:'71',assetId:'a1',slotNo:1}]})});
+  e.state.assetLoader=async id=>{assert.equal(id,'a1');reads++;if(reads===1)throw Error('expired ticket');return'original-asset';};
+  e.page.onLoad({});await tick();await tick();assert.match(e.page.data.candidates[0].imageError,/重试/);
+  await e.page.retryCandidateImage({currentTarget:{dataset:{id:'c1'}}});assert.equal(e.page.data.candidates[0].url,'original-asset');
+  e.page.candidateImageError({currentTarget:{dataset:{id:'c1'}}});assert.equal(e.page.data.candidates[0].url,'');
+  await e.page.retryCandidateImage({currentTarget:{dataset:{id:'c1'}}});assert.equal(reads,3);assert.equal(e.page.data.candidates[0].url,'original-asset');e.page.onUnload();
 });

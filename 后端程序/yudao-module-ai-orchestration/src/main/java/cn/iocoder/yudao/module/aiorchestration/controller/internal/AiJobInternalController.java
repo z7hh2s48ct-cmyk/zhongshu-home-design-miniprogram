@@ -97,12 +97,17 @@ public class AiJobInternalController {
     }
 
     @PostMapping("/{jobId}/prompt-calls")
-    @Operation(summary = "提示词模型调用前幂等扣点")
-    public CommonResult<Boolean> chargePromptCall(@PathVariable("jobId") String jobId,
-                                                   HttpServletRequest request,
-                                                   @RequestBody(required = false) java.util.Map<String, Object> body) {
+    public CommonResult<String> reservePromptCall(@PathVariable("jobId") String jobId,HttpServletRequest request,
+                                                 @RequestBody java.util.Map<String,Object> body) {
         requireSignature(request);
-        return success(settlementService.chargePromptCall(Long.parseLong(jobId)));
+        return success(settlementService.reservePromptCall(Long.parseLong(jobId),((Number)body.get("attemptNo")).intValue(),((Number)body.get("fencingToken")).longValue()));
+    }
+
+    @PostMapping("/{jobId}/prompt-call-events")
+    public CommonResult<Boolean> finishPromptCall(@PathVariable("jobId") String jobId,HttpServletRequest request,
+                                                 @RequestBody java.util.Map<String,Object> body) {
+        requireSignature(request);
+        return success(settlementService.finishPromptCall(Long.parseLong(jobId),((Number)body.get("attemptNo")).intValue(),((Number)body.get("fencingToken")).longValue(),String.valueOf(body.get("outcome")),(String)body.get("callId"),(String)body.get("responseHash")));
     }
 
     @PostMapping("/{jobId}/progress-events")

@@ -27,6 +27,22 @@ public class UsagePriceRuleAdminController {
         this.audit = audit;
     }
 
+    @GetMapping("/prompt-reconciliations")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.USAGE_PRICE_QUERY + "')")
+    public CommonResult<java.util.List<Map<String,Object>>> pendingPrompts() { return success(prices.pendingPrompts()); }
+
+    public record PromptDecision(boolean supplierCalled,String evidence) { }
+    @PostMapping("/prompt-reconciliations/{jobId}")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.USAGE_PRICE_MANAGE + "')")
+    @org.springframework.transaction.annotation.Transactional
+    public CommonResult<Boolean> reconcilePrompt(@PathVariable String jobId,@RequestBody PromptDecision decision) {
+        if (decision.evidence()==null || decision.evidence().isBlank() || decision.evidence().length()>500) throw new IllegalArgumentException("Supplier reconciliation evidence required");
+        boolean changed=prices.reconcilePrompt(jobId,decision.supplierCalled());
+        audit.record(AuditEventMessage.builder().eventType("AI_PROMPT_RECONCILED").action("RECONCILE").bizType("ai_job").bizId(jobId)
+                .actorType(AuditEventMessage.ActorType.ADMIN).result(AuditEventMessage.AuditResult.SUCCESS).actorId(String.valueOf(SecurityFrameworkUtils.getLoginUserId())).detail(Map.of("supplierCalled",decision.supplierCalled(),"evidence",decision.evidence())).build());
+        return success(changed);
+    }
+
     public record CreateRule(String product, long pointCost, Instant effectiveAt, Instant expiresAt) { }
 
     @GetMapping

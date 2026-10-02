@@ -109,6 +109,8 @@ class BudgetAccountPriceT14ContractTest {
         var priceController = new AppAccountPriceController();
         ReflectionTestUtils.setField(priceController, "accountPriceService", accounts);
         ReflectionTestUtils.setField(priceController, "identitySessionPort", identities);
+        ReflectionTestUtils.setField(priceController, "verifiedAccountRateLimiter",
+                mock(cn.iocoder.yudao.framework.ratelimiter.core.VerifiedAccountRateLimiter.class));
         var catalogController = new AppBudgetCatalogController();
         ReflectionTestUtils.setField(catalogController, "budgetCatalogService",
                 new cn.iocoder.yudao.module.design.budget.BudgetCatalogService(ds, transactions, new JdbcAuditPort(ds)));

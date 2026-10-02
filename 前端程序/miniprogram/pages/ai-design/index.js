@@ -6,6 +6,7 @@ const config = require('../../utils/config');
 const sha256 = require('../../utils/sha256');
 const designInputs = require('../../utils/design-inputs');
 const generationOptions = require('../../utils/generation-options');
+const attempts = require('../../utils/generation-attempt');
 const flatDefaults = generationOptions.selection('FLAT');
 const NOTE_SUGGESTIONS = ['老人房设在一楼', '客餐厅朝南', '厨房设在一楼', '保留露台', '增加储物空间'];
 
@@ -33,12 +34,37 @@ protectedPage({
     resolutions: generationOptions.RESOLUTIONS, orientations: generationOptions.orientations(flatDefaults.resolution)
   },
   onLoad(options) {
+    try {
+      const saved = attempts.read('initial-flat');
+      if (saved && saved.payload && saved.payload.body) {
+        const body = saved.payload.body, inputs = body.requirementInputs || {};
+        const options = saved.payload.imageOptions;
+        const refCase = body.sourceType === 'CASE_REFERENCE' ? { caseId: body.refCaseId } : null;
+        this._recoveringAttempt = true;
+        this._lastAttemptKey = saved.key;
+        this._lastRefCaseId = refCase && String(refCase.caseId);
+        this.setData({ mode: saved.payload.mode == null ? (inputs.faceWidthM != null ? 0 : 1) : saved.payload.mode, refCase: refCase, count: saved.payload.count,
+          faceWidth: inputs.faceWidthM == null ? '' : String(inputs.faceWidthM), depth: inputs.depthM == null ? '' : String(inputs.depthM),
+          floorIndex: designInputs.FLOOR_OPTIONS.findIndex(o => o.count === inputs.floorCount),
+          familyIndex: designInputs.indexOfFamily(inputs.family), note: inputs.note || '', prompt: inputs.prompt || '',
+          sketchAssetId: body.sketchAssetId || null, resolution: options.resolution, orientation: options.orientation,
+          pendingGeneration: true });
+      }
+    } catch (error) { /* No authenticated persisted attempt. */ }
     if (options && options.caseId) return; // 由 onShow 统一读全局参考案例
   },
   onShow() {
-    const refCase = getApp().globalData.refCase;
+    // A different entry may have accepted and cleared the shared operation while this
+    // tab was cached. A fresh appearance starts a new design rather than retaining a
+    // completed operation marker forever.
+    if (this._lastAttemptKey && !attempts.read('initial-flat')) {
+      this._lastAttemptKey = null;
+      this._recoveringAttempt = false;
+      this.setData({ creating: false, pendingGeneration: false });
+    }
+    const refCase = this._recoveringAttempt ? this.data.refCase : getApp().globalData.refCase;
     const patch = { refCase: refCase };
-    if (refCase) {
+    if (refCase && String(refCase.caseId) !== this._lastRefCaseId) {
       const parts = [];
       if (refCase.buildingArea) parts.push(refCase.buildingArea + '㎡');
       if (refCase.floorCount) parts.push(refCase.floorCount + '层');
@@ -50,6 +76,7 @@ protectedPage({
       const floorIndex = designInputs.FLOOR_OPTIONS.findIndex(function (o) { return o.count === floorCount; });
       if (floorIndex >= 0) patch.floorIndex = floorIndex;
     }
+    this._lastRefCaseId = refCase && String(refCase.caseId);
     this.setData(patch);
     this.refreshPoints();
     require('../../utils/generation-price').refresh(this, 'FLAT');
@@ -167,11 +194,16 @@ protectedPage({
 
   generate() {
     if (this.data.creating || !this.data.quoteReady) return;
+    if (this._lastAttemptKey && !attempts.read('initial-flat')) {
+      this.setData({ pendingGeneration: false });
+      wx.showToast({ title: '上次任务已由其他入口受理，请到我的方案查看', icon: 'none' });
+      return;
+    }
     const count = this.data.count;
     const imageOptions = generationOptions.selection('FLAT', this.data);
     const self = this;
     self.setData({ creating: true });
-    const idemKey = 'proj-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    let attempt; const slot = 'initial-flat';
     const refCase = this.data.refCase;
     // T15：两种模式都全量上送需求输入（面宽/进深/层数/家庭需求/补充需求等），后端冻结进需求快照供 AI 提示词使用
     const built = designInputs.buildRequirementInputs(this.data.mode, this.data);
@@ -180,31 +212,48 @@ protectedPage({
       self.setData({ creating: false });
       return;
     }
-    const body = refCase && refCase.caseId
+    const body = this.data.mode === 0 && refCase && refCase.caseId
       ? { sourceType: 'CASE_REFERENCE', refCaseId: String(refCase.caseId), requirementInputs: built.inputs }
       : {
           sourceType: 'SELF_UPLOAD',
           sketchAssetId: this.data.sketchAssetId || undefined,
           requirementInputs: built.inputs
         };
+    try { attempt = attempts.begin(slot, { body: body, mode: this.data.mode, count: count, imageOptions: { resolution: imageOptions.resolution, orientation: imageOptions.orientation } }); }
+    catch (error) { self.setData({ creating: false }); wx.showToast({ title: error.msg || '无法保存生成请求', icon: 'none' }); return; }
+    this._lastAttemptKey = attempt.key;
     let confirmedPrice;
-    return require('../../utils/generation-price').confirm('FLAT', count, '', { resolution: imageOptions.resolution }).then(function (price) {
+    const priceRequest = attempt.confirmedPrice ? Promise.resolve(attempt.confirmedPrice)
+      : require('../../utils/generation-price').confirm('FLAT', count, '', { resolution: imageOptions.resolution });
+    return priceRequest.then(function (price) {
       confirmedPrice = price;
-      return api.createProject(body);
+      attempt.confirmedPrice = price; attempts.save(slot, attempt);
+      if (attempt.projectId) return { projectId: attempt.projectId };
+      attempts.submitted(slot, attempt);
+      return api.createProject(body, attempt.key);
     }).then(function (project) {
+      attempts.assertCurrent(attempt);
       const projectId = project && project.projectId;
       if (!projectId) throw { msg: '创建设计项目失败' };
+      attempt.projectId = projectId; attempts.save(slot, attempt);
       getApp().globalData.projectId = projectId;
-      getApp().globalData.refCase = null;
       getApp().globalData.resultVersionId = null;
-      return api.createFlatJob(projectId, count, idemKey, confirmedPrice,
+      attempts.submitted(slot, attempt);
+      return api.createFlatJob(projectId, count, attempt.key, confirmedPrice,
         { resolution: imageOptions.resolution, orientation: imageOptions.orientation }).then(function (job) {
+        attempts.assertCurrent(attempt);
+        attempts.complete(slot, attempt);
+        self._lastAttemptKey = null;
+        self._recoveringAttempt = false; self.setData({ pendingGeneration: false });
+        getApp().globalData.refCase = null;
         getApp().globalData.jobId = job.jobId;
         wx.redirectTo({ url: '/pages/ai-design/generating?stage=plane&count=' + count });
       });
     }).catch(function (err) {
+      try { if (attempts.failed(slot, attempt, err)) self._lastAttemptKey = null; } catch (stale) { /* Do not modify another session. */ }
       if (!err || !err.cancelled) wx.showToast({ title: (err && err.msg) || '创建任务失败', icon: 'none' });
-      self.setData({ creating: false });
+      let pending = false; try { pending = !!attempts.read(slot); } catch (unavailable) { /* Logged out. */ }
+      self.setData({ creating: false, pendingGeneration: pending });
     });
   }
 });

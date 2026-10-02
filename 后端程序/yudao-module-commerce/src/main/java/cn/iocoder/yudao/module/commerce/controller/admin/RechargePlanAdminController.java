@@ -69,6 +69,17 @@ public class RechargePlanAdminController {
         return success(new PageResult<>(list, total == null ? 0 : total.longValue()));
     }
 
+    @GetMapping("/{planId}")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.RECHARGE_PLAN_QUERY + "')")
+    public CommonResult<Map<String, Object>> getPlan(@PathVariable("planId") String planId) {
+        var row = jdbc.queryForMap("SELECT id,name,amount_cents,base_points,bonus_points,recommended,sort,enabled "
+                + "FROM recharge_plan WHERE id=? AND deleted=FALSE", Long.parseLong(planId));
+        return success(Map.of("id", String.valueOf(row.get("id")), "name", row.get("name"),
+                "amountCents", row.get("amount_cents"), "basePoints", row.get("base_points"),
+                "bonusPoints", row.get("bonus_points"), "recommended", row.get("recommended"),
+                "sort", row.get("sort"), "enabled", row.get("enabled")));
+    }
+
     @jakarta.annotation.Resource
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
@@ -91,8 +102,19 @@ public class RechargePlanAdminController {
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.RECHARGE_PLAN_MANAGE + "')")
     public CommonResult<Boolean> updatePlan(@PathVariable("planId") String planId,
                                             @RequestBody Map<String, Object> body) {
+        if (body.keySet().stream().anyMatch(key -> !List.of("name", "enabled", "recommended", "sort").contains(key))) {
+            throw new IllegalArgumentException("金额和设计点创建后不可修改，请新建充值方案");
+        }
         var sets = new java.util.ArrayList<String>();
         var args = new java.util.ArrayList<Object>();
+        if (body.containsKey("name")) {
+            if (!(body.get("name") instanceof String name) || name.isBlank() || name.length() > 40) throw new IllegalArgumentException("方案名称无效");
+            sets.add("name = ?"); args.add(((String) body.get("name")).trim());
+        }
+        for (String flag : List.of("enabled", "recommended")) {
+            if (body.containsKey(flag) && !(body.get(flag) instanceof Boolean)) throw new IllegalArgumentException("方案状态必须为布尔值");
+        }
+        if (body.containsKey("sort") && (!(body.get("sort") instanceof Number sort) || sort.doubleValue() != sort.intValue() || sort.intValue() < 0 || sort.intValue() > 999)) throw new IllegalArgumentException("排序无效");
         if (body.containsKey("enabled")) {
             sets.add("enabled = ?"); args.add(Boolean.TRUE.equals(body.get("enabled")));
         }
@@ -108,7 +130,7 @@ public class RechargePlanAdminController {
         sets.add("version = version + 1"); sets.add("update_time = now()");
         args.add(Long.parseLong(planId));
         int updated = jdbc.update(
-                "UPDATE recharge_plan SET " + String.join(", ", sets) + " WHERE id = ?",
+                "UPDATE recharge_plan SET " + String.join(", ", sets) + " WHERE id = ? AND deleted = FALSE",
                 args.toArray());
         return success(updated == 1);
     }
