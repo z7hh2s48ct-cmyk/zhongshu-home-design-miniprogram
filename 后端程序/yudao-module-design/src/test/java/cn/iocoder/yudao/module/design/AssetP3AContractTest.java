@@ -137,7 +137,10 @@ class AssetP3AContractTest {
         var ticket = assetService.requestCasePreviewTicket(502, id, Long.parseLong(replaced.assetId()));
         assertThat(assetService.readCasePreviewTicket(502, id, Long.parseLong(replaced.assetId()), ticket.getToken()).content()).isNotEmpty();
         assertThat(cases.publish(id, "501")).isTrue();
-        assertThatThrownBy(() -> companyImages.upload(id, 501, 4, "COVER", null, "image/png", pngBytes(32,32), true, false)).isInstanceOf(ServiceException.class);
+        var publishedReplacement = companyImages.upload(id, 501, 4, "COVER", null, "image/png", pngBytes(32,32), true, false);
+        assertThat(publishedReplacement.version()).isEqualTo(5);
+        assertThat(cases.getAdminCase(id).orElseThrow().publicationStatus()).isEqualTo("PUBLISHED");
+        assertThat(rightsGrantService.hasEffectiveGrant(Long.parseLong(publishedReplacement.assetId()), "PUBLIC_DISPLAY")).isTrue();
     }
 
     @Test

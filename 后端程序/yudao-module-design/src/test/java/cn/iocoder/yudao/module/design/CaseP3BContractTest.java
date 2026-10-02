@@ -145,6 +145,7 @@ class CaseP3BContractTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled("Superseded: published company cases are editable with CAS")
     void publishedCompanyCaseCannotBeChangedWithoutWithdrawal() {
         long id = createAndPublish(120, "MODERN");
         assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "直接改线上内容", null, "MODERN", 2, 120, null, null, null, null))
@@ -359,6 +360,21 @@ class CaseP3BContractTest {
         page1.list().forEach(c -> seen.add(c.caseId()));
         page2.list().forEach(c -> seen.add(c.caseId()));
         assertThat(seen).doesNotHaveDuplicates().hasSize(4);
+    }
+
+    @Test
+    void publishedCompanyCaseEditingPreservesImmutableVersionAndCas() {
+        long id = createAndPublish(120, "MODERN");
+        assertThat(catalog.requireImageEditable(id, 1, "COVER", null).publicationStatus())
+                .isEqualTo("PUBLISHED");
+        catalog.updateCase(id, ADMIN, 1, "published edit", null, "MODERN", 2, 120,
+                null, null, null, null);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(2);
+        assertThat(catalog.getAdminCase(id).orElseThrow().publicationStatus()).isEqualTo("PUBLISHED");
+        assertThat(jdbc.queryForObject("SELECT creator FROM design_case_version WHERE case_id=? AND version=2",
+                String.class, id)).isEqualTo(String.valueOf(ADMIN));
+        assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "stale", null, "MODERN", 2,
+                120, null, null, null, null)).isInstanceOf(ServiceException.class);
     }
 
     private static class ExecutorServicePool {

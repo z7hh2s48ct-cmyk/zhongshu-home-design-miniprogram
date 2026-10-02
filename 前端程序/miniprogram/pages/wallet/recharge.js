@@ -16,11 +16,37 @@ protectedPage({
     iosBlocked: false
   },
   onLoad() {
+    this._active = true;
+    this._lifecycleToken = 1;
+    this._pollTimer = null;
     // 平台判定放最前：先决定支付入口是否可用，再拉方案，避免 iOS 端闪现支付按钮。
     this.setData({ iosBlocked: platform.isIOS() });
     this.loadPlans();
   },
-  onShow() { this.refreshPoints(); },
+  onShow() {
+    this._active = true;
+    this._lifecycleToken = (this._lifecycleToken || 0) + 1;
+    this.refreshPoints();
+  },
+  onHide() { this.cancelPaymentPolling(); },
+  onUnload() { this.cancelPaymentPolling(); },
+  cancelPaymentPolling() {
+    this._active = false;
+    this._lifecycleToken = (this._lifecycleToken || 0) + 1;
+    if (this._pollTimer) clearTimeout(this._pollTimer);
+    this._pollTimer = null;
+    this.setData({ paying: false });
+  },
+  isCurrentLifecycle(token) {
+    return this._active && this._lifecycleToken === token;
+  },
+  schedulePaymentPoll(callback, token) {
+    if (!this.isCurrentLifecycle(token)) return;
+    this._pollTimer = setTimeout(() => {
+      this._pollTimer = null;
+      if (this.isCurrentLifecycle(token)) callback();
+    }, 800);
+  },
   refreshPoints() {
     const self = this;
     api.getPointAccount().then(function (account) {
@@ -62,9 +88,11 @@ protectedPage({
     // 涉及真实下单：点击防重 + 幂等键，快速连点不重复建单
     if (this.data.paying) return;
     const self = this;
+    const lifecycleToken = self._lifecycleToken;
     self.setData({ paying: true });
     const idemKey = 'recharge-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     api.createRechargeOrder(current.planId, idemKey).then(function (order) {
+      if (!self.isCurrentLifecycle(lifecycleToken)) return;
       // T13-24：真实支付通道下发 payParams 时拉起微信支付；Stub 通道无该字段，直接进入查单页
       if (order && order.payParams && typeof wx.requestPayment === 'function') {
         self.invokePayment(order, order.payParams);
@@ -72,6 +100,7 @@ protectedPage({
       }
       self.toSuccessPage(order);
     }).catch(function (err) {
+      if (!self.isCurrentLifecycle(lifecycleToken)) return;
       wx.showToast({ title: (err && err.msg) || '创建订单失败', icon: 'none' });
       self.setData({ paying: false });
     });
@@ -83,9 +112,13 @@ protectedPage({
    */
   invokePayment(order, payParams) {
     const self = this;
+    const lifecycleToken = self._lifecycleToken;
     wx.requestPayment(Object.assign({}, payParams, {
-      success: function () { self.toSuccessPage(order); },
+      success: function () {
+        if (self.isCurrentLifecycle(lifecycleToken)) self.toSuccessPage(order);
+      },
       fail: function (res) {
+        if (!self.isCurrentLifecycle(lifecycleToken)) return;
         const errMsg = (res && res.errMsg) || '';
         // P3-9（报告 15）：弹窗取消/异常不代表未扣款——模拟通道自动确认可能晚于
         // fail 回调，真实微信支付回调丢失同理。轮询查单（首次 + 1 次重试）对齐真实
@@ -95,15 +128,17 @@ protectedPage({
         const pollOrder = function () {
           attempts += 1;
           api.getRechargeOrder(order.orderId).then(function (fresh) {
+            if (!self.isCurrentLifecycle(lifecycleToken)) return;
             if (fresh && (fresh.fulfillmentState === 'CREDITED' || fresh.paymentState === 'SUCCEEDED')) {
               self.toSuccessPage(fresh);
               return;
             }
-            if (attempts < 2) { setTimeout(pollOrder, 800); return; }
+            if (attempts < 2) { self.schedulePaymentPoll(pollOrder, lifecycleToken); return; }
             self.setData({ paying: false });
             self.handlePaymentFailure(order, errMsg);
           }).catch(function () {
-            if (attempts < 2) { setTimeout(pollOrder, 800); return; }
+            if (!self.isCurrentLifecycle(lifecycleToken)) return;
+            if (attempts < 2) { self.schedulePaymentPoll(pollOrder, lifecycleToken); return; }
             self.setData({ paying: false });
             self.handlePaymentFailure(order, errMsg);
           });
@@ -136,15 +171,18 @@ protectedPage({
    */
   offerResumePayment(order) {
     const self = this;
+    const lifecycleToken = self._lifecycleToken;
     wx.showModal({
       title: '继续支付',
       content: '订单尚未完成支付，是否继续？',
       confirmText: '继续支付',
       cancelText: '稍后再说',
       success: function (modalRes) {
+        if (!self.isCurrentLifecycle(lifecycleToken)) return;
         if (!modalRes.confirm) return;
         self.setData({ paying: true });
         api.getPayParams(order.orderId).then(function (params) {
+          if (!self.isCurrentLifecycle(lifecycleToken)) return;
           if (params && typeof wx.requestPayment === 'function') {
             self.invokePayment(order, params);
           } else {
@@ -152,6 +190,7 @@ protectedPage({
             self.toSuccessPage(order);
           }
         }).catch(function () {
+          if (!self.isCurrentLifecycle(lifecycleToken)) return;
           self.setData({ paying: false });
           wx.showToast({ title: '订单状态已变更，请查看充值记录', icon: 'none' });
         });
@@ -159,6 +198,7 @@ protectedPage({
     });
   },
   toSuccessPage(order) {
+    if (!this._active) return;
     this.setData({ paying: false });
     if (!order || !view.id(order.orderId)) { wx.showToast({ title: '订单未确认，请查看充值记录', icon: 'none' }); return; }
     wx.navigateTo({

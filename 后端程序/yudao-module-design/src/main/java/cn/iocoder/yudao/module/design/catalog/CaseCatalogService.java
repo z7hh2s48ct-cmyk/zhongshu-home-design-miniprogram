@@ -100,19 +100,17 @@ public class CaseCatalogService {
             if (currentVersion == null || currentVersion != expectedVersion) {
                 throw exception(STATE_VERSION_CONFLICT);
             }
-            if ("PUBLISHED".equals(c.get("publication_status")))
-                throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "已上架案例请先下架后再编辑");
             long newVersionId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO design_case_version (id, case_id, version, title, description, style_code, "
-                            + "floor_count, building_area, face_width, depth, rooms, tags) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb))",
+                            + "floor_count, building_area, face_width, depth, rooms, tags, creator) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?)",
                     newVersionId, caseId, expectedVersion + 1, title, description, styleCode,
-                    floorCount, buildingArea, faceWidth, depth, toJson(rooms), toJsonStrings(tags));
+                    floorCount, buildingArea, faceWidth, depth, toJson(rooms), toJsonStrings(tags), String.valueOf(adminUserId));
             jdbcTemplate.update(
-                    "UPDATE design_case SET current_version_id = ?, update_time = now() "
+                    "UPDATE design_case SET current_version_id = ?, updater = ?, update_time = now() "
                             + "WHERE id = ? AND current_version_id = ?",
-                    newVersionId, caseId, currentVersionId);
+                    newVersionId, String.valueOf(adminUserId), caseId, currentVersionId);
             // 资产关系随版本继承（资产行数少，Java 端逐行生成新 ID）
             var assets = jdbcTemplate.queryForList(
                     "SELECT asset_id, asset_role, floor_no FROM design_case_asset "
@@ -134,8 +132,8 @@ public class CaseCatalogService {
     /** 上传前后都校验状态与版本，避免慢扫描期间发生覆盖。 */
     public CaseDetail requireImageEditable(long caseId, long expectedVersion, String role, Integer floorNo) {
         var detail = getAdminCase(caseId).orElseThrow(() -> exception(RESOURCE_FORBIDDEN));
-        if (!"COMPANY".equals(detail.sourceType()) || "PUBLISHED".equals(detail.publicationStatus()))
-            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "仅公司草稿或已下架案例可更换图纸，请先下架");
+        if (!"COMPANY".equals(detail.sourceType()))
+            throw new ServiceException(RESOURCE_FORBIDDEN.getCode(), "Only company cases may replace images");
         if (detail.version() != expectedVersion) throw exception(STATE_VERSION_CONFLICT);
         if (role == null || !List.of("COVER", "ELEVATION", "FLOOR_PLAN").contains(role)
                 || ("FLOOR_PLAN".equals(role) ? floorNo == null || floorNo < 1 || floorNo > detail.floorCount() : floorNo != null))
