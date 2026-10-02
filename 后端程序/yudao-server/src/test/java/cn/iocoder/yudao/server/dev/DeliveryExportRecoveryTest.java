@@ -30,13 +30,16 @@ class DeliveryExportRecoveryTest {
         delivery=new JdbcDeliveryPort(ds); messages=new MessageService(ds);
     }
     @BeforeEach void reset() {
-        jdbc.execute("TRUNCATE export_job,design_point_ledger,user_message,message_receipt,refund_order,recharge_order,case_submission");
+        jdbc.execute("TRUNCATE export_job,design_point_ledger,audit_event,user_message,message_receipt,refund_order,recharge_order,case_submission");
         storage=mock(ObjectStoragePort.class);objects=new ConcurrentHashMap<>();
         doAnswer(call->{objects.put(call.getArgument(0),call.getArgument(1));return null;}).when(storage).putObject(anyString(),any());
         worker=new ZhongshuExportWorker(ds,delivery,storage);
     }
     long job(Map<String,Object> filters) {
-        return delivery.createExportJob(ExportJobRequest.builder().jobType("POINT_LEDGER").requesterType("ADMIN").requesterUserId(1L).filterSnapshot(filters).build());
+        return job("POINT_LEDGER", filters);
+    }
+    long job(String jobType, Map<String,Object> filters) {
+        return delivery.createExportJob(ExportJobRequest.builder().jobType(jobType).requesterType("ADMIN").requesterUserId(1L).filterSnapshot(filters).build());
     }
     void ledger(long id,long user,String reason) {
         jdbc.update("INSERT INTO design_point_ledger(id,user_id,type,delta,available_after,reserved_after,reason) VALUES(?,?,'MANUAL_CREDIT',1,1,0,?)",id,user,reason);
@@ -51,6 +54,24 @@ class DeliveryExportRecoveryTest {
         assertThat(delivery.getExportJob(id).getStatus().name()).isEqualTo("COMPLETED");
         String csv=content(id);assertThat(csv).contains("\"'=SAFE_MARKER_601\"").doesNotContain("SHOULD_NOT_APPEAR");
         assertThat(csv.lines().count()).isEqualTo(602);
+    }
+    @Test void auditExportAppliesEventTypeAndTimeFilters() {
+        jdbc.update("INSERT INTO audit_event(event_type,actor_type,action,create_time) VALUES('ORDER_CREDITED','SYSTEM','CREDIT','2026-01-02T00:00:00Z')");
+        jdbc.update("INSERT INTO audit_event(event_type,actor_type,action,create_time) VALUES('ORDER_REFUND_REVERSED','SYSTEM','REFUND','2026-01-02T00:00:00Z')");
+        jdbc.update("INSERT INTO audit_event(event_type,actor_type,action,create_time) VALUES('ORDER_CREDITED','SYSTEM','CREDIT','2000-01-01T00:00:00Z')");
+        long id=job("AUDIT_EVENTS", Map.of("type","ORDER_CREDITED","from","2026-01-01T00:00:00Z"));
+        worker.processClaim(id);
+        assertThat(delivery.getExportJob(id).getStatus().name()).isEqualTo("COMPLETED");
+        assertThat(content(id)).contains("ORDER_CREDITED").doesNotContain("ORDER_REFUND_REVERSED");
+    }
+    @Test void exportsBudgetEstimateAndAiPromptLedgerTypes() {
+        ledger(1,7,"budget");jdbc.update("UPDATE design_point_ledger SET type='BUDGET_ESTIMATE_DEBIT' WHERE id=1");
+        ledger(2,7,"prompt");jdbc.update("UPDATE design_point_ledger SET type='AI_PROMPT_DEBIT' WHERE id=2");
+        long budget=job(Map.of("type","BUDGET_ESTIMATE_DEBIT"));
+        long prompt=job(Map.of("type","AI_PROMPT_DEBIT"));
+        worker.processClaim(budget);worker.processClaim(prompt);
+        assertThat(content(budget)).contains("BUDGET_ESTIMATE_DEBIT").doesNotContain("AI_PROMPT_DEBIT");
+        assertThat(content(prompt)).contains("AI_PROMPT_DEBIT").doesNotContain("BUDGET_ESTIMATE_DEBIT");
     }
     @Test void expiredLeaseCanBeRecoveredAndCannotOverwriteNewOwner() {
         ledger(1,7,"row");long id=job(Map.of());

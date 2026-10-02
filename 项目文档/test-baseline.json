@@ -5,19 +5,19 @@
   "inventory": {
     "mini": {
       "executableFiles": 39,
-      "declaredTestCalls": 349
+      "declaredTestCalls": 353
     },
     "backend": {
       "ordinaryFiles": 65,
-      "declaredOrdinaryTestMethods": 626,
+      "declaredOrdinaryTestMethods": 629,
       "excludedRealAcceptanceFiles": 3,
       "contractFiles": 37,
-      "testMethods": 360,
+      "testMethods": 361,
       "parameterizedMethods": 0
     },
     "admin": {
-      "executableFiles": 14,
-      "declaredTestCalls": 82
+      "executableFiles": 15,
+      "declaredTestCalls": 84
     },
     "e2e": {
       "checkpoints": 59

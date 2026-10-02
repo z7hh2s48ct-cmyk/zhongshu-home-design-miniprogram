@@ -103,14 +103,14 @@ public class CaseCatalogService {
             long newVersionId = IdWorker.getId();
             jdbcTemplate.update(
                     "INSERT INTO design_case_version (id, case_id, version, title, description, style_code, "
-                            + "floor_count, building_area, face_width, depth, rooms, tags) "
-                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb))",
+                            + "floor_count, building_area, face_width, depth, rooms, tags, creator) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?)",
                     newVersionId, caseId, expectedVersion + 1, title, description, styleCode,
-                    floorCount, buildingArea, faceWidth, depth, toJson(rooms), toJsonStrings(tags));
+                    floorCount, buildingArea, faceWidth, depth, toJson(rooms), toJsonStrings(tags), String.valueOf(adminUserId));
             jdbcTemplate.update(
-                    "UPDATE design_case SET current_version_id = ?, update_time = now() "
+                    "UPDATE design_case SET current_version_id = ?, updater = ?, update_time = now() "
                             + "WHERE id = ? AND current_version_id = ?",
-                    newVersionId, caseId, currentVersionId);
+                    newVersionId, String.valueOf(adminUserId), caseId, currentVersionId);
             // 资产关系随版本继承（资产行数少，Java 端逐行生成新 ID）
             var assets = jdbcTemplate.queryForList(
                     "SELECT asset_id, asset_role, floor_no FROM design_case_asset "

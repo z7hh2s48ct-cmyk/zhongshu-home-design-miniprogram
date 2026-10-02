@@ -57,7 +57,7 @@ function runtime(initial = {}) {
     const module = { exports: {} };
     modules.set(filename, module);
     vm.runInNewContext(fs.readFileSync(filename, 'utf8'), {
-      module, wx, console, setTimeout, getApp: () => ({ globalData: {} }), getCurrentPages: () => [],
+      module, wx, console, setTimeout, clearTimeout, getApp: () => ({ globalData: {} }), getCurrentPages: () => [],
       Page(value) { definition = value; },
       require(specifier) {
         if (specifier.endsWith('/access')) return { protectedPage(value) { definition = value; } };
@@ -254,4 +254,59 @@ test('非 iOS 平台 iosBlocked 保持 false，支付链路不受影响', async 
   const page = env.page();
   await flush();
   assert.equal(page.data.iosBlocked, false);
+});
+
+test('waiting retry is cancelled when the recharge page hides', async () => {
+  const env = runtime({ order: { orderId, payParams } });
+  const page = await paidPage(env);
+  tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
+  await flush();
+  page.onHide();
+  await new Promise(r => setTimeout(r, 900));
+  assert.equal(tag(env.calls, 'getRechargeOrder').length, 1);
+  assert.equal(tag(env.calls, 'modal').length, 0);
+  assert.equal(tag(env.calls, 'navigateTo').length, 0);
+});
+
+test('in-flight order lookup cannot show UI after the page hides', async () => {
+  const env = runtime({ order: { orderId, payParams } });
+  let resolve;
+  env.api.getRechargeOrder = () => new Promise(r => { resolve = r; });
+  const page = await paidPage(env);
+  tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
+  await flush();
+  page.onHide();
+  resolve({ orderId, paymentState: 'SUCCEEDED', fulfillmentState: 'CREDITED' });
+  await flush();
+  assert.equal(tag(env.calls, 'navigateTo').length, 0);
+  assert.equal(tag(env.calls, 'modal').length, 0);
+});
+
+test('a response from before re-entry cannot navigate the new recharge page', async () => {
+  const env = runtime({ order: { orderId, payParams } });
+  let resolve;
+  env.api.getRechargeOrder = () => new Promise(r => { resolve = r; });
+  const page = await paidPage(env);
+  tag(env.calls, 'requestPayment')[0][1].fail({ errMsg: 'requestPayment:fail cancel' });
+  await flush();
+  page.onHide();
+  page.onShow();
+  resolve({ orderId, paymentState: 'SUCCEEDED', fulfillmentState: 'CREDITED' });
+  await flush();
+  assert.equal(tag(env.calls, 'navigateTo').length, 0);
+  assert.equal(tag(env.calls, 'modal').length, 0);
+});
+
+test('a create-order response after leaving cannot navigate or invoke payment', async () => {
+  const env = runtime();
+  let resolve;
+  env.api.createRechargeOrder = () => new Promise(r => { resolve = r; });
+  const page = env.page();
+  await flush();
+  page.pay();
+  page.onHide();
+  resolve({ orderId, payParams });
+  await flush();
+  assert.equal(tag(env.calls, 'requestPayment').length, 0);
+  assert.equal(tag(env.calls, 'navigateTo').length, 0);
 });
