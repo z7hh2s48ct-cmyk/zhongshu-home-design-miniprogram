@@ -166,8 +166,8 @@ const create = async () => {
     if (closed) return
     ElMessage.success('任务已创建，后台生成中')
     await search()
-  } catch {
-    ElMessage.error('创建失败，请重试')
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '创建失败，请检查筛选范围后重试')
   } finally {
     creating.value = false
   }
