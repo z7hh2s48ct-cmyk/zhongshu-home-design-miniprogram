@@ -25,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static cn.hutool.core.collection.ListUtil.toList;
 import static cn.iocoder.yudao.framework.common.util.collection.SetUtils.asSet;
@@ -136,6 +137,8 @@ public class PermissionServiceTest extends BaseDbUnitTest {
         roleMenuMapper.insert(roleMenu01);
         RoleMenuDO roleMenu02 = randomPojo(RoleMenuDO.class).setRoleId(1L).setMenuId(200L);
         roleMenuMapper.insert(roleMenu02);
+        when(menuService.getMenuList()).thenReturn(List.of(
+                menu(10L, 0L, "/zs"), menu(100L, 10L, null), menu(200L, 10L, null), menu(300L, 10L, null)));
 
         // 调用
         permissionService.assignRoleMenu(roleId, menuIds);
@@ -146,6 +149,25 @@ public class PermissionServiceTest extends BaseDbUnitTest {
         assertEquals(200L, roleMenuList.get(0).getMenuId());
         assertEquals(1L, roleMenuList.get(1).getRoleId());
         assertEquals(300L, roleMenuList.get(1).getMenuId());
+    }
+
+    @Test
+    public void testAssignRoleMenu_keepsHiddenMenusAndRejectsHiddenInjection() {
+        Long roleId = 1L;
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(roleId).setMenuId(100L));
+        roleMenuMapper.insert(randomPojo(RoleMenuDO.class).setRoleId(roleId).setMenuId(200L));
+        when(menuService.getMenuList()).thenReturn(List.of(
+                menu(10L, 0L, "/zs"), menu(100L, 20L, null), menu(101L, 20L, null),
+                menu(200L, 10L, null), menu(300L, 10L, null), menu(20L, 0L, "/crm")));
+
+        permissionService.assignRoleMenu(roleId, asSet(300L, 101L));
+
+        assertEquals(asSet(100L, 300L), roleMenuMapper.selectListByRoleId(roleId).stream()
+                .map(RoleMenuDO::getMenuId).collect(Collectors.toSet()));
+    }
+
+    private static MenuDO menu(Long id, Long parentId, String path) {
+        return new MenuDO().setId(id).setParentId(parentId).setPath(path);
     }
 
     @Test

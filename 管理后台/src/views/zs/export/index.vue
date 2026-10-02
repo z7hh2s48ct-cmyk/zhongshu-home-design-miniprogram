@@ -22,8 +22,15 @@
         <el-form-item v-if="form.jobType === 'POINT_LEDGER'" label="用户编号">
           <el-input v-model="form.userId" placeholder="可选，精确匹配" clearable />
         </el-form-item>
-        <el-form-item v-if="typeOptions.length" label="记录筛选">
-          <el-select v-model="form.type" style="width: 200px" clearable placeholder="可选，全部">
+        <el-form-item v-if="typeOptions.length || form.jobType === 'AUDIT_EVENTS'" label="记录筛选">
+          <el-select
+            v-model="form.type"
+            style="width: 200px"
+            clearable
+            filterable
+            allow-create
+            placeholder="可选，全部"
+          >
             <el-option
               v-for="opt in typeOptions"
               :key="opt.value"
@@ -149,7 +156,9 @@ const typeOptions = computed(() => {
       { label: '人工调增', value: 'MANUAL_CREDIT' },
       { label: '人工调减', value: 'MANUAL_DEBIT' },
       { label: '退款冲正(基础)', value: 'RECHARGE_BASE_REVERSAL' },
-      { label: '退款冲正(赠送)', value: 'RECHARGE_BONUS_REVERSAL' }
+      { label: '退款冲正(赠送)', value: 'RECHARGE_BONUS_REVERSAL' },
+      { label: 'Budget estimate debit', value: 'BUDGET_ESTIMATE_DEBIT' },
+      { label: 'AI prompt debit', value: 'AI_PROMPT_DEBIT' }
     ]
   }
   if (form.jobType === 'ACCOUNTS') {

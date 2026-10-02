@@ -9,7 +9,7 @@
     },
     "backend": {
       "ordinaryFiles": 65,
-      "declaredOrdinaryTestMethods": 627,
+      "declaredOrdinaryTestMethods": 629,
       "excludedRealAcceptanceFiles": 3,
       "contractFiles": 37,
       "testMethods": 361,
