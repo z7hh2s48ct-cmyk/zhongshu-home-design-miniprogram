@@ -625,7 +625,7 @@ async function resetAccountPrice(row: any) {
     await BudgetApi.setAccountPriceForUser({
       accountId: accountFilter.value,
       optionId: String(row.optionId),
-      regionCode: row.regionCode || '',
+      regionCode: regionFilter.value,
       unitPriceCents: null,
       reason: '管理端恢复默认'
     })
