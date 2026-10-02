@@ -74,7 +74,7 @@
         <el-table-column label="失效时间（北京）" min-width="170"
           ><template #default="{ row }">{{ displayTime(row.expiresAt) }}</template></el-table-column
         >
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'PENDING' || row.status === 'RUNNING'"
@@ -83,6 +83,14 @@
               type="primary"
               @click="refresh(row)"
               >刷新</el-button
+            >
+            <el-button
+              v-if="row.status === 'PENDING' || row.status === 'RUNNING'"
+              size="small"
+              text
+              type="danger"
+              @click="cancel(row)"
+              >取消</el-button
             >
             <el-button
               v-if="row.status === 'COMPLETED'"
@@ -109,8 +117,8 @@
       />
 
       <div class="zs-footnote">
-        每次最多 10,000 条、10 MB，超限请缩小时间范围。导出截至任务创建时的数据；CSV 时间为
-        UTC。下载票据 600 秒内单次有效，文件 24 小时后过期。
+        每次最多 10,000 条、10 MB，超限请缩小时间范围。导出截至任务创建时的数据；CSV 同时提供 UTC
+        与北京时间两列。下载票据 600 秒内单次有效，文件 24 小时后过期。
       </div>
     </div>
   </div>
@@ -118,7 +126,7 @@
 
 <script lang="ts" setup>
 import * as ZsApi from '@/api/zs'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'ZsExport' })
 
@@ -169,7 +177,8 @@ const exportError = (code: string) =>
   ({
     EXPORT_ROW_LIMIT: '记录超限，请缩小范围',
     EXPORT_SIZE_LIMIT: '文件超限，请缩小范围',
-    EXPORT_RETRY_LIMIT: '重试次数超限，请重新创建'
+    EXPORT_RETRY_LIMIT: '重试次数超限，请重新创建',
+    EXPORT_CANCELLED: '已取消'
   })[code] || '生成失败，请重新创建'
 
 const typeText = (t: string) =>
@@ -224,6 +233,30 @@ const refresh = async (job: any) => {
     if (job.status === 'COMPLETED') ElMessage.success('导出完成，可下载')
   } catch {
     ElMessage.error('状态刷新失败，请重试')
+  }
+}
+
+// F-5 取消任务：标记后由 worker 下一次 tick 收口为失败（已取消）
+const cancel = async (job: any) => {
+  try {
+    await ElMessageBox.confirm(
+      '取消后该任务不再生成文件；已进入生成尾段的任务仍可能完成。确定取消？',
+      '取消导出任务',
+      {
+        type: 'warning',
+        confirmButtonText: '取消任务',
+        cancelButtonText: '再等等'
+      }
+    )
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.cancelExportJob(job.exportJobId)
+    if (!ok) ElMessage.warning('任务已不在可取消状态')
+    refresh(job)
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '取消失败，请重试')
   }
 }
 

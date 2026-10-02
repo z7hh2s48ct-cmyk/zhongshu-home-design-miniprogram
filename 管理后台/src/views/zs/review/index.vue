@@ -8,12 +8,47 @@
     </div>
 
     <div class="zs-table-card">
-      <el-tabs v-model="activeTab" @tab-change="search">
-        <el-tab-pane label="待审核" name="SUBMITTED" />
-        <el-tab-pane label="已通过" name="APPROVED" />
-        <el-tab-pane label="已退回" name="CHANGES_REQUESTED" />
-        <el-tab-pane label="已拒绝" name="REJECTED" />
-      </el-tabs>
+      <div class="zs-review-tabs-bar">
+        <el-tabs v-model="activeTab" @tab-change="search">
+          <el-tab-pane label="待审核（含重提）" name="SUBMITTED" />
+          <el-tab-pane label="已通过" name="APPROVED" />
+          <el-tab-pane label="已退回" name="CHANGES_REQUESTED" />
+          <el-tab-pane label="已拒绝" name="REJECTED" />
+        </el-tabs>
+        <!-- E-6 批量操作常驻页签右侧：不再依赖滚动到表格下方才发现 -->
+        <div v-if="activeTab === 'SUBMITTED'" class="zs-review-bulk">
+          <el-button
+            size="small"
+            type="success"
+            plain
+            :disabled="!selection.length"
+            :loading="bulkLoading"
+            @click="doBulkReview('APPROVE')"
+          >
+            批量通过（{{ selection.length }}）
+          </el-button>
+          <el-button
+            size="small"
+            type="warning"
+            plain
+            :disabled="!selection.length"
+            :loading="bulkLoading"
+            @click="doBulkReview('CHANGES_REQUESTED')"
+          >
+            批量退回（{{ selection.length }}）
+          </el-button>
+          <el-button
+            size="small"
+            type="danger"
+            plain
+            :disabled="!selection.length"
+            :loading="bulkLoading"
+            @click="doBulkReview('REJECT')"
+          >
+            批量拒绝（{{ selection.length }}）
+          </el-button>
+        </div>
+      </div>
 
       <el-alert
         v-if="loadError"
@@ -21,7 +56,8 @@
         :closable="false"
         title="投稿列表加载失败，请重试"
         style="margin-bottom: 12px"
-      />
+        ><el-button @click="load">重新加载</el-button></el-alert
+      >
 
       <el-table
         v-if="activeTab === 'SUBMITTED'"
@@ -104,23 +140,6 @@
         </el-table-column>
       </el-table>
 
-      <div v-if="activeTab === 'SUBMITTED' && selection.length" class="mt-12px">
-        <el-button type="success" plain :loading="bulkLoading" @click="doBulkReview('APPROVE')">
-          批量通过（{{ selection.length }}）
-        </el-button>
-        <el-button
-          type="warning"
-          plain
-          :loading="bulkLoading"
-          @click="doBulkReview('CHANGES_REQUESTED')"
-        >
-          批量退回（{{ selection.length }}）
-        </el-button>
-        <el-button type="danger" plain :loading="bulkLoading" @click="doBulkReview('REJECT')">
-          批量拒绝（{{ selection.length }}）
-        </el-button>
-      </div>
-
       <el-pagination
         class="mt-16px"
         layout="total, prev, pager, next"
@@ -177,17 +196,21 @@ const load = async () => {
 // 批量审核：后端逐项幂等、单项失败不中断；退回/拒绝要求填写意见
 const doBulkReview = async (decision: string) => {
   const needComment = decision !== 'APPROVE'
+  // E-6 回显选中项授权状态：未授权公开展示的稿件不适合批量通过，避免误放
+  const unauthorized = selection.value.filter((r) => !r.publicDisplayGranted).length
+  const summary = selection.value
+    .slice(0, 5)
+    .map(
+      (r) => `${r.submissionId.slice(-6)}（${r.publicDisplayGranted ? '已授权' : '未授权展示'}）`
+    )
+  const preview = `将${decision === 'APPROVE' ? '通过' : decision === 'CHANGES_REQUESTED' ? '退回修改' : '拒绝'} ${selection.value.length} 件：${summary.join('、')}${selection.value.length > 5 ? ' 等' : ''}${unauthorized ? `；其中 ${unauthorized} 件未授权公开展示` : ''}`
   let comment = ''
   try {
-    const { value } = await ElMessageBox.prompt(
-      `对选中的 ${selection.value.length} 项执行「${decision === 'APPROVE' ? '通过' : decision === 'CHANGES_REQUESTED' ? '退回修改' : '拒绝'}」，请输入审核意见`,
-      '批量审核',
-      {
-        inputValidator: (v: string) => (needComment && !v?.trim() ? '审核意见必填' : true),
-        confirmButtonText: '确认执行',
-        cancelButtonText: '取消'
-      }
-    )
+    const { value } = await ElMessageBox.prompt(`${preview}，请输入审核意见`, '批量审核', {
+      inputValidator: (v: string) => (needComment && !v?.trim() ? '审核意见必填' : true),
+      confirmButtonText: '确认执行',
+      cancelButtonText: '取消'
+    })
     comment = value?.trim() || ''
   } catch {
     return
@@ -216,3 +239,23 @@ const doBulkReview = async (decision: string) => {
 }
 onMounted(load)
 </script>
+
+<style lang="scss" scoped>
+.zs-review-tabs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  :deep(.el-tabs) {
+    flex: 1;
+  }
+}
+
+.zs-review-bulk {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  white-space: nowrap;
+}
+</style>
