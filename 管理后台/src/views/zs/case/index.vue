@@ -108,10 +108,7 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <span
-              v-if="row.sourceType === 'COMPANY'"
-              class="zs-link"
-              @click="$router.push(`/zs/case/create?id=${row.caseId}`)"
+            <span class="zs-link" @click="$router.push(`/zs/case/create?id=${row.caseId}`)"
               >编辑</span
             >
             <span class="zs-link" @click="openPreview(row)">预览</span>

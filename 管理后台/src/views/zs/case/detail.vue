@@ -7,10 +7,7 @@
       </div>
       <div class="zs-actions">
         <el-button @click="$router.push('/zs/case')">返回列表</el-button>
-        <el-button
-          v-if="detail?.sourceType === 'COMPANY'"
-          class="zs-btn-primary"
-          @click="$router.push(`/zs/case/create?id=${caseId}`)"
+        <el-button class="zs-btn-primary" @click="$router.push(`/zs/case/create?id=${caseId}`)"
           >编辑</el-button
         >
         <el-button
