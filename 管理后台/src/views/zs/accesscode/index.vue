@@ -235,10 +235,7 @@
               v-if="detail.row.status === 'ACTIVE'"
               type="warning"
               plain
-              @click="
-                doDisable(detail.row)
-                loadDetail()
-              "
+              @click="disableAndRefresh(detail.row)"
               >停用</el-button
             >
             <el-button v-if="canUnbind" type="danger" plain @click="doUnbind">解绑用户</el-button>
@@ -435,6 +432,11 @@ const doDisable = async (row: any) => {
   } catch (e: any) {
     message.error(e?.msg || '停用失败，请重试')
   }
+}
+// 抽屉内停用：除刷新列表外同步重拉详情
+const disableAndRefresh = async (row: any) => {
+  await doDisable(row)
+  await loadDetail()
 }
 const doDelete = async (row: any) => {
   try {

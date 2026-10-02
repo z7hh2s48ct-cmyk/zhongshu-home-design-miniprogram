@@ -118,7 +118,7 @@
             <el-dropdown
               v-if="canMore(row)"
               trigger="click"
-              @command="(command: string) => rowAction(command, row)"
+              @command="(command) => rowAction(command, row)"
             >
               <span class="zs-link zs-more">更多 ▾</span>
               <template #dropdown>
