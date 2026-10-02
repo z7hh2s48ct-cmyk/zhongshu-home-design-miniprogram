@@ -286,8 +286,11 @@ const generateRoutePath = (parentPath: string, path: string) => {
 export const pathResolve = (parentPath: string, path: string) => {
   if (isUrl(path)) return path
   if (!path) return parentPath // 修复 path 为空时返回 parentPath，避免拼接出错 https://t.zsxq.com/QVr6b
-  const childPath = path.startsWith('/') ? path : `/${path}`
-  return `${parentPath}${childPath}`.replace(/\/+/g, '/')
+  // POSIX 语义：以 / 开头的子路径是绝对路径，直接返回，不再与父路径拼接。
+  // 2026-10-02 实测：业务菜单按六组重组后子项携带绝对路径（/zs/case），旧拼接产生
+  // /zs-content/zs/case 死链导致侧边栏点击落到 404。
+  if (path.startsWith('/')) return path
+  return `${parentPath}/${path}`.replace(/\/+/g, '/')
 }
 
 // 路由降级
