@@ -47,7 +47,7 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
   )
   // 隐藏路由（详情/编辑/旧充值路由）不进菜单
   assert.deepEqual(Array.from(result[1].children, child => child.path), ['/zs/case', '/zs/review'])
-  assert.deepEqual(Array.from(result[2].children, child => child.path), ['/zs/account', '/zs/access-code', '/zs/point-adjustments'])
+  assert.deepEqual(Array.from(result[2].children, child => child.path), ['/zs/account', '/zs/access-code'])
   assert.deepEqual(Array.from(result[3].children, child => child.path), ['/zs/recharge', '/zs/point-ledger'])
   assert.deepEqual(Array.from(result[4].children, child => child.path), ['/zs/budget', '/zs/budget-estimates'])
   assert.deepEqual(Array.from(result[5].children, child => child.path), ['/zs/generation-pricing', '/zs/usage-pricing'])
@@ -60,7 +60,7 @@ test('业务菜单按六组组装：户型最上、隐私在最后组末尾，�
 })
 
 test('保留全部业务入口且子项为绝对路径，可直接导航', () => {
-  for (const target of ['case', 'review', 'access-code', 'point-adjustments', 'recharge', 'budget', 'budget-estimates', 'point-ledger', 'account', 'export', 'audit', 'privacy', 'announcement', 'generation-pricing', 'usage-pricing']) {
+  for (const target of ['case', 'review', 'access-code', 'recharge', 'budget', 'budget-estimates', 'point-ledger', 'account', 'export', 'audit', 'privacy', 'announcement', 'generation-pricing', 'usage-pricing']) {
     assert.ok(values(menus(), `/zs/${target}`).includes(`/zs/${target}`), target)
   }
 })

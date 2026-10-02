@@ -99,7 +99,7 @@ public class PointAdminController {
     }
 
     @PostMapping("/manual-point-adjustments")
-    @Operation(summary = "创建人工调点申请（制单）；不能直接改余额")
+    @Operation(summary = "人工调点（2026-10-02 单人决策）：管理员确认后直接生效入账，写流水与审计")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.POINTS_ADJUST + "')")
     public CommonResult<Map<String, Object>> createAdjustment(@RequestBody Map<String, Object> body) {
         // 19 位雪花 id 超出 JS 安全整数，客户端可能以字符串送达：统一按字符串解析，双类型兼容
@@ -109,9 +109,9 @@ public class PointAdminController {
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("调点原因不能为空");
         }
-        long makerUserId = SecurityFrameworkUtils.getLoginUserId();
-        long id = manualPointAdjustmentService.submit(targetUserId, delta, reason, makerUserId);
-        return success(Map.of("adjustmentId", String.valueOf(id), "status", "SUBMITTED"));
+        long operator = SecurityFrameworkUtils.getLoginUserId();
+        manualPointAdjustmentService.submitAndExecute(targetUserId, delta, reason, operator);
+        return success(Map.of("status", "EXECUTED"));
     }
 
     @PostMapping("/manual-point-adjustments/{adjustmentId}/review-decisions")

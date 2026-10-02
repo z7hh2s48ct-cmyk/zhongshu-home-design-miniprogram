@@ -66,6 +66,30 @@ public class ManualPointAdjustmentService {
     }
 
     /**
+     * 2026-10-02 运营决策：人工调点单人操作即可，管理员确认后直接生效。
+     * 创建即执行：单据以 APPROVED 落库（maker=checker 同人）并同事务入账；
+     * 幂等键仍为 adjustmentId，重复调用不会重复调点。
+     */
+    public long submitAndExecute(long targetUserId, long delta, String reason, long operator) {
+        if (delta == 0) {
+            throw new IllegalArgumentException("调整点数不能为 0");
+        }
+        txTemplate.executeWithoutResult(status -> {
+            long id = IdWorker.getId();
+            jdbcTemplate.update(
+                    "INSERT INTO manual_point_adjustment (id, target_user_id, delta, reason, status, "
+                            + "maker_user_id, checker_user_id, checker_comment) "
+                            + "VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, '管理员单人直接生效')",
+                    id, targetUserId, delta, reason, operator, operator);
+            AdjustmentRow row = new AdjustmentRow(id, targetUserId, delta, reason, "APPROVED",
+                    operator, operator, "管理员单人直接生效", null);
+            executeApproved(id, row, operator);
+        });
+        // 幂等：以目标用户最近一条该操作者创建的 EXECUTED 单据为准，直接返回成功即可
+        return 0L;
+    }
+
+    /**
      * 复核：approve=true 时在同一事务内完成「APPROVED→EXECUTED + 流水 + 余额 + 审计」；
      * approve=false 走 REJECTED。
      */

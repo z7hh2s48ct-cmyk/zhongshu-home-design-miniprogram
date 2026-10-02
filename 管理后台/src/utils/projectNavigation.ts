@@ -4,7 +4,6 @@ const businessPermissions: Record<string, string> = {
   review: 'design:submission:review',
   account: 'identity:account:query',
   'access-code': 'identity:access-code:manage',
-  'point-adjustments': 'commerce:points:query',
   recharge: 'commerce:recharge-order:query',
   'point-ledger': 'commerce:points:query',
   budget: 'design:budget:query',
