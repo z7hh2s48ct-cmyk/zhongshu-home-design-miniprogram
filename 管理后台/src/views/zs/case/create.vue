@@ -41,9 +41,16 @@
             :fit-input-width="false"
             placeholder="选择或输入自定义风格"
           >
-            <el-option v-for="s in STYLE_PRESETS" :key="s.value" :label="s.label" :value="s.value" />
+            <el-option
+              v-for="s in STYLE_PRESETS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
-          <span class="ml-8px" style="font-size: 12px; color: #8a8a8a">可直接输入新风格（≤32字符）</span>
+          <span class="ml-8px" style="font-size: 12px; color: #8a8a8a"
+            >可直接输入新风格（≤32字符）</span
+          >
         </el-form-item>
         <el-form-item label="层数" required>
           <el-input-number v-model="form.floorCount" :min="1" :max="8" />
@@ -215,11 +222,7 @@ const uploadImage = async (
     loadedVersion.value == null
   )
     return
-  if (
-    !publicDisplay.value ||
-    !checkPermi(['design:case:update'])
-  )
-    return
+  if (!publicDisplay.value || !checkPermi(['design:case:update'])) return
   if (
     !['image/png', 'image/jpeg'].includes(file.type) ||
     file.size <= 0 ||

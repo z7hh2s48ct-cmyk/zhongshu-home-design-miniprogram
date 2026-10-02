@@ -106,7 +106,12 @@
     </div>
 
     <!-- 单个生成授权码 -->
-    <el-dialog v-model="single.visible" title="生成授权码" width="460px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="single.visible"
+      title="生成授权码"
+      width="460px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="90px">
         <el-form-item label="有效期(天)">
           <el-input-number v-model="single.validityDays" :min="1" :max="3650" />
@@ -122,7 +127,12 @@
         </el-form-item>
       </el-form>
       <div v-if="single.code" class="zs-single-code">
-        <el-alert type="warning" :closable="false" show-icon title="请立即复制保存；明文仅此一次展示。" />
+        <el-alert
+          type="warning"
+          :closable="false"
+          show-icon
+          title="请立即复制保存；明文仅此一次展示。"
+        />
         <code>{{ single.code }}</code>
       </div>
       <template #footer>
@@ -147,9 +157,7 @@
         <template v-if="detail.row">
           <h4 class="zs-drawer-section">基本信息</h4>
           <el-descriptions :column="2" border size="small">
-            <el-descriptions-item label="授权码">{{
-              detail.row.codeMask
-            }}</el-descriptions-item>
+            <el-descriptions-item label="授权码">{{ detail.row.codeMask }}</el-descriptions-item>
             <el-descriptions-item label="状态">{{
               statusText(detail.row.status)
             }}</el-descriptions-item>
@@ -173,15 +181,11 @@
           <template v-if="detail.account">
             <h4 class="zs-drawer-section">绑定用户</h4>
             <el-descriptions :column="2" border size="small">
-              <el-descriptions-item label="用户编号">{{
-                detail.account.id
-              }}</el-descriptions-item>
+              <el-descriptions-item label="用户编号">{{ detail.account.id }}</el-descriptions-item>
               <el-descriptions-item label="昵称">{{
                 detail.account.nickname || '—'
               }}</el-descriptions-item>
-              <el-descriptions-item label="授权状态">{{
-                accountGrantText
-              }}</el-descriptions-item>
+              <el-descriptions-item label="授权状态">{{ accountGrantText }}</el-descriptions-item>
               <el-descriptions-item label="可用点数">{{
                 detail.account.availablePoints ?? '—'
               }}</el-descriptions-item>
@@ -212,7 +216,9 @@
                 </template>
               </el-table-column>
               <el-table-column label="时间" width="150">
-                <template #default="{ row }">{{ fmtTime(row.create_time || row.createdAt) }}</template>
+                <template #default="{ row }">{{
+                  fmtTime(row.create_time || row.createdAt)
+                }}</template>
               </el-table-column>
             </el-table>
           </template>
@@ -225,16 +231,17 @@
               @click="copyCode(detail.row)"
               >复制授权码</el-button
             >
-            <el-button v-if="detail.row.status === 'ACTIVE'" type="warning" plain @click="doDisable(detail.row); loadDetail()"
+            <el-button
+              v-if="detail.row.status === 'ACTIVE'"
+              type="warning"
+              plain
+              @click="
+                doDisable(detail.row)
+                loadDetail()
+              "
               >停用</el-button
             >
-            <el-button
-              v-if="canUnbind"
-              type="danger"
-              plain
-              @click="doUnbind"
-              >解绑用户</el-button
-            >
+            <el-button v-if="canUnbind" type="danger" plain @click="doUnbind">解绑用户</el-button>
             <el-button
               v-if="detail.row.status !== 'CONSUMED'"
               type="danger"

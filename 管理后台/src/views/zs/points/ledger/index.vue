@@ -59,18 +59,14 @@
         <el-table-column label="用户" prop="userId" width="110" />
         <el-table-column label="类型" width="140">
           <template #default="{ row }">
-            <span
-              class="zs-tag"
-              :class="(row.delta || 0) > 0 ? 'zs-tag--green' : 'zs-tag--red'"
-              >{{ typeText(row.type) }}</span
-            >
+            <span class="zs-tag" :class="(row.delta || 0) > 0 ? 'zs-tag--green' : 'zs-tag--red'">{{
+              typeText(row.type)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="变化" width="90">
           <template #default="{ row }">
-            <span
-              :style="{ color: (row.delta || 0) > 0 ? '#3f9e56' : '#d0342c', fontWeight: 600 }"
-            >
+            <span :style="{ color: (row.delta || 0) > 0 ? '#3f9e56' : '#d0342c', fontWeight: 600 }">
               {{ (row.delta || 0) > 0 ? '+' : '' }}{{ row.delta }}
             </span>
           </template>

@@ -81,7 +81,12 @@
         @pagination="load"
       />
     </div>
-    <el-dialog v-model="editorOpen" title="新增业务价格" width="480px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="editorOpen"
+      title="新增业务价格"
+      width="480px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="100px">
         <el-form-item label="计费业务"
           ><el-select v-model="form.product"

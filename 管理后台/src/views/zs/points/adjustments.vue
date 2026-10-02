@@ -44,9 +44,7 @@
         <el-table-column label="目标用户" prop="target_user_id" width="120" />
         <el-table-column label="调整" width="90">
           <template #default="{ row }">
-            <span
-              :style="{ color: (row.delta || 0) > 0 ? '#3f9e56' : '#d0342c', fontWeight: 600 }"
-            >
+            <span :style="{ color: (row.delta || 0) > 0 ? '#3f9e56' : '#d0342c', fontWeight: 600 }">
               {{ (row.delta || 0) > 0 ? '+' : '' }}{{ row.delta }}
             </span>
           </template>

@@ -14,7 +14,10 @@
           >编辑</el-button
         >
         <el-button
-          v-if="detail?.sourceType === 'COMPANY' && ['DRAFT', 'OFFLINE'].includes(detail?.publicationStatus)"
+          v-if="
+            detail?.sourceType === 'COMPANY' &&
+            ['DRAFT', 'OFFLINE'].includes(detail?.publicationStatus)
+          "
           type="success"
           plain
           @click="doPublish"
@@ -46,7 +49,9 @@
           <el-descriptions-item label="来源">{{
             detail.sourceType === 'COMPANY' ? '公司案例' : 'AI案例'
           }}</el-descriptions-item>
-          <el-descriptions-item label="风格">{{ styleText(detail.styleCode) }}</el-descriptions-item>
+          <el-descriptions-item label="风格">{{
+            styleText(detail.styleCode)
+          }}</el-descriptions-item>
           <el-descriptions-item label="建筑参数"
             >{{ detail.buildingArea }}㎡ / {{ detail.floorCount }}层</el-descriptions-item
           >

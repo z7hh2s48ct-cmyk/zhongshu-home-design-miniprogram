@@ -124,7 +124,10 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item
-                    v-if="row.sourceType === 'COMPANY' && ['DRAFT', 'OFFLINE'].includes(row.publicationStatus)"
+                    v-if="
+                      row.sourceType === 'COMPANY' &&
+                      ['DRAFT', 'OFFLINE'].includes(row.publicationStatus)
+                    "
                     command="publish"
                     >上架</el-dropdown-item
                   >
