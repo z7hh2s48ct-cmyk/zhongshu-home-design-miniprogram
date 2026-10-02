@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -38,99 +38,83 @@
           justify-content: center;
           align-items: center;
           flex-direction: column;
+          width: 320px;
         }
 
         .app-loading .app-loading-title {
-          margin-bottom: 30px;
+          margin-bottom: 28px;
           font-size: 20px;
           font-weight: bold;
+          color: #303133;
           text-align: center;
         }
 
         .app-loading .app-loading-logo {
-          width: 100px;
-          margin: 0 auto 15px auto;
+          display: block;
+          width: 72px;
+          margin: 0 auto 12px auto;
         }
 
-        .app-loading .app-loading-item {
+        /* 进度条：轨道 + 渐变填充 + 流光动效（替代原旋转动画） */
+        .app-loading .app-loading-track {
           position: relative;
-          display: inline-block;
-          width: 60px;
-          height: 60px;
-          vertical-align: middle;
-          border-radius: 50%;
-        }
-
-        .app-loading .app-loading-outter {
-          position: absolute;
           width: 100%;
+          height: 8px;
+          overflow: hidden;
+          background: #e8e0d4;
+          border-radius: 999px;
+        }
+
+        .app-loading .app-loading-fill {
+          width: 0%;
           height: 100%;
-          border: 4px solid #2d8cf0;
-          border-bottom: 0;
-          border-left-color: transparent;
-          border-radius: 50%;
-          animation: loader-outter 1s cubic-bezier(0.42, 0.61, 0.58, 0.41) infinite;
+          background: linear-gradient(90deg, #a0561f, #d4884a);
+          border-radius: 999px;
+          transition: width 0.6s cubic-bezier(0.25, 0.8, 0.35, 1);
         }
 
-        .app-loading .app-loading-inner {
+        .app-loading .app-loading-shine {
           position: absolute;
-          top: calc(50% - 20px);
-          left: calc(50% - 20px);
-          width: 40px;
-          height: 40px;
-          border: 4px solid #87bdff;
-          border-right: 0;
-          border-top-color: transparent;
-          border-radius: 50%;
-          animation: loader-inner 1s cubic-bezier(0.42, 0.61, 0.58, 0.41) infinite;
+          top: 0;
+          left: -40%;
+          width: 40%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgb(255 255 255 / 55%), transparent);
+          animation: loading-shine 1.4s ease-in-out infinite;
         }
 
-        @-webkit-keyframes loader-outter {
+        @keyframes loading-shine {
           0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
+            left: -40%;
           }
 
           100% {
-            -webkit-transform: rotate(360deg);
-            transform: rotate(360deg);
+            left: 100%;
           }
         }
 
-        @keyframes loader-outter {
-          0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
-          }
-
-          100% {
-            -webkit-transform: rotate(360deg);
-            transform: rotate(360deg);
-          }
+        .app-loading .app-loading-meta {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+          margin-top: 10px;
+          font-size: 12px;
+          color: #8a8a8a;
         }
 
-        @-webkit-keyframes loader-inner {
-          0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
-          }
-
-          100% {
-            -webkit-transform: rotate(-360deg);
-            transform: rotate(-360deg);
-          }
+        /* 轮换文案：淡入淡出，缓解等待焦虑 */
+        .app-loading .app-loading-tip {
+          height: 20px;
+          margin-top: 18px;
+          overflow: hidden;
+          font-size: 13px;
+          color: #a08760;
+          text-align: center;
+          transition: opacity 0.35s ease;
         }
 
-        @keyframes loader-inner {
-          0% {
-            -webkit-transform: rotate(0deg);
-            transform: rotate(0deg);
-          }
-
-          100% {
-            -webkit-transform: rotate(-360deg);
-            transform: rotate(-360deg);
-          }
+        .app-loading .app-loading-tip--fade {
+          opacity: 0;
         }
       </style>
       <div class="app-loading">
@@ -139,12 +123,53 @@
             <img src="/logo.gif" class="app-loading-logo" alt="Logo" />
             <div class="app-loading-title">%VITE_APP_TITLE%</div>
           </div>
-          <div class="app-loading-item">
-            <div class="app-loading-outter"></div>
-            <div class="app-loading-inner"></div>
+          <div class="app-loading-track">
+            <div class="app-loading-fill" id="appLoadingFill"></div>
+            <div class="app-loading-shine"></div>
+          </div>
+          <div class="app-loading-meta">
+            <span id="appLoadingTip">正在为你准备设计工作台…</span>
+            <span id="appLoadingPercent">0%</span>
           </div>
         </div>
       </div>
+      <script>
+        ;(function () {
+          // 启动占位进度：非真实字节数，按阶段推进并封顶 92%，Vue 挂载后整块移除
+          var fill = document.getElementById('appLoadingFill')
+          var percentEl = document.getElementById('appLoadingPercent')
+          var tipEl = document.getElementById('appLoadingTip')
+          if (!fill) return
+          var tips = [
+            '正在为你准备设计工作台…',
+            '正在加载菜单与权限…',
+            '正在校验登录状态…',
+            '首次加载资源稍多，马上就好…',
+            '正在同步最新运营数据…',
+            '好的设计值得稍等片刻 ✨'
+          ]
+          var progress = 0
+          var tipIndex = 0
+          var timer = setInterval(function () {
+            // 越接近完成走得越慢（9%→3%→1%），封顶 92% 等待真实挂载
+            var step = progress < 40 ? 9 : progress < 70 ? 5 : progress < 85 ? 3 : 1
+            progress = Math.min(92, progress + step)
+            fill.style.width = progress + '%'
+            percentEl.textContent = Math.round(progress) + '%'
+            if (tipEl) {
+              tipEl.classList.add('app-loading-tip--fade')
+              setTimeout(function () {
+                tipIndex = (tipIndex + 1) % tips.length
+                tipEl.textContent = tips[tipIndex]
+                tipEl.classList.remove('app-loading-tip--fade')
+              }, 350)
+            }
+          }, 1600)
+          window.addEventListener('DOMContentLoaded', function () {
+            clearInterval(timer)
+          })
+        })()
+      </script>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

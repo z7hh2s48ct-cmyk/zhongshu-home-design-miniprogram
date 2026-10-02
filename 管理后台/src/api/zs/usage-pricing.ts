@@ -25,3 +25,5 @@ export const createRule = (data: {
 }) => request.post({ url: base, data })
 export const retireRule = (id: string, data?: { reason: string }) =>
   request.patch({ url: `${base}/${encodeURIComponent(id)}/retire`, data })
+export const deleteRule = (id: string) =>
+  request.delete({ url: `${base}/${encodeURIComponent(id)}` })

@@ -131,6 +131,25 @@ public class GenerationPriceRuleAdminController {
         return success(retired);
     }
 
+    @org.springframework.web.bind.annotation.DeleteMapping("/{ruleId}")
+    @Operation(summary = "删除已停用的出图计价规则（逻辑删除）；生效中规则必须先停用。历史扣费金额已快照在流水，追溯不受影响")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.GENERATION_PRICE_MANAGE + "')")
+    @Transactional
+    public CommonResult<Boolean> deleteRule(@PathVariable("ruleId") String ruleId) {
+        long id = Long.parseLong(ruleId);
+        Map<String, Object> detail = jdbc.queryForMap(
+                "SELECT stage,resolution,unit_point_cost,min_count,max_count,effective_at,expires_at,version,status "
+                        + "FROM generation_price_rule WHERE id=? AND deleted = FALSE", id);
+        int updated = jdbc.update(
+                "UPDATE generation_price_rule SET deleted = TRUE, update_time = now() "
+                        + "WHERE id = ? AND status = 'RETIRED' AND deleted = FALSE", id);
+        boolean deleted = updated == 1;
+        if (deleted) {
+            audit(id, "DELETE", toAuditDetail(detail));
+        }
+        return success(deleted);
+    }
+
     private GenerationImageOptions normalize(String stage, String resolution) {
         try {
             return GenerationImageOptions.normalize(stage, resolution, null);

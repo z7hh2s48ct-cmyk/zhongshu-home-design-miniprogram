@@ -1,6 +1,6 @@
 <template>
   <div class="zs-page">
-    <div class="zs-page-header">
+    <div v-if="!embedded" class="zs-page-header">
       <div>
         <h1 class="zs-page-title">AI 任务</h1>
         <div class="zs-page-subtitle"
@@ -139,6 +139,8 @@ import * as ZsApi from '@/api/zs'
 import { fmtTime } from '@/utils/zsFormat'
 
 defineOptions({ name: 'ZsAiJob' })
+// embedded=true 时内嵌于设计点流水页的“生成任务”tab，标题交给外层
+withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
 
 const loading = ref(false)
 /** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */

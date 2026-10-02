@@ -2,7 +2,7 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">生成价格</h1>
+        <h1 class="zs-page-title">出图定价</h1>
         <div class="zs-page-subtitle">按平面、立面及 2K / 4K 分别定价；横竖画幅同价</div>
       </div>
       <el-button v-if="canManage" class="zs-btn-primary" @click="openEditor()">新增价格</el-button>
@@ -105,6 +105,14 @@
               :disabled="saving"
               @click="retire(row)"
               >停用</el-button
+            >
+            <el-button
+              v-if="canManage && row.status !== 'ACTIVE'"
+              link
+              type="danger"
+              :disabled="saving"
+              @click="remove(row)"
+              >删除</el-button
             >
           </template></el-table-column
         >
@@ -327,6 +335,30 @@ async function retire(row: GenerationPriceRule) {
     await load()
   } catch (e: any) {
     message.error(e?.msg || '停用失败，请重试；该价格在停用成功前仍在计费')
+  } finally {
+    saving.value = false
+  }
+}
+async function remove(row: GenerationPriceRule) {
+  if (!canManage.value || saving.value || row.status === 'ACTIVE') return
+  try {
+    await message.confirm(
+      '删除该已停用价格？历史扣费金额已快照在点数流水，追溯不受影响；删除后不可恢复。'
+    )
+  } catch {
+    return
+  }
+  saving.value = true
+  try {
+    const ok = await PricingApi.deletePriceRule(row.ruleId)
+    if (!ok) {
+      message.warning('仅已停用的价格可删除；生效中请先停用')
+      return
+    }
+    message.success('价格已删除')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '删除失败，请重试')
   } finally {
     saving.value = false
   }

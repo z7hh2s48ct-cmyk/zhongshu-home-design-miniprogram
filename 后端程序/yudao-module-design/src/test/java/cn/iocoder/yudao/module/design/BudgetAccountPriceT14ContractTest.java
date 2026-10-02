@@ -134,6 +134,22 @@ class BudgetAccountPriceT14ContractTest {
     }
 
     @Test
+    void adminPricePageRequiresAnExplicitValidRegionAndKeepsItOnEachRow() {
+        setOverride("208001", 60_000, "admin adjustment");
+        var page = accounts.pageByAccount(1, "TEST_A", 1, 20);
+        assertThat(page.getList()).hasSize(1);
+        assertThat(page.getList().get(0).regionCode()).isEqualTo("TEST_A");
+        assertThatThrownBy(() -> accounts.pageByAccount(1, "", 1, 20))
+                .isInstanceOf(ServiceException.class)
+                .extracting(error -> ((ServiceException) error).getCode())
+                .isEqualTo(BUDGET_ACCOUNT_PRICE_INVALID.getCode());
+        assertThatThrownBy(() -> accounts.pageByAccount(1, "NOT_A_REGION", 1, 20))
+                .isInstanceOf(ServiceException.class)
+                .extracting(error -> ((ServiceException) error).getCode())
+                .isEqualTo(BUDGET_ACCOUNT_PRICE_INVALID.getCode());
+    }
+
+    @Test
     void myPricesListBaselineOverrideAndMissingStatesWithoutCustomTemplates() throws Exception {
         custom(830001, 830002);
         price(830003, REGION, 830002, 360_000);
@@ -285,12 +301,12 @@ class BudgetAccountPriceT14ContractTest {
         setOverride("208001", 60_000, "第一版");
         ok(delete(BASE + "/my-prices/208001?regionCode=TEST_A").header("Authorization", "Bearer owner"));
         setOverride("208006", 100_000, null);
-        var page = accounts.pageByAccount(1, 1, 20);
+        var page = accounts.pageByAccount(1, "TEST_A", 1, 20);
         assertThat(page.getTotal()).isEqualTo(2);
         assertThat(page.getList()).extracting(BudgetAccountPriceService.AdminAccountPrice::status)
                 .containsExactlyInAnyOrder("ACTIVE", "REMOVED");
         assertThat(page.getList().get(0).optionLabel()).isNotBlank();
-        assertThatThrownBy(() -> accounts.pageByAccount(1, 0, 20)).isInstanceOf(ServiceException.class);
+        assertThatThrownBy(() -> accounts.pageByAccount(1, "TEST_A", 0, 20)).isInstanceOf(ServiceException.class);
         assertThatThrownBy(() -> accounts.upsert(1, "TEST_A", 208001, Map.of("unitPriceCents", "abc")))
                 .isInstanceOfSatisfying(ServiceException.class, e -> assertThat(e.getCode()).isEqualTo(BUDGET_ACCOUNT_PRICE_INVALID.getCode()));
     }

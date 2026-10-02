@@ -2,16 +2,16 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">审计事件</h1>
+        <h1 class="zs-page-title">操作记录</h1>
         <div class="zs-page-subtitle"
-          >全部管理操作留痕：制单复核、授权码交付、发布上架、退款与调点；支持按时间/类型/操作者/业务对象取证</div
+          >谁在什么时间对什么做了什么：调点复核、激活码交付、发布上架、退款等全部留痕，可按时间/类型/操作者/对象取证</div
         >
       </div>
       <el-button
         v-hasPermi="['design:export:manage']"
         class="zs-btn-primary"
         @click="$router.push('/zs/export')"
-        ><Icon icon="ep:download" class="mr-4px" /> 导出审计事件</el-button
+        ><Icon icon="ep:download" class="mr-4px" /> 导出操作记录</el-button
       >
     </div>
 
@@ -84,7 +84,7 @@
         v-if="loadError"
         type="error"
         :closable="false"
-        title="审计事件加载失败，请重试（当前列表不代表完整审计记录）"
+        title="操作记录加载失败，请重试（当前列表不代表完整留痕）"
         style="margin-bottom: 12px"
         ><el-button @click="load">重新加载</el-button></el-alert
       >
@@ -92,14 +92,29 @@
         v-if="!loading && !loadError && !list.length"
         type="info"
         :closable="false"
-        title="当前筛选条件下没有审计事件；清空筛选可查看全部留痕"
+        title="当前筛选条件下没有操作记录；清空筛选可查看全部"
         style="margin-bottom: 12px"
       />
 
       <el-table :data="list" v-loading="loading" stripe @row-click="toggleDetail">
-        <el-table-column type="expand">
+        <el-table-column type="expand" title="详情">
           <template #default="{ row }">
-            <pre class="zs-audit-detail">{{ prettyDetail(row.detail) }}</pre>
+            <div class="zs-audit-detail-block">
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item
+                  v-for="item in detailRows(row.detail)"
+                  :key="item.k"
+                  :label="item.label"
+                >
+                  <span :class="{ 'zs-audit-red': item.bad }">{{ item.text }}</span>
+                </el-descriptions-item>
+              </el-descriptions>
+              <el-collapse class="mt-8px">
+                <el-collapse-item title="原始数据（JSON）" name="raw">
+                  <pre class="zs-audit-detail">{{ prettyDetail(row.detail) }}</pre>
+                </el-collapse-item>
+              </el-collapse>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="事件号" prop="id" width="200" />
@@ -108,7 +123,9 @@
         </el-table-column>
 
         <el-table-column label="操作者" width="160">
-          <template #default="{ row }">{{ row.actor_type }}:{{ row.actor_id }}</template>
+          <template #default="{ row }"
+            >{{ actorTypeText(row.actor_type) }} {{ row.actor_id }}</template
+          >
         </el-table-column>
         <el-table-column label="动作" width="110">
           <template #default="{ row }">{{ actionText[row.action] || row.action }}</template>
@@ -236,6 +253,83 @@ const linkOf = (row: any): { path: string } | null => {
   return targets[row.biz_type] ? { path: targets[row.biz_type] } : null
 }
 
+const actorTypeText = (t: string) =>
+  ({ ADMIN: '管理员', USER: '用户', SYSTEM: '系统', WORKER: '任务器' })[t] || t
+
+// 审计 detail 字段的中文映射：键名 + 常见枚举值（审计要“人物执行事件的具体详情”且用中文可读）
+const DETAIL_LABELS: Record<string, string> = {
+  budgetId: '预算编号',
+  reason: '原因',
+  recipients: '送达人数',
+  title: '标题',
+  submissionId: '投稿编号',
+  caseId: '案例编号',
+  userId: '用户编号',
+  projectId: '项目编号',
+  unitPointCost: '单价（设计点）',
+  minCount: '最少张数',
+  maxCount: '最多张数',
+  stage: '阶段',
+  resolution: '清晰度',
+  effectiveAt: '生效时间',
+  expiresAt: '失效时间',
+  quoteId: '报价编号',
+  revisionId: '修订编号',
+  adjustmentCents: '调价（分）',
+  finalPriceCents: '最终价（分）',
+  quantity: '数量',
+  codeMask: '授权码掩码',
+  batchId: '批次编号',
+  orderId: '订单编号',
+  refundId: '退款单编号',
+  points: '点数',
+  targetUserId: '目标用户',
+  delta: '调整点数',
+  comment: '意见',
+  confirmedBuildingArea: '核定面积'
+}
+const VALUE_TEXT: Record<string, Record<string, string>> = {
+  stage: { FLAT: '平面', ELEVATION: '立面' },
+  resolution: { '2K': '2K', '4K': '4K' },
+  result: { SUCCESS: '成功', FAILURE: '失败', DENIED: '拒绝' }
+}
+const fmtValue = (key: string, value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '—'
+  // 时间类字段转北京时间可读
+  if (/(At|Time)$/.test(key) && typeof value === 'string') {
+    const d = new Date(value)
+    if (!isNaN(d.getTime()))
+      return d.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+  }
+  const mapped = VALUE_TEXT[key]?.[String(value)]
+  if (mapped) return mapped
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+const detailRows = (raw: any): Array<{ k: string; label: string; text: string; bad?: boolean }> => {
+  let obj: Record<string, unknown>
+  try {
+    obj = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>) || {}
+  } catch {
+    return [{ k: '_raw', label: '原始内容', text: String(raw ?? '（无）') }]
+  }
+  const entries = Object.entries(obj || {})
+  if (!entries.length) return [{ k: '_empty', label: '详情', text: '（该事件无附加明细）' }]
+  return entries.map(([k, v]) => ({
+    k,
+    label: DETAIL_LABELS[k] || k,
+    text: fmtValue(k, v),
+    bad: k === 'result' && v !== 'SUCCESS'
+  }))
+}
+
 const prettyDetail = (raw: any) => {
   if (!raw) return '（无明细）'
   try {
@@ -285,6 +379,15 @@ onMounted(load)
 <style lang="scss" scoped>
 .zs-filter {
   margin-bottom: 6px;
+}
+
+.zs-audit-detail-block {
+  padding: 0 8px;
+}
+
+.zs-audit-red {
+  font-weight: 600;
+  color: #d0342c;
 }
 
 .zs-audit-detail {

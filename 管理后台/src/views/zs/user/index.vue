@@ -2,7 +2,7 @@
   <div class="zs-page">
     <div class="zs-page-header">
       <div>
-        <h1 class="zs-page-title">C端用户</h1>
+        <h1 class="zs-page-title">客户管理</h1>
         <div class="zs-page-subtitle">小程序用户查询：授权状态、设计点余额、设计与投稿统计</div>
       </div>
     </div>
@@ -47,7 +47,13 @@
 
       <el-table :data="list" v-loading="loading" stripe @row-click="openDetail">
         <el-table-column label="用户编号" prop="id" width="200" />
-        <el-table-column label="昵称" prop="nickname" min-width="140">
+        <el-table-column label="激活码" width="170">
+          <template #default="{ row }">
+            <span v-if="row.access_code_mask" class="zs-code-mask">{{ row.access_code_mask }}</span>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="昵称" prop="nickname" min-width="130">
           <template #default="{ row }">{{ row.nickname || '（未设置）' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -97,6 +103,19 @@
             <div class="zs-detail-row"
               ><span>用户编号</span><b>{{ detail.data.id }}</b></div
             >
+            <div class="zs-detail-row">
+              <span>激活码</span>
+              <b>
+                <span v-if="detail.data.accessCode" class="zs-code-mask">
+                  {{ detail.data.accessCode.codeMask }}
+                  <small style="color: #8a8a8a">
+                    （{{ accessCodeStateText(detail.data.accessCode.codeStatus) }}，绑定于
+                    {{ fmtTime(detail.data.accessCode.consumedAt) }}）</small
+                  >
+                </span>
+                <span v-else>未兑换过激活码</span>
+              </b>
+            </div>
             <div class="zs-detail-row"
               ><span>昵称</span><b>{{ detail.data.nickname || '（未设置）' }}</b></div
             >
@@ -116,16 +135,25 @@
             </div>
           </div>
 
-          <el-button
-            v-if="detail.data.status === 'ACTIVE'"
-            v-hasPermi="['identity:account:disable']"
-            type="danger"
-            plain
-            @click="disableAccount(detail.data)"
-            >停用账号</el-button
-          >
+          <div class="zs-detail-actions">
+            <el-button
+              v-hasPermi="['commerce:points:adjust']"
+              type="warning"
+              plain
+              @click="adjustDialog.visible = true"
+              >人工调点</el-button
+            >
+            <el-button
+              v-if="detail.data.status === 'ACTIVE'"
+              v-hasPermi="['identity:account:disable']"
+              type="danger"
+              plain
+              @click="disableAccount(detail.data)"
+              >停用账号</el-button
+            >
+          </div>
           <p v-if="detail.data.status === 'ACTIVE'" class="zs-disable-hint"
-            >停用后立即撤销访问授权、拒绝新兑换；点数余额冻结不清零，可恢复（另行管理）。</p
+            >人工调点为该用户制单（制单/复核双人分离）；停用后立即撤销访问授权、拒绝新兑换；点数余额冻结不清零。</p
           >
 
           <div class="zs-detail-block-title">授权记录（解绑后该账号立即降为受限会话）</div>
@@ -195,6 +223,38 @@
         </template>
       </div>
     </el-drawer>
+
+    <!-- 人工调点（制单）：目标用户即当前详情用户，复核在「调点复核」页双人完成 -->
+    <el-dialog v-model="adjustDialog.visible" title="人工调点（制单）" width="460px">
+      <el-form label-width="90px">
+        <el-form-item label="目标用户">
+          <el-input :model-value="detail.data?.id" disabled style="width: 240px" />
+        </el-form-item>
+        <el-form-item label="调整点数" required>
+          <el-input-number v-model="adjustDialog.delta" :step="10" />
+          <span class="ml-8px" style="font-size: 12px; color: #8a8a8a">正数为调增，负数为调减</span>
+        </el-form-item>
+        <el-form-item label="原因" required>
+          <el-input
+            v-model="adjustDialog.reason"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+            placeholder="如：生成失败补偿 / 活动赠送"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adjustDialog.visible = false">取消</el-button>
+        <el-button
+          class="zs-btn-primary"
+          :loading="adjustDialog.submitting"
+          @click="submitAdjustment"
+          >提交制单</el-button
+        >
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -216,6 +276,34 @@ const detail = reactive({ visible: false, loading: false, data: null as any, ord
 const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' })[s] || s
 const statusClass = (s: string) =>
   ({ ACTIVE: 'zs-tag--green', DISABLED: 'zs-tag--yellow', CLOSED: 'zs-tag--red' })[s] || ''
+const accessCodeStateText = (s: string) =>
+  ({ ACTIVE: '未使用', CONSUMED: '已绑定', DISABLED: '已停用' })[s] || s
+
+// ---- 人工调点（对当前用户制单；复核双人分离在调点复核页） ----
+const adjustDialog = reactive({ visible: false, submitting: false, delta: 10, reason: '' })
+async function submitAdjustment() {
+  const targetUserId = String(detail.data?.id || '')
+  if (!/^\d{1,20}$/.test(targetUserId) || !adjustDialog.delta || !adjustDialog.reason.trim()) {
+    ElMessage.warning('请填写调整点数与原因')
+    return
+  }
+  adjustDialog.submitting = true
+  try {
+    // 目标用户以字符串提交：19 位雪花编号超出 JS 安全整数，后端按字符串解析
+    await ZsApi.createManualAdjustment({
+      targetUserId,
+      delta: adjustDialog.delta,
+      reason: adjustDialog.reason.trim()
+    })
+    ElMessage.success('制单成功，待另一管理员在「调点复核」页复核后生效')
+    adjustDialog.visible = false
+    adjustDialog.delta = 10
+    adjustDialog.reason = ''
+    openDetail({ id: detail.data.id })
+  } finally {
+    adjustDialog.submitting = false
+  }
+}
 
 const search = () => {
   query.pageNo = 1
@@ -348,5 +436,17 @@ onMounted(load)
   font-size: 12px;
   line-height: 1.8;
   color: #8a8a8a;
+}
+</style>
+
+<style lang="scss" scoped>
+.zs-code-mask {
+  font-family: monospace;
+}
+
+.zs-detail-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
 }
 </style>

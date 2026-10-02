@@ -136,15 +136,18 @@ class CaseP3BContractTest {
     }
 
     @Test
-    void aiCaseCannotBeEditedOutsideSubmissionWorkflow() {
+    void aiCaseParametersEditableForOperationsCorrection() {
+        // 2026-10-02 运营决策：AI 案例开放参数编辑（图纸仍走投稿流程，requireImageEditable 拒绝 AI）
         long id = createAndPublish(120, "MODERN");
         jdbc.update("UPDATE design_case SET source_type='AI' WHERE id=?", id);
-        assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "changed", null, "MODERN", 2, 120,
-                null, null, null, null)).isInstanceOf(ServiceException.class);
-        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(1);
+        catalog.updateCase(id, ADMIN, 1, "运营修正标题", null, "MODERN", 2, 120,
+                null, null, null, null);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(2);
+        assertThat(catalog.getAdminCase(id).orElseThrow().title()).isEqualTo("运营修正标题");
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled("Superseded: published company cases are editable with CAS")
     void publishedCompanyCaseCannotBeChangedWithoutWithdrawal() {
         long id = createAndPublish(120, "MODERN");
         assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "直接改线上内容", null, "MODERN", 2, 120, null, null, null, null))
@@ -359,6 +362,21 @@ class CaseP3BContractTest {
         page1.list().forEach(c -> seen.add(c.caseId()));
         page2.list().forEach(c -> seen.add(c.caseId()));
         assertThat(seen).doesNotHaveDuplicates().hasSize(4);
+    }
+
+    @Test
+    void publishedCompanyCaseEditingPreservesImmutableVersionAndCas() {
+        long id = createAndPublish(120, "MODERN");
+        assertThat(catalog.requireImageEditable(id, 1, "COVER", null).publicationStatus())
+                .isEqualTo("PUBLISHED");
+        catalog.updateCase(id, ADMIN, 1, "published edit", null, "MODERN", 2, 120,
+                null, null, null, null);
+        assertThat(catalog.getAdminCase(id).orElseThrow().version()).isEqualTo(2);
+        assertThat(catalog.getAdminCase(id).orElseThrow().publicationStatus()).isEqualTo("PUBLISHED");
+        assertThat(jdbc.queryForObject("SELECT creator FROM design_case_version WHERE case_id=? AND version=2",
+                String.class, id)).isEqualTo(String.valueOf(ADMIN));
+        assertThatThrownBy(() -> catalog.updateCase(id, ADMIN, 1, "stale", null, "MODERN", 2,
+                120, null, null, null, null)).isInstanceOf(ServiceException.class);
     }
 
     private static class ExecutorServicePool {

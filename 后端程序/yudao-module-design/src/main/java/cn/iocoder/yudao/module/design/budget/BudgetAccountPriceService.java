@@ -49,7 +49,7 @@ public class BudgetAccountPriceService {
         this.auditPort = auditPort;
     }
 
-    public record AdminAccountPrice(long accountId, String optionId, String optionLabel, String itemCode,
+    public record AdminAccountPrice(long accountId, String regionCode, String optionId, String optionLabel, String itemCode,
                                     long unitPriceCents, String reason, String status, String updatedAt) {}
 
     /** 逐项并列基准价与本人覆盖价；只开放标准目录项，自定义模板项维持后台补价流程。 */
@@ -113,20 +113,21 @@ public class BudgetAccountPriceService {
     }
 
     /** 管理端只读查询：某账号的覆盖历史（含已恢复的 REMOVED 行），无任何干预入口。 */
-    public PageResult<AdminAccountPrice> pageByAccount(long accountId, int pageNo, int pageSize) {
+    public PageResult<AdminAccountPrice> pageByAccount(long accountId, String regionCode, int pageNo, int pageSize) {
         if (accountId <= 0 || pageNo < 1 || pageSize < 1 || pageSize > 100) throw exception(BUDGET_ACCOUNT_PRICE_INVALID);
+        String validatedRegionCode = (String) region(regionCode).get("code");
         Long total = jdbc.queryForObject("SELECT count(*) FROM budget_account_price WHERE tenant_id = 0 AND account_id = ? AND deleted = FALSE", Long.class, accountId);
         var rows = jdbc.query("SELECT a.option_id, a.unit_price_cents, a.reason, a.status, a.update_time, o.label, i.code AS item_code "
                 + "FROM budget_account_price a "
                 + "JOIN budget_option o ON o.tenant_id = a.tenant_id AND o.id = a.option_id AND o.deleted = FALSE "
                 + "JOIN budget_item i ON i.tenant_id = o.tenant_id AND i.id = o.item_id AND i.deleted = FALSE "
                 + "WHERE a.tenant_id = 0 AND a.account_id = ? AND a.deleted = FALSE ORDER BY a.update_time DESC, a.id DESC LIMIT ? OFFSET ?",
-                accountPriceMapper(accountId), accountId, pageSize, (long) (pageNo - 1) * pageSize);
+                accountPriceMapper(accountId, validatedRegionCode), accountId, pageSize, (long) (pageNo - 1) * pageSize);
         return new PageResult<>(rows, total);
     }
 
-    private RowMapper<AdminAccountPrice> accountPriceMapper(long accountId) {
-        return (rs, index) -> new AdminAccountPrice(accountId, rs.getString("option_id"), rs.getString("label"), rs.getString("item_code"),
+    private RowMapper<AdminAccountPrice> accountPriceMapper(long accountId, String regionCode) {
+        return (rs, index) -> new AdminAccountPrice(accountId, regionCode, rs.getString("option_id"), rs.getString("label"), rs.getString("item_code"),
                 rs.getLong("unit_price_cents"), rs.getString("reason"), rs.getString("status"),
                 rs.getTimestamp("update_time").toInstant().toString());
     }
