@@ -483,13 +483,13 @@ const doUnbind = async () => {
 
   code {
     display: block;
-    margin-top: 8px;
     padding: 10px 14px;
+    margin-top: 8px;
     font-size: 16px;
     letter-spacing: 1px;
-    user-select: all;
     background: #f5f3ef;
     border-radius: 6px;
+    user-select: all;
   }
 }
 
