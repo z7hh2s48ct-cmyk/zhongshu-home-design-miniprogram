@@ -32,6 +32,8 @@ import static cn.iocoder.yudao.module.design.enums.ErrorCodeConstants.GENERATION
  * - 创建平面任务同事务：锁定案例版本、校验当前有效 GENERATION_REFERENCE 授权并冻结
  *   grant_id + rights_version 快照（仅公开展示不可生成）→ 委托 AiJobPort 计价扣点建任务；
  *   幂等键保证重复点击返回同一任务；授权撤回后新任务拒绝、已建任务凭快照审计不追溯；
+ * - 立面任务输入 = 已选平面候选（空间约束）+（CASE_REFERENCE 时）有有效生成参考授权的案例立面图
+ *   （风格参考，未授权立面资产自动排除），参考图总数不超过引擎契约上限 8；
  * - 候选晋升：任务终态后 ACCEPTED 结果晋升为资产（所有者=用户）+ design_candidate，幂等；
  * - 选择：候选属本人项目、任务终态才可选；每阶段一条有效选择，重复选择返回既有。
  */
@@ -708,7 +710,17 @@ public class DesignProjectService {
         if (overrides != null) requirements.putAll(overrides);
         List<Long> assetIds;
         if ("ELEVATION".equals(phase)) {
-            assetIds=jdbcTemplate.queryForList("SELECT c.asset_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.project_id=? AND s.id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,project.projectId(),sourceSelection);
+            assetIds=new java.util.ArrayList<>(jdbcTemplate.queryForList("SELECT c.asset_id FROM design_selection s JOIN design_candidate c ON c.id=s.candidate_id AND c.project_id=s.project_id WHERE s.project_id=? AND s.id=? AND s.stage='FLAT' AND s.deleted=FALSE AND c.deleted=FALSE",Long.class,project.projectId(),sourceSelection));
+            // 案例立面参考：已选平面冻结空间约束，案例立面图供风格/材质参考（引擎 plan 与 /images/edits 均真实消费）。
+            // 仅纳入有有效生成参考授权的立面资产，未授权的直接排除而非报错——不破坏既有「仅平面参考」的可用性；
+            // 引擎输入契约上限 8 张，剩余槽位让给案例立面。
+            if ("CASE_REFERENCE".equals(project.sourceType()) && assetIds.size() < 8) {
+                assetIds.addAll(jdbcTemplate.queryForList("SELECT a.asset_id FROM design_case_asset a JOIN design_project p ON p.ref_version_id=a.case_version_id "
+                        + "WHERE p.id=? AND a.asset_role='ELEVATION' AND a.deleted=FALSE AND EXISTS (SELECT 1 FROM asset_rights_grant g "
+                        + "WHERE g.asset_id=a.asset_id AND g.scope='GENERATION_REFERENCE' AND g.status='ACTIVE' "
+                        + "AND g.effective_at<=now() AND (g.expires_at IS NULL OR g.expires_at>now()) AND g.deleted=FALSE) "
+                        + "ORDER BY a.id LIMIT ?",Long.class,project.projectId(),8 - assetIds.size()));
+            }
         } else if ("CASE_REFERENCE".equals(project.sourceType())) {
             assetIds=jdbcTemplate.queryForList("SELECT a.asset_id FROM design_case_asset a JOIN design_project p ON p.ref_version_id=a.case_version_id WHERE p.id=? AND a.asset_role='FLOOR_PLAN' AND a.deleted=FALSE ORDER BY a.id LIMIT 8",Long.class,project.projectId());
         } else {
