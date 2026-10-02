@@ -283,8 +283,14 @@ public class AccessCodeService {
             args.add(batchId);
         }
         if (status != null && !status.isBlank()) {
-            where.append(" AND c.status = ?");
-            args.add(status.trim());
+            String value = status.trim();
+            if ("EXPIRED".equals(value)) {
+                // 派生态：与统计卡 EXPIRED 同口径（ACTIVE 且已过有效期），供统计卡点击联动
+                where.append(" AND c.status = 'ACTIVE' AND c.expires_at IS NOT NULL AND c.expires_at < now()");
+            } else {
+                where.append(" AND c.status = ?");
+                args.add(value);
+            }
         }
         if (codeMask != null && !codeMask.isBlank()) {
             String mask = codeMask.trim();

@@ -7,6 +7,7 @@ import cn.iocoder.yudao.module.commerce.enums.PermissionConstants;
 import cn.iocoder.yudao.module.commerce.pricing.UsagePointPriceService;
 import cn.iocoder.yudao.module.infra.zhongshu.audit.AuditEventMessage;
 import cn.iocoder.yudao.module.infra.zhongshu.audit.AuditPort;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -84,6 +85,20 @@ public class UsagePriceRuleAdminController {
                 .bizType("service_usage_price_rule").bizId(String.valueOf(ruleId))
                 .result(AuditEventMessage.AuditResult.SUCCESS).detail(Map.of("reason", reason)).build());
         return success(changed);
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{ruleId}")
+    @Operation(summary = "删除已停用的业务积分价格（逻辑删除）；生效中规则必须先停用。历史扣费金额已快照，追溯不受影响")
+    @PreAuthorize("@ss.hasPermission('" + PermissionConstants.USAGE_PRICE_MANAGE + "')")
+    @org.springframework.transaction.annotation.Transactional
+    public CommonResult<Boolean> delete(@PathVariable long ruleId) {
+        boolean deleted = prices.deleteRule(ruleId, String.valueOf(SecurityFrameworkUtils.getLoginUserId()));
+        if (deleted) audit.record(AuditEventMessage.builder().eventType("USAGE_PRICE_RULE")
+                .actorType(AuditEventMessage.ActorType.ADMIN)
+                .actorId(String.valueOf(SecurityFrameworkUtils.getLoginUserId())).action("DELETE")
+                .bizType("service_usage_price_rule").bizId(String.valueOf(ruleId))
+                .result(AuditEventMessage.AuditResult.SUCCESS).detail(Map.of()).build());
+        return success(deleted);
     }
 
     private Map<String, Object> view(UsagePointPriceService.PriceRule rule) {

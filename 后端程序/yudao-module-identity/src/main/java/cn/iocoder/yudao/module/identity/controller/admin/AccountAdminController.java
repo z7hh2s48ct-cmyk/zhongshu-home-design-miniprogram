@@ -62,16 +62,22 @@ public class AccountAdminController {
         Long total = jdbc.queryForObject(
                 "SELECT count(*) FROM account a" + where, Long.class, args.toArray());
         // 最新一条流水的 available_after 即当前可用余额（账本只追加，末行即快照）
+        // 激活码列：取该账号最近一次兑换的授权码掩码（一码一账号；多次兑换取最新，形成用户↔码对应关系）
         String listSql =
                 "SELECT a.id, a.nickname, a.status, a.create_time, g.id AS grant_id, g.status AS grant_status, "
                         + "(SELECT count(*) FROM design_project p WHERE p.user_id = a.id AND p.deleted = FALSE) AS project_count, "
                         + "(SELECT count(*) FROM case_submission s WHERE s.user_id = a.id AND s.status = 'APPROVED' "
                         + "  AND s.deleted = FALSE) AS approved_submission_count, "
                         + "(SELECT l.available_after FROM design_point_ledger l WHERE l.user_id = a.id "
-                        + "  AND l.deleted = FALSE ORDER BY l.id DESC LIMIT 1) AS available_points "
+                        + "  AND l.deleted = FALSE ORDER BY l.id DESC LIMIT 1) AS available_points, "
+                        + "ac.code_mask AS access_code_mask "
                         + "FROM account a "
                         + "LEFT JOIN design_access_grant g ON g.account_id = a.id AND g.status = 'ACTIVE' "
-                        + "  AND g.deleted = FALSE"
+                        + "  AND g.deleted = FALSE "
+                        + "LEFT JOIN LATERAL (SELECT c.code_mask FROM access_code_redemption r "
+                        + "  JOIN design_access_code c ON c.id = r.code_id AND c.deleted = FALSE "
+                        + "  WHERE r.account_id = a.id AND r.deleted = FALSE "
+                        + "  ORDER BY r.id DESC LIMIT 1) ac ON TRUE"
                         + where
                         + " ORDER BY a.id DESC LIMIT ? OFFSET ?";
         args.add(Math.min(pageSize, 100));
@@ -108,6 +114,14 @@ public class AccountAdminController {
         }
         Map<String, Object> detail = new LinkedHashMap<>(accounts.get(0));
         stringifyIds(detail);
+        // 用户详情体现其激活码（最近一次兑换的授权码掩码）
+        List<Map<String, Object>> accessCode = jdbc.queryForList(
+                "SELECT c.code_mask, c.status AS code_status, c.consumed_at, c.expires_at "
+                        + "FROM access_code_redemption r "
+                        + "JOIN design_access_code c ON c.id = r.code_id AND c.deleted = FALSE "
+                        + "WHERE r.account_id = ? AND r.deleted = FALSE ORDER BY r.id DESC LIMIT 1", id);
+        accessCode.forEach(this::stringifyIds);
+        detail.put("accessCode", accessCode.isEmpty() ? null : accessCode.get(0));
         List<Map<String, Object>> grants = jdbc.queryForList(
                 "SELECT id, status, granted_at, revoked_at, revoked_by FROM design_access_grant "
                         + "WHERE account_id = ? AND deleted = FALSE ORDER BY id DESC LIMIT 20", id);
