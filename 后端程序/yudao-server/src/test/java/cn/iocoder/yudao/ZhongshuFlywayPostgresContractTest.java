@@ -37,8 +37,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 class ZhongshuFlywayPostgresContractTest {
 
-    /** 全部 location 的迁移执行总数（新增迁移时同步更新；2026-10-02 实测 9：platform 5 + 其余 location 4，009 业务权限种子入 platform） */
-    private static final int MIGRATION_COUNT = 9;
+    /** 全部 location 的迁移执行总数（新增迁移时同步更新；2026-10-02 实测 10：platform 6 + 其余 location 4，010 停用账号权限入 platform） */
+    private static final int MIGRATION_COUNT = 10;
 
     @Container
     static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>(
@@ -272,6 +272,14 @@ class ZhongshuFlywayPostgresContractTest {
                      "SELECT count(*) FROM system_role_menu WHERE role_id = 1 AND menu_id BETWEEN 9520 AND 9549 AND deleted = 0")) {
             rs.next();
             assertThat(rs.getInt(1)).as("超级管理员应绑定全部业务权限种子").isEqualTo(28);
+        }
+        // 010 停用账号按钮权限：独立 ID 9550（V009 重放 DELETE 区间之外）
+        try (Connection c = newConnection();
+             Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery(
+                     "SELECT count(*) FROM system_menu WHERE id = 9550 AND permission = 'identity:account:disable' AND deleted = 0")) {
+            rs.next();
+            assertThat(rs.getInt(1)).as("停用账号按钮权限应种入").isEqualTo(1);
         }
 
         // 种子可重复执行（DELETE + INSERT 幂等）：重放迁移不会产生重复行
