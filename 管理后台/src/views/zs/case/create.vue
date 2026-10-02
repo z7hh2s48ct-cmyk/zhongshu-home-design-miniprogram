@@ -5,7 +5,7 @@
         <h1 class="zs-page-title">{{ isEdit ? '编辑公司案例' : '新增公司案例' }}</h1>
         <div class="zs-page-subtitle">参数校核通过后可上架至小程序户型库</div>
       </div>
-      <el-button @click="$router.back()">返回</el-button>
+      <el-button @click="$router.push('/zs/case')">返回列表</el-button>
     </div>
 
     <div class="zs-table-card zs-form" v-loading="loading">
@@ -32,15 +32,21 @@
           />
         </el-form-item>
         <el-form-item label="风格" required>
-          <el-select v-model="form.styleCode" style="width: 200px">
-            <el-option label="新中式" value="NEW_CHINESE" />
-            <el-option label="现代" value="MODERN" />
-            <el-option label="欧式" value="EURO" />
-            <el-option label="美式" value="AMERICAN" />
+          <el-select
+            v-model="form.styleCode"
+            style="width: 200px"
+            filterable
+            allow-create
+            default-first-option
+            :fit-input-width="false"
+            placeholder="选择或输入自定义风格"
+          >
+            <el-option v-for="s in STYLE_PRESETS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
+          <span class="ml-8px" style="font-size: 12px; color: #8a8a8a">可直接输入新风格（≤32字符）</span>
         </el-form-item>
         <el-form-item label="层数" required>
-          <el-input-number v-model="form.floorCount" :min="1" :max="4" />
+          <el-input-number v-model="form.floorCount" :min="1" :max="8" />
         </el-form-item>
         <el-form-item label="建筑面积(㎡)" required>
           <el-input-number v-model="form.buildingArea" :min="30" :max="2000" />
@@ -57,7 +63,7 @@
               >先保存草稿及楼层参数，再上传图纸。上传校验成功后立即保存到案例新版本；上架至少需要封面和平面图。</p
             >
             <p v-if="publicationStatus === 'PUBLISHED'"
-              >此案例已上架，请先返回列表下架后再更换图纸。</p
+              >此案例已上架：参数与图纸保存后立即对小程序生效（按版本留痕，可随时下架回退展示）。</p
             >
             <el-checkbox v-model="publicDisplay"
               >确认公司拥有图片使用权，并允许公开展示</el-checkbox
@@ -91,7 +97,6 @@
                   loading ||
                   !!loadError ||
                   loadedVersion == null ||
-                  publicationStatus === 'PUBLISHED' ||
                   !checkPermi(['design:case:update'])
                 "
                 @change="uploadImage($event, slot)"
@@ -145,7 +150,7 @@ const images = reactive<Record<string, { assetId: string; url: string; error: bo
 const imageSlots = computed(() => [
   { key: 'COVER', role: 'COVER', label: '封面图', floorNo: null },
   { key: 'ELEVATION', role: 'ELEVATION', label: '立面图', floorNo: null },
-  ...Array.from({ length: Math.min(4, Math.max(1, Number(form.floorCount) || 1)) }, (_, i) => ({
+  ...Array.from({ length: Math.min(8, Math.max(1, Number(form.floorCount) || 1)) }, (_, i) => ({
     key: `FLOOR_PLAN:${i + 1}`,
     role: 'FLOOR_PLAN',
     label: `${i + 1}层平面图`,
@@ -153,6 +158,17 @@ const imageSlots = computed(() => [
   }))
 ])
 let sequence = 0
+// 常用风格预设；允许运营直接输入自定义风格（后端 style_code 为 VARCHAR(32)，无枚举约束）
+const STYLE_PRESETS = [
+  { label: '新中式', value: 'NEW_CHINESE' },
+  { label: '现代', value: 'MODERN' },
+  { label: '中式', value: 'CHINESE' },
+  { label: '欧式', value: 'EUROPEAN' },
+  { label: '美式', value: 'AMERICAN' },
+  { label: '日式', value: 'JAPANESE' },
+  { label: '法式', value: 'FRENCH' },
+  { label: '田园', value: 'COUNTRYSIDE' }
+]
 const form = reactive({
   title: '',
   description: '',
@@ -201,7 +217,6 @@ const uploadImage = async (
     return
   if (
     !publicDisplay.value ||
-    publicationStatus.value === 'PUBLISHED' ||
     !checkPermi(['design:case:update'])
   )
     return
@@ -251,7 +266,6 @@ const loadCase = async () => {
     const detail = await ZsApi.getCase(String(route.query.id))
     if (seq !== sequence) return
     if (detail.sourceType !== 'COMPANY') throw Error('AI案例只能通过投稿审核流程处理')
-    if (detail.publicationStatus === 'PUBLISHED') throw Error('已上架案例请先返回列表下架后再编辑')
     for (const key of [
       'title',
       'description',

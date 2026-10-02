@@ -124,19 +124,13 @@ test('图纸上传期间不允许并发保存，预览失败不丢已保存关�
   await app.state.previewImage('COVER'); assert.equal(app.state.images.COVER.error, false)
 })
 
-test('未保存/已上架案例、非图片或超限文件不能上传，迟到结果不污染已离开页面', async () => {
+test('已上架案例免下架直接上传（立即生效）；非图片或超限文件不能上传，迟到结果不污染已离开页面', async () => {
   let count = 0, finish
   const api = { getCase: async () => ({ sourceType: 'COMPANY', publicationStatus: 'PUBLISHED', version: 1 }), uploadCaseImage: () => { count++; return new Promise(resolve => { finish = resolve }) } }
   const app = component('case/create.vue', api, { path: '/zs/case/create', query: { id: '5' } })
   await app.hooks.mount(); app.state.publicDisplay.value = true
   const slot = { key: 'COVER', role: 'COVER', floorNo: null }
   const event = file => ({ target: { files: [file], value: '' } })
-  await app.state.uploadImage(event(new Blob(['png'], { type: 'image/png' })), slot)
-  assert.equal(count, 0)
-  assert.match(app.state.loadError.value, /先返回列表下架/)
-  app.state.loadError.value = ''
-  app.state.loadedVersion.value = 1
-  app.state.publicationStatus.value = 'DRAFT'
   await app.state.uploadImage(event(new Blob(['not image'], { type: 'text/plain' })), slot)
   await app.state.uploadImage(event({ type: 'image/png', size: 16 * 1024 * 1024 + 1 }), slot)
   assert.equal(count, 0)

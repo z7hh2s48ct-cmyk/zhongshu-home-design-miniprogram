@@ -78,8 +78,16 @@
         @selection-change="(rows) => (selectedIds = rows.map((r) => r.caseId))"
       >
         <el-table-column type="selection" width="44" />
-        <el-table-column label="案例编号" prop="caseId" width="160" />
-        <el-table-column label="案例名称" prop="title" min-width="130" />
+        <el-table-column label="案例编号" prop="caseId" width="160">
+          <template #default="{ row }">
+            <span class="zs-link zs-case-link" @click="openDetail(row)">{{ row.caseId }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="案例名称" prop="title" min-width="130">
+          <template #default="{ row }">
+            <span class="zs-link zs-case-link" @click="openDetail(row)">{{ row.title }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="来源" width="80">
           <template #default="{ row }">{{ row.sourceType === 'COMPANY' ? '公司' : 'AI' }}</template>
         </el-table-column>
@@ -101,26 +109,31 @@
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <span
-              v-if="row.sourceType === 'COMPANY' && row.publicationStatus !== 'PUBLISHED'"
+              v-if="row.sourceType === 'COMPANY'"
               class="zs-link"
               @click="$router.push(`/zs/case/create?id=${row.caseId}`)"
               >编辑</span
             >
-            <span
-              class="zs-link"
-              v-if="
-                row.sourceType === 'COMPANY' && ['DRAFT', 'OFFLINE'].includes(row.publicationStatus)
-              "
-              @click="doPublish(row)"
-              >上架</span
-            >
-            <span
-              class="zs-link-danger"
-              v-if="row.publicationStatus === 'PUBLISHED'"
-              @click="doOffline(row)"
-              >下架</span
-            >
             <span class="zs-link" @click="openPreview(row)">预览</span>
+            <el-dropdown
+              v-if="canMore(row)"
+              trigger="click"
+              @command="(command: string) => rowAction(command, row)"
+            >
+              <span class="zs-link zs-more">更多 ▾</span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item
+                    v-if="row.sourceType === 'COMPANY' && ['DRAFT', 'OFFLINE'].includes(row.publicationStatus)"
+                    command="publish"
+                    >上架</el-dropdown-item
+                  >
+                  <el-dropdown-item v-if="row.publicationStatus === 'PUBLISHED'" command="offline"
+                    >下架</el-dropdown-item
+                  >
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -192,6 +205,7 @@ import { fmtTime, styleText } from '@/utils/zsFormat'
 
 defineOptions({ name: 'ZsCaseManage' })
 const message = useMessage()
+const $router = useRouter()
 
 const loading = ref(false)
 /** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
@@ -273,6 +287,15 @@ const statusText = (s: string) =>
   ({ DRAFT: '草稿', PUBLISHED: '已上架', OFFLINE: '已下架' })[s] || s
 const statusColor = (s: string) =>
   ({ DRAFT: 'gray', PUBLISHED: 'green', OFFLINE: 'red' })[s] || 'gray'
+
+const openDetail = (row: any) => $router.push(`/zs/case/detail/${row.caseId}`)
+const canMore = (row: any) =>
+  (row.sourceType === 'COMPANY' && ['DRAFT', 'OFFLINE'].includes(row.publicationStatus)) ||
+  row.publicationStatus === 'PUBLISHED'
+const rowAction = (command: string, row: any) => {
+  if (command === 'publish') doPublish(row)
+  else if (command === 'offline') doOffline(row)
+}
 
 const search = () => {
   query.pageNo = 1
@@ -359,6 +382,14 @@ onMounted(load)
 
 .zs-link {
   margin-right: 12px;
+}
+
+.zs-case-link {
+  font-weight: 600;
+}
+
+.zs-more {
+  margin-right: 0;
 }
 
 .case-preview-grid {
