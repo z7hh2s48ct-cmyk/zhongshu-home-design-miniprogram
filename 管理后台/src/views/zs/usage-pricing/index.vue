@@ -81,7 +81,12 @@
         @pagination="load"
       />
     </div>
-    <el-dialog v-model="editorOpen" title="新增业务价格" width="480px">
+    <el-dialog
+      v-model="editorOpen"
+      title="新增业务价格"
+      width="480px"
+      :close-on-click-modal="false"
+    >
       <el-form label-width="100px">
         <el-form-item label="计费业务"
           ><el-select v-model="form.product"
@@ -137,8 +142,11 @@ const form = reactive({
 const label = (product: UsageProduct) =>
   product === 'BUDGET_ESTIMATE' ? '预算测算（成功一次）' : '提示词模型调用（每次）'
 const dateLabel = (value: string) => new Date(value).toLocaleString('zh-CN', { hour12: false })
+// 竞态保护：快速切换筛选时丢弃旧响应，避免旧结果覆盖新结果
+let loadSeq = 0
 async function load() {
   if (!canQuery.value) return
+  const seq = ++loadSeq
   loading.value = true
   loadError.value = false
   try {
@@ -147,14 +155,16 @@ async function load() {
       product: filters.product || undefined,
       status: filters.status || undefined
     })
+    if (seq !== loadSeq) return
     rows.value = page.list
     total.value = page.total
   } catch {
+    if (seq !== loadSeq) return
     rows.value = []
     total.value = 0
     loadError.value = true
   } finally {
-    loading.value = false
+    if (seq === loadSeq) loading.value = false
   }
 }
 function openEditor() {
@@ -183,22 +193,27 @@ async function save() {
     message.success('价格已新增')
     editorOpen.value = false
     await load()
-  } catch {
-    message.error('保存失败，请检查权限或时间范围')
+  } catch (e: any) {
+    message.error(e?.msg || '保存失败，请检查权限或时间范围')
   } finally {
     saving.value = false
   }
 }
 async function retire(row: UsagePriceRule) {
   if (!canManage.value || saving.value) return
+  // 确认取消与接口失败必须分开处理：停用失败静默会让运营误以为价格已停用（仍在计费）
+  const confirmed = await message
+    .confirm(`停用“${label(row.product)}”当前价格？`)
+    .then(() => true)
+    .catch(() => false)
+  if (!confirmed) return
+  saving.value = true
   try {
-    await message.confirm(`停用“${label(row.product)}”当前价格？`)
-    saving.value = true
     await Api.retireRule(row.ruleId)
     message.success('价格已停用')
     await load()
-  } catch {
-    /* 用户取消或请求失败时保持列表 */
+  } catch (e: any) {
+    message.error(e?.msg || '停用失败，请刷新后重试；该价格在停用成功前仍在计费')
   } finally {
     saving.value = false
   }

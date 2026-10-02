@@ -29,11 +29,18 @@ export const fmtTime = (value: any): string => {
 /** 毫秒时间戳 / ISO 字符串 → 「yyyy-MM-dd」 */
 export const fmtDate = (value: any): string => fmtTime(value).slice(0, 10)
 
+// 兼容两代风格码：老表单（EURO/AMERICAN）与预设表（CHINESE/EUROPEAN 等）；
+// 未映射的自定义风格直接展示原文
 export const STYLE_TEXT: Record<string, string> = {
   NEW_CHINESE: '新中式',
   MODERN: '现代',
   CHINESE: '中式',
-  EUROPEAN: '欧式'
+  EUROPEAN: '欧式',
+  EURO: '欧式',
+  AMERICAN: '美式',
+  JAPANESE: '日式',
+  FRENCH: '法式',
+  COUNTRYSIDE: '田园'
 }
 export const styleText = (code: any): string => STYLE_TEXT[code] || code || '—'
 

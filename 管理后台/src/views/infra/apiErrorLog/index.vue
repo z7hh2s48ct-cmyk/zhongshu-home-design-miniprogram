@@ -43,6 +43,15 @@
           class="!w-240px"
         />
       </el-form-item>
+      <el-form-item label="请求路径" prop="requestUrl">
+        <el-input
+          v-model="queryParams.requestUrl"
+          placeholder="如 /design/，清空查看全部"
+          clearable
+          @keyup.enter="handleQuery"
+          class="!w-240px"
+        />
+      </el-form-item>
       <el-form-item label="异常时间" prop="exceptionTime">
         <el-date-picker
           v-model="queryParams.exceptionTime"
@@ -179,7 +188,8 @@ const queryParams = reactive({
   userId: null,
   userType: null,
   applicationName: null,
-  requestUrl: null,
+  // 本项目业务接口全部位于 /design/ 前缀下；默认只看项目相关错误，清空可查框架全部日志
+  requestUrl: '/design/',
   processStatus: null,
   exceptionTime: []
 })

@@ -1,7 +1,7 @@
 <template>
   <div class="zs-page">
     <div class="zs-page-header">
-      <div>
+      <div v-if="!embedded">
         <h1 class="zs-page-title">充值方案</h1>
         <div class="zs-page-subtitle"
           >小程序端展示的充值档位；改价不影响历史订单（订单引用快照）</div
@@ -63,6 +63,8 @@
 import * as ZsApi from '@/api/zs'
 
 defineOptions({ name: 'ZsRechargePlan' })
+// embedded=true 时由充值管理合并页内嵌，标题交给外层，仅保留操作按钮
+defineProps<{ embedded?: boolean }>()
 const message = useMessage()
 
 const loading = ref(false)

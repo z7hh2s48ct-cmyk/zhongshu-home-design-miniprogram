@@ -113,7 +113,11 @@
     </div>
     <el-dialog
       v-model="editorOpen"
-      title="新增生成价格"
+      :title="
+        editingSource
+          ? `调价 · ${stageLabel(form.stage)} ${form.resolution}（生成新价格版本，旧价保留至失效）`
+          : '新增生成价格'
+      "
       width="500px"
       :close-on-click-modal="!saving"
     >
@@ -186,6 +190,8 @@ const form = reactive({
   effectiveAt: '',
   expiresAt: ''
 })
+// 调价来源行：非空表示从已有价格进入（生成新版本而非覆盖）
+const editingSource = ref<GenerationPriceRule | null>(null)
 const stageLabel = (stage: string) => (stage === 'FLAT' ? '平面方案' : '立面方案')
 const dateLabel = (value: string | null) =>
   value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '长期有效'
@@ -222,6 +228,7 @@ function refresh() {
 }
 function openEditor(row?: GenerationPriceRule) {
   if (!canManage.value) return
+  editingSource.value = row ?? null
   Object.assign(form, {
     stage: row?.stage || 'FLAT',
     resolution: row?.resolution || '2K',
@@ -273,8 +280,8 @@ async function save() {
     editorOpen.value = false
     message.success('价格已保存')
     await refresh()
-  } catch {
-    message.error('价格保存失败，请重试')
+  } catch (e: any) {
+    message.error(e?.msg || '价格保存失败，请重试')
   } finally {
     saving.value = false
   }
@@ -293,8 +300,8 @@ async function retire(row: GenerationPriceRule) {
     await PricingApi.retirePriceRule(row.ruleId)
     message.success('价格已停用')
     await load()
-  } catch {
-    message.error('停用失败，请重试')
+  } catch (e: any) {
+    message.error(e?.msg || '停用失败，请重试；该价格在停用成功前仍在计费')
   } finally {
     saving.value = false
   }

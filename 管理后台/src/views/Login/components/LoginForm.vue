@@ -2,7 +2,7 @@
   <div class="zs-login-card">
     <!-- 卡片标题区 -->
     <div class="zs-login-head">
-      <div class="zs-login-title">众墅之家设计管理后台</div>
+      <div class="zs-login-title">设计管理后台</div>
       <div class="zs-login-subtitle">仅限授权管理员使用</div>
     </div>
 

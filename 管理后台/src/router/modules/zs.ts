@@ -3,7 +3,10 @@ import { Layout } from '@/utils/routerHelper'
 
 /**
  * 众墅之家设计管理后台——本地静态路由
- * 与效果图 02-12 对应；登录后即可见（细粒度权限由后端 @PreAuthorize 把关）
+ * meta.group 决定侧边栏分组：projectNavigation.buildProjectMenus 按其组装 6 个业务顶级组
+ * （content 户型与内容 / auth 用户与授权 / fund 资金与点数 / budget 预算与报价 / pricing 价格管理 / ops 运营与合规）。
+ * 路由本身保持 /zs 扁平注册，分组只影响菜单树展示。
+ * 登录后即可见（细粒度权限由后端 @PreAuthorize 把关）
  */
 const zsRouter: RouteRecordRaw[] = [
   {
@@ -12,48 +15,68 @@ const zsRouter: RouteRecordRaw[] = [
     name: 'ZhongshuDesign',
     meta: { hidden: false },
     children: [
-      {
-        path: 'privacy',
-        component: () => import('@/views/zs/privacy/index.vue'),
-        name: 'ZsPrivacy',
-        meta: { title: '隐私申请', icon: 'ep:lock', noCache: true }
-      },
-      {
-        path: 'dashboard',
-        component: () => import('@/views/zs/dashboard/index.vue'),
-        name: 'ZsDashboard',
-        // 与首页 / 指向同一视图，仅作 URL 兜底；工作台入口由 remainingRouter 的 / 承载。
-        meta: { title: '工作台', icon: 'ep:home-filled', noCache: false, hidden: true }
-      },
+      // —— 户型与内容 content ——
       {
         path: 'case',
         component: () => import('@/views/zs/case/index.vue'),
         name: 'ZsCaseManage',
-        meta: { title: '户型库管理', icon: 'ep:office-building' }
+        meta: { title: '户型库管理', icon: 'ep:office-building', group: 'content' }
       },
       {
         path: 'case/create',
         component: () => import('@/views/zs/case/create.vue'),
         name: 'ZsCaseCreate',
-        meta: { title: '新增公司案例', icon: 'ep:plus', noCache: true, hidden: true }
+        meta: {
+          title: '新增公司案例',
+          icon: 'ep:plus',
+          noCache: true,
+          hidden: true,
+          group: 'content',
+          activeMenu: '/zs/case'
+        }
+      },
+      {
+        path: 'case/detail/:caseId',
+        component: () => import('@/views/zs/case/detail.vue'),
+        name: 'ZsCaseDetail',
+        meta: {
+          title: '案例详情',
+          noCache: true,
+          hidden: true,
+          group: 'content',
+          activeMenu: '/zs/case'
+        }
       },
       {
         path: 'review',
         component: () => import('@/views/zs/review/index.vue'),
         name: 'ZsReview',
-        meta: { title: 'AI案例审核', icon: 'ep:view', noCache: true }
+        meta: { title: 'AI案例审核', icon: 'ep:view', noCache: true, group: 'content' }
       },
       {
         path: 'review/:submissionId',
         component: () => import('@/views/zs/review/detail.vue'),
         name: 'ZsReviewDetail',
-        meta: { title: '审核详情', noCache: true, hidden: true, activeMenu: '/zs/review' }
+        meta: {
+          title: '审核详情',
+          noCache: true,
+          hidden: true,
+          group: 'content',
+          activeMenu: '/zs/review'
+        }
+      },
+      // —— 用户与授权 auth ——
+      {
+        path: 'account',
+        component: () => import('@/views/zs/user/index.vue'),
+        name: 'ZsAccount',
+        meta: { title: 'C端用户', icon: 'ep:user', group: 'auth' }
       },
       {
         path: 'access-code',
         component: () => import('@/views/zs/accesscode/index.vue'),
         name: 'ZsAccessCode',
-        meta: { title: '授权码管理', icon: 'ep:key', noCache: true }
+        meta: { title: '授权码管理', icon: 'ep:key', noCache: true, group: 'auth' }
       },
       {
         path: 'access-code/batch',
@@ -64,26 +87,34 @@ const zsRouter: RouteRecordRaw[] = [
           icon: 'ep:plus',
           noCache: true,
           hidden: true,
+          group: 'auth',
           activeMenu: '/zs/access-code'
         }
       },
       {
+        path: 'point-adjustments',
+        component: () => import('@/views/zs/points/adjustments.vue'),
+        name: 'ZsPointAdjustments',
+        meta: { title: '人工调点单', icon: 'ep:edit', noCache: true, group: 'auth' }
+      },
+      // —— 资金与点数 fund ——
+      {
+        path: 'recharge',
+        component: () => import('@/views/zs/recharge/index.vue'),
+        name: 'ZsRechargeManage',
+        meta: { title: '充值管理', icon: 'ep:tickets', group: 'fund' }
+      },
+      {
+        path: 'recharge-order',
+        name: 'ZsRechargeOrderLegacy',
+        redirect: '/zs/recharge?tab=orders',
+        meta: { hidden: true, group: 'fund', activeMenu: '/zs/recharge' }
+      },
+      {
         path: 'recharge-plan',
-        component: () => import('@/views/zs/recharge/plan/index.vue'),
-        name: 'ZsRechargePlan',
-        meta: { title: '充值方案', icon: 'ep:coin' }
-      },
-      {
-        path: 'generation-pricing',
-        component: () => import('@/views/zs/generation-pricing/index.vue'),
-        name: 'ZsGenerationPricing',
-        meta: { title: '生成价格', icon: 'ep:price-tag', noCache: true }
-      },
-      {
-        path: 'usage-pricing',
-        component: () => import('@/views/zs/usage-pricing/index.vue'),
-        name: 'ZsUsagePricing',
-        meta: { title: '业务积分价格', icon: 'ep:coin', noCache: true }
+        name: 'ZsRechargePlanLegacy',
+        redirect: '/zs/recharge?tab=plans',
+        meta: { hidden: true, group: 'fund', activeMenu: '/zs/recharge' }
       },
       {
         path: 'recharge-plan/edit',
@@ -93,26 +124,28 @@ const zsRouter: RouteRecordRaw[] = [
           title: '编辑充值方案',
           noCache: true,
           hidden: true,
-          activeMenu: '/zs/recharge-plan'
+          group: 'fund',
+          activeMenu: '/zs/recharge'
         }
       },
       {
-        path: 'recharge-order',
-        component: () => import('@/views/zs/recharge/order/index.vue'),
-        name: 'ZsRechargeOrder',
-        meta: { title: '充值订单', icon: 'ep:tickets' }
+        path: 'point-ledger',
+        component: () => import('@/views/zs/points/ledger/index.vue'),
+        name: 'ZsPointLedger',
+        meta: { title: '设计点流水', icon: 'ep:wallet', group: 'fund' }
       },
+      // —— 预算与报价 budget ——
       {
         path: 'budget',
         component: () => import('@/views/zs/budget/index.vue'),
         name: 'ZsBudgetCatalog',
-        meta: { title: '预算配置', icon: 'ep:money', noCache: true }
+        meta: { title: '预算配置', icon: 'ep:money', noCache: true, group: 'budget' }
       },
       {
         path: 'budget-estimates',
         component: () => import('@/views/zs/budget/estimates.vue'),
         name: 'ZsBudgetEstimates',
-        meta: { title: '项目预算', icon: 'ep:document', noCache: true }
+        meta: { title: '项目预算', icon: 'ep:document', noCache: true, group: 'budget' }
       },
       {
         path: 'budget-estimates/:budgetId',
@@ -122,6 +155,7 @@ const zsRouter: RouteRecordRaw[] = [
           title: '预算明细与修订',
           noCache: true,
           hidden: true,
+          group: 'budget',
           activeMenu: '/zs/budget-estimates'
         }
       },
@@ -133,38 +167,54 @@ const zsRouter: RouteRecordRaw[] = [
           title: '对外报价',
           noCache: true,
           hidden: true,
+          group: 'budget',
           activeMenu: '/zs/budget-estimates'
         }
       },
+      // —— 价格管理 pricing ——
       {
-        path: 'point-ledger',
-        component: () => import('@/views/zs/points/ledger/index.vue'),
-        name: 'ZsPointLedger',
-        meta: { title: '设计点流水', icon: 'ep:wallet' }
+        path: 'generation-pricing',
+        component: () => import('@/views/zs/generation-pricing/index.vue'),
+        name: 'ZsGenerationPricing',
+        meta: { title: '出图计价', icon: 'ep:price-tag', noCache: true, group: 'pricing' }
       },
       {
-        path: 'account',
-        component: () => import('@/views/zs/user/index.vue'),
-        name: 'ZsAccount',
-        meta: { title: 'C端用户', icon: 'ep:user' }
+        path: 'usage-pricing',
+        component: () => import('@/views/zs/usage-pricing/index.vue'),
+        name: 'ZsUsagePricing',
+        meta: { title: '业务积分价格', icon: 'ep:coin', noCache: true, group: 'pricing' }
       },
+      // —— 运营与合规 ops ——
       {
         path: 'ai-job',
         component: () => import('@/views/zs/job/index.vue'),
         name: 'ZsAiJob',
-        meta: { title: 'AI任务', icon: 'ep:cpu' }
+        meta: { title: 'AI任务', icon: 'ep:cpu', group: 'ops' }
       },
       {
         path: 'export',
         component: () => import('@/views/zs/export/index.vue'),
         name: 'ZsExport',
-        meta: { title: '数据导出', icon: 'ep:download' }
+        meta: { title: '数据导出', icon: 'ep:download', group: 'ops' }
       },
       {
         path: 'audit',
         component: () => import('@/views/zs/audit/index.vue'),
         name: 'ZsAudit',
-        meta: { title: '审计事件', icon: 'ep:document-checked' }
+        meta: { title: '审计事件', icon: 'ep:document-checked', group: 'ops' }
+      },
+      {
+        path: 'privacy',
+        component: () => import('@/views/zs/privacy/index.vue'),
+        name: 'ZsPrivacy',
+        meta: { title: '隐私申请', icon: 'ep:lock', group: 'ops' }
+      },
+      {
+        path: 'dashboard',
+        component: () => import('@/views/zs/dashboard/index.vue'),
+        name: 'ZsDashboard',
+        // 与首页 / 指向同一视图，仅作 URL 兜底；工作台入口由 remainingRouter 的 / 承载。
+        meta: { title: '工作台', icon: 'ep:home-filled', noCache: false, hidden: true }
       }
     ]
   }
