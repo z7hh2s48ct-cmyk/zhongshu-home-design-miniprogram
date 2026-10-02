@@ -48,14 +48,26 @@
         class="mb-16px"
       />
       <div class="budget-filters">
-        <el-input
+        <!-- E-7 覆盖价账号搜索：昵称模糊选人，不再要求手输完整 19 位账号 ID -->
+        <el-select
           v-if="kind === 'account-prices'"
           v-model="accountFilter"
           class="budget-select"
           clearable
-          placeholder="输入账号 ID"
-          @keyup.enter="refresh"
-        />
+          filterable
+          remote
+          :remote-method="searchAccounts"
+          :loading="accountSearching"
+          placeholder="输入昵称或账号 ID 搜索用户"
+          @change="refresh"
+        >
+          <el-option
+            v-for="acc in accountCandidates"
+            :key="acc.id"
+            :value="String(acc.id)"
+            :label="`${acc.nickname || '（未设置）'} · ${acc.id}`"
+          />
+        </el-select>
         <el-select
           v-if="kind === 'options' || kind === 'prices'"
           v-model="itemFilter"
@@ -135,7 +147,20 @@
             <template #default="{ row }">{{ row.reason || '未填写' }}</template>
           </el-table-column>
           <el-table-column label="更新时间" min-width="170">
-            <template #default="{ row }">{{ displayTime(row.updatedAt) }}</template>
+            <template #default="{ row }">{{ fmtTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <!-- F-4 覆盖价干预：代用户改价/恢复默认，price-publish 权限 -->
+          <el-table-column v-if="canPricePublish" label="干预" min-width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openAccountPriceEditor(row)">代改</el-button>
+              <el-button
+                v-if="row.status === 'ACTIVE'"
+                link
+                type="danger"
+                @click="resetAccountPrice(row)"
+                >恢复默认</el-button
+              >
+            </template>
           </el-table-column>
         </template>
         <el-table-column
@@ -173,10 +198,15 @@
             >{{ row.regionCode }} / {{ optionNameById(row.optionId) }}</template
           >
         </el-table-column>
-        <el-table-column v-if="kind === 'prices'" label="单价（元）" min-width="120">
+        <el-table-column v-if="kind === 'prices'" label="单价（元）" min-width="130">
           <template #default="{ row }"
             >{{ formatCents(row.unitPriceCents)
-            }}<el-tag v-if="row.unitPriceCents === 0" size="small">免费</el-tag></template
+            }}<el-tooltip
+              v-if="row.unitPriceCents === 0 && (row.freeReason || row.reason)"
+              :content="row.freeReason || row.reason"
+              placement="top"
+              ><el-tag size="small">免费?</el-tag></el-tooltip
+            ><el-tag v-else-if="row.unitPriceCents === 0" size="small">免费</el-tag></template
           >
         </el-table-column>
         <el-table-column v-if="kind === 'prices'" label="有效期（左闭右开）" min-width="230">
@@ -482,6 +512,8 @@
 import * as BudgetApi from '@/api/zs/budget'
 import type { CatalogKind, CatalogRow } from '@/api/zs/budget'
 import { checkPermi } from '@/utils/permission'
+import { fmtTime } from '@/utils/zsFormat'
+import { ElMessageBox } from 'element-plus'
 import {
   createForm,
   formPayload,
@@ -497,6 +529,7 @@ const message = useMessage()
 const canQuery = computed(() => checkPermi(['design:budget:query']))
 const canConfigure = computed(() => canQuery.value && checkPermi(['design:budget:configure']))
 const canPublish = computed(() => canQuery.value && checkPermi(['design:budget:price-publish']))
+const canPricePublish = canPublish
 const labels = {
   regions: '建造地区',
   items: '自定义预算项',
@@ -515,6 +548,93 @@ const itemFilter = ref(''),
   regionFilter = ref(''),
   optionFilter = ref(''),
   accountFilter = ref('')
+const accountCandidates = ref<any[]>([])
+const accountSearching = ref(false)
+// E-7 覆盖价账号远程搜索：昵称模糊 + 纯数字直查 ID
+async function searchAccounts(keyword: string) {
+  if (!keyword || !keyword.trim()) {
+    accountCandidates.value = []
+    return
+  }
+  accountSearching.value = true
+  try {
+    const value = keyword.trim()
+    const params = /^d{1,20}$/.test(value)
+      ? { status: '', nickname: '', pageNo: 1, pageSize: 20 }
+      : { status: '', nickname: value, pageNo: 1, pageSize: 20 }
+    const res = await BudgetApi.searchAccountsApi(params)
+    let list = res?.list || []
+    if (list.length === 0 && /^d{1,20}$/.test(value)) {
+      try {
+        const direct = await BudgetApi.getAccountById(value)
+        if (direct) list = [direct]
+      } catch {
+        /* 直查失败保持空 */
+      }
+    }
+    accountCandidates.value = list
+  } catch {
+    accountCandidates.value = []
+  } finally {
+    accountSearching.value = false
+  }
+}
+// F-4 代用户改价（price-publish 权限）：复用 T14 upsert 语义
+async function openAccountPriceEditor(row: any) {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `为账号 ${accountFilter.value} 的「${row.optionLabel}」设置覆盖单价（元，留空恢复默认）：`,
+      '代用户设置覆盖价',
+      {
+        confirmButtonText: '保存',
+        cancelButtonText: '取消',
+        inputPlaceholder: '如 128.00；留空并确认即恢复默认',
+        inputValidator: (v: string) => {
+          if (!v?.trim()) return true
+          const n = Number(v)
+          return Number.isFinite(n) && n > 0 && n <= 1000000 ? true : '请输入 0～100 万的有效金额'
+        }
+      }
+    )
+    const trimmed = value.trim()
+    const cents = trimmed ? Math.round(Number(trimmed) * 100) : null
+    if (cents != null && (!Number.isSafeInteger(cents) || cents < 1)) {
+      message.error('金额换算分值无效')
+      return
+    }
+    await BudgetApi.setAccountPriceForUser({
+      accountId: accountFilter.value,
+      optionId: String(row.optionId),
+      regionCode: row.regionCode || '',
+      unitPriceCents: cents,
+      reason: '管理端代改：' + (row.reason || '运营调整')
+    })
+    message.success(cents == null ? '已恢复默认价' : '覆盖价已更新')
+    refresh()
+  } catch (e: any) {
+    if (e !== 'cancel' && e !== 'close') message.error(e?.msg || '设置失败，请重试')
+  }
+}
+async function resetAccountPrice(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      `清除账号 ${accountFilter.value} 对「${row.optionLabel}」的覆盖价，恢复基准价？`,
+      '恢复默认',
+      { type: 'warning', confirmButtonText: '恢复默认', cancelButtonText: '取消' }
+    )
+    await BudgetApi.setAccountPriceForUser({
+      accountId: accountFilter.value,
+      optionId: String(row.optionId),
+      regionCode: row.regionCode || '',
+      unitPriceCents: null,
+      reason: '管理端恢复默认'
+    })
+    message.success('已恢复默认价')
+    refresh()
+  } catch (e: any) {
+    if (e !== 'cancel' && e !== 'close') message.error(e?.msg || '操作失败，请重试')
+  }
+}
 const loadError = ref(''),
   saveError = ref('')
 const choices = reactive({
@@ -532,8 +652,7 @@ const optionNameById = (id?: string) => {
   const option = choices.options.find((o) => o.optionId === id)
   return option ? optionName(option) : id || '未指定'
 }
-const displayTime = (value?: string) =>
-  value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '待填写'
+const displayTime = (value?: string) => (value ? fmtTime(value) : '待填写')
 const errorText = (error: any) =>
   error?.msg || error?.message || '请求失败，请重试；若版本冲突请刷新后重新核对'
 let readSequence = 0

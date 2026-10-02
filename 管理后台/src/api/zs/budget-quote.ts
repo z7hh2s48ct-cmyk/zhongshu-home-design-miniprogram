@@ -96,3 +96,14 @@ export const withdrawQuote = (
     data,
     headers: { 'Idempotency-Key': key }
   })
+// E-3 作废草稿（含 stale 草稿）：仅 DRAFT 可作废，业主端永不展示
+export const discardQuote = (
+  quoteId: string,
+  data: { expectedVersion: number; reason: string },
+  key: string
+) =>
+  request.post<BudgetQuote>({
+    url: `${BASE}/quotes/${encodeURIComponent(quoteId)}/discard`,
+    data,
+    headers: { 'Idempotency-Key': key }
+  })

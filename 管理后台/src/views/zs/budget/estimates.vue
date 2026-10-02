@@ -16,7 +16,14 @@
     <div v-else class="zs-table-card">
       <el-form inline @submit.prevent="search">
         <el-form-item label="项目编号"
-          ><el-input v-model="projectId" clearable maxlength="19" placeholder="完整项目编号"
+          ><el-input
+            v-model="projectId"
+            clearable
+            maxlength="19"
+            placeholder="完整项目编号（精确）"
+        /></el-form-item>
+        <el-form-item label="关键词"
+          ><el-input v-model="keyword" clearable placeholder="项目名 / 用户昵称（模糊）"
         /></el-form-item>
         <el-form-item label="完整性"
           ><el-select
@@ -84,9 +91,16 @@
         <el-table-column label="生成时间" min-width="175"
           ><template #default="{ row }">{{ displayTime(row.createdAt) }}</template></el-table-column
         >
-        <el-table-column label="操作" width="90" fixed="right"
+        <el-table-column label="操作" width="130" fixed="right"
           ><template #default="{ row }"
-            ><el-button link type="primary" @click="open(row)">详情</el-button></template
+            ><el-button link type="primary" @click="open(row)">详情</el-button
+            ><el-button
+              v-if="row.completeness === 'COMPLETE'"
+              link
+              type="primary"
+              @click="openQuotes(row)"
+              >对外报价</el-button
+            ></template
           ></el-table-column
         >
       </el-table>
@@ -113,6 +127,7 @@ const router = useRouter()
 const canQuery = computed(() => checkPermi(['design:budget:query']))
 const rows = ref<BudgetSummary[]>([])
 const projectId = ref(''),
+  keyword = ref(''),
   completeness = ref(''),
   pageNo = ref(1),
   total = ref(0)
@@ -136,6 +151,7 @@ async function load() {
       pageNo: pageNo.value,
       pageSize: 20,
       ...(projectId.value ? { projectId: projectId.value } : {}),
+      ...(keyword.value.trim() ? { keyword: keyword.value.trim() } : {}),
       ...(completeness.value ? { completeness: completeness.value } : {})
     })
     if (requestId === sequence && canQuery.value) {
@@ -154,12 +170,18 @@ function search() {
 }
 function reset() {
   projectId.value = ''
+  keyword.value = ''
   completeness.value = ''
   search()
 }
 function open(row: BudgetSummary) {
   if (canQuery.value && validId(row.budgetId))
     void router.push('/zs/budget-estimates/' + row.budgetId)
+}
+// E-4 报价直达：省去进详情再点的两跳
+function openQuotes(row: BudgetSummary) {
+  if (canQuery.value && validId(row.budgetId))
+    void router.push(`/zs/budget-estimates/${row.budgetId}/quotes`)
 }
 watch(canQuery, () => {
   void load()

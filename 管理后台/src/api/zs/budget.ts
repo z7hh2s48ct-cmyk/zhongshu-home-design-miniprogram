@@ -80,3 +80,18 @@ export interface AccountPricePage {
 
 export const getAccountPrices = (params: { accountId: string; pageNo: number; pageSize: number }) =>
   request.get<AccountPricePage>({ url: `${BASE}/account-prices`, params })
+// E-7 覆盖价账号搜索（复用账号分页端点）
+export const searchAccountsApi = (params: any) =>
+  request.get<any>({ url: '/design/v1/accounts', params })
+export const getAccountById = (accountId: string) =>
+  request.get<any>({
+    url: `${BASE.replace('/budget', '')}/accounts/${encodeURIComponent(accountId)}`
+  })
+// F-4 代用户设置/清除覆盖价（design:budget:price-publish）
+export const setAccountPriceForUser = (data: {
+  accountId: string
+  optionId: string
+  regionCode: string
+  unitPriceCents: number | null
+  reason: string
+}) => request.put<any>({ url: `${BASE}/account-prices`, data })

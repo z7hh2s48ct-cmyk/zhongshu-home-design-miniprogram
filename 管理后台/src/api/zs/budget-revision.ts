@@ -106,6 +106,7 @@ export interface RevisionCommand {
 export const getEstimates = (params: {
   projectId?: string
   completeness?: string
+  keyword?: string
   pageNo: number
   pageSize: number
 }) => request.get<{ list: BudgetSummary[]; total: number }>({ url: BASE, params })
