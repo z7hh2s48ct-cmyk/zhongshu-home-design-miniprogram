@@ -86,20 +86,29 @@ protectedPage({
     wx.requestPayment(Object.assign({}, payParams, {
       success: function () { self.toSuccessPage(order); },
       fail: function (res) {
-        self.setData({ paying: false });
         const errMsg = (res && res.errMsg) || '';
-        // P3-9（报告 15）：弹窗取消/异常不代表未扣款（模拟通道自动确认扣款后仍回 cancel）——
-        // 一切 fail 分支先查单对齐真实状态，已到账直接进成功页，杜绝「提示未完成却已扣费」。
-        api.getRechargeOrder(order.orderId).then(function (fresh) {
-          if (fresh && (fresh.fulfillmentState === 'CREDITED' || fresh.paymentState === 'SUCCEEDED')) {
-            self.toSuccessPage(fresh);
-            return;
-          }
-          self.handlePaymentFailure(order, errMsg);
-        }).catch(function () {
-          // 查单失败：退回原分支语义，不阻塞用户
-          self.handlePaymentFailure(order, errMsg);
-        });
+        // P3-9（报告 15）：弹窗取消/异常不代表未扣款——模拟通道自动确认可能晚于
+        // fail 回调，真实微信支付回调丢失同理。轮询查单（首次 + 1 次重试）对齐真实
+        // 状态：任一次看到已到账直接进成功页；确认未到账才复位 paying 并走原分支
+        // （继续支付弹窗/提示）。轮询期保持 paying=true 防重复建单。
+        let attempts = 0;
+        const pollOrder = function () {
+          attempts += 1;
+          api.getRechargeOrder(order.orderId).then(function (fresh) {
+            if (fresh && (fresh.fulfillmentState === 'CREDITED' || fresh.paymentState === 'SUCCEEDED')) {
+              self.toSuccessPage(fresh);
+              return;
+            }
+            if (attempts < 2) { setTimeout(pollOrder, 800); return; }
+            self.setData({ paying: false });
+            self.handlePaymentFailure(order, errMsg);
+          }).catch(function () {
+            if (attempts < 2) { setTimeout(pollOrder, 800); return; }
+            self.setData({ paying: false });
+            self.handlePaymentFailure(order, errMsg);
+          });
+        };
+        pollOrder();
       }
     }));
   },
