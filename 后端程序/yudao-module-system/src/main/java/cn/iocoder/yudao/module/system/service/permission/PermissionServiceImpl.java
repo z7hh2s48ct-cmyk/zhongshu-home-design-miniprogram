@@ -45,6 +45,8 @@ import static cn.iocoder.yudao.framework.common.util.json.JsonUtils.toJsonString
 @Slf4j
 public class PermissionServiceImpl implements PermissionService {
 
+    private static final Set<String> PROJECT_MENU_ROOT_PATHS = Set.of("/zs", "/system", "/infra");
+
     @Resource
     private RoleMenuMapper roleMenuMapper;
     @Resource
@@ -142,9 +144,13 @@ public class PermissionServiceImpl implements PermissionService {
         // 获得角色拥有菜单编号
         Set<Long> dbMenuIds = convertSet(roleMenuMapper.selectListByRoleId(roleId), RoleMenuDO::getMenuId);
         // 计算新增和删除的菜单编号
-        Set<Long> menuIdList = CollUtil.emptyIfNull(menuIds);
-        Collection<Long> createMenuIds = CollUtil.subtract(menuIdList, dbMenuIds);
-        Collection<Long> deleteMenuIds = CollUtil.subtract(dbMenuIds, menuIdList);
+        Set<Long> manageableMenuIds = getProjectMenuIds();
+        Set<Long> requestedMenuIds = new HashSet<>(CollUtil.emptyIfNull(menuIds));
+        requestedMenuIds.retainAll(manageableMenuIds);
+        Set<Long> dbManageableMenuIds = new HashSet<>(dbMenuIds);
+        dbManageableMenuIds.retainAll(manageableMenuIds);
+        Collection<Long> createMenuIds = CollUtil.subtract(requestedMenuIds, dbManageableMenuIds);
+        Collection<Long> deleteMenuIds = CollUtil.subtract(dbManageableMenuIds, requestedMenuIds);
         // 执行新增和删除。对于已经授权的菜单，不用做任何处理
         if (CollUtil.isNotEmpty(createMenuIds)) {
             roleMenuMapper.insertBatch(CollectionUtils.convertList(createMenuIds, menuId -> {
@@ -157,6 +163,34 @@ public class PermissionServiceImpl implements PermissionService {
         if (CollUtil.isNotEmpty(deleteMenuIds)) {
             roleMenuMapper.deleteListByRoleIdAndMenuIds(roleId, deleteMenuIds);
         }
+    }
+
+    private Set<Long> getProjectMenuIds() {
+        List<MenuDO> menus = menuService.getMenuList();
+        if (CollUtil.isEmpty(menus)) {
+            return Collections.emptySet();
+        }
+        Map<Long, MenuDO> menuById = new HashMap<>();
+        Set<Long> rootIds = new HashSet<>();
+        for (MenuDO menu : menus) {
+            menuById.put(menu.getId(), menu);
+            if (MenuDO.ID_ROOT.equals(menu.getParentId()) && PROJECT_MENU_ROOT_PATHS.contains(menu.getPath())) {
+                rootIds.add(menu.getId());
+            }
+        }
+        Set<Long> result = new HashSet<>();
+        for (MenuDO menu : menus) {
+            MenuDO current = menu;
+            Set<Long> visited = new HashSet<>();
+            while (current != null && visited.add(current.getId())) {
+                if (rootIds.contains(current.getId())) {
+                    result.add(menu.getId());
+                    break;
+                }
+                current = menuById.get(current.getParentId());
+            }
+        }
+        return result;
     }
 
     @Override
