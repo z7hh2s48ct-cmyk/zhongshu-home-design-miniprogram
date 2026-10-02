@@ -131,3 +131,11 @@ export const getAuditEvents = (params) => request.get({ url: `${BASE}/audit-even
 // ---------- F-2 运营公告 ----------
 export const createAnnouncement = (data: { title: string; content: string }) =>
   request.post({ url: `${BASE}/announcements`, data })
+
+// ---------- 运营数据删除（2026-10-02：全模块单个+批量删除，逻辑删除+审计） ----------
+export const deleteAdminData = (type: string, id: string | number) =>
+  request.delete({
+    url: `${BASE}/admin-data/${encodeURIComponent(type)}/${encodeURIComponent(String(id))}`
+  })
+export const batchDeleteAdminData = (type: string, ids: Array<string | number>) =>
+  request.post({ url: `${BASE}/admin-data/batch-deletes`, data: { type, ids } })

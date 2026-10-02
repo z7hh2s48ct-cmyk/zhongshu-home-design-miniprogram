@@ -62,7 +62,19 @@
           </el-form-item>
         </el-form>
 
-        <el-table :data="list" v-loading="loading" stripe @row-click="openLedgerDetail">
+        <div v-if="selectedRows.length" style="margin-bottom: 10px">
+          <el-button size="small" type="danger" plain @click="deleteSelected"
+            >批量删除（{{ selectedRows.length }}）</el-button
+          >
+        </div>
+        <el-table
+          :data="list"
+          v-loading="loading"
+          stripe
+          @row-click="openLedgerDetail"
+          @selection-change="(rows: any[]) => (selectedRows = rows)"
+        >
+          <el-table-column type="selection" width="42" />
           <el-table-column label="流水号" prop="ledgerId" width="180" />
           <el-table-column label="用户" prop="userId" width="110" />
           <el-table-column label="类型" width="140">
@@ -91,9 +103,12 @@
           <el-table-column label="时间" width="160">
             <template #default="{ row }">{{ fmtTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="90" fixed="right">
+          <el-table-column label="操作" width="130" fixed="right">
             <template #default="{ row }">
               <span class="zs-link" @click.stop="openLedgerDetail(row)">详情</span>
+              <span class="zs-link-danger" style="margin-left: 10px" @click.stop="deleteRow(row)"
+                >删除</span
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -109,8 +124,8 @@
         />
 
         <div class="zs-footnote">
-          点击行或「详情」查看该笔流水的完整来龙去脉；人工调整由「用户详情 →
-          人工调点」制单并经双人复核后入账；已执行流水不可修改，只能反向调整。
+          点击行或「详情」查看该笔流水的完整来龙去脉；人工调整在「客户管理 → 详情 →
+          人工调点」由管理员直接生效；流水支持删除（隐藏该行，余额不回滚）。
         </div>
       </div>
 
@@ -174,6 +189,7 @@
 <script lang="ts" setup>
 import * as ZsApi from '@/api/zs'
 import { fmtTime } from '@/utils/zsFormat'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AiJob from '@/views/zs/job/index.vue'
 
 defineOptions({ name: 'ZsPointLedger' })
@@ -195,6 +211,53 @@ const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ userId: '', type: '', pageNo: 1, pageSize: 10 })
+
+// 2026-10-02 运营决策：全模块可删（单个+批量，逻辑删除+审计）
+const selectedRows = ref<any[]>([])
+async function deleteRow(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      '删除该流水？删除后该行从列表隐藏，账户余额不回滚（逻辑删除，留审计）。',
+      '确认删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.deleteAdminData('point-ledger', row.ledgerId)
+    if (!ok) {
+      ElMessage.warning('记录不存在或已删除')
+      return
+    }
+    ElMessage.success('已删除')
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '删除失败，请重试')
+  }
+}
+async function deleteSelected() {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(
+      '批量删除选中的 ' + selectedRows.value.length + ' 条流水？（逻辑删除，余额不回滚，留审计）',
+      '批量删除',
+      { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await ZsApi.batchDeleteAdminData(
+      'point-ledger',
+      selectedRows.value.map((r) => r.ledgerId)
+    )
+    ElMessage.success('已删除 ' + (res?.deleted ?? 0) + ' / ' + selectedRows.value.length)
+    await load()
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '批量删除失败，请重试')
+  }
+}
 
 const bizText = (b: string) =>
   ({
@@ -225,9 +288,7 @@ const bizLinkOf = (row: any): { path: string } | null => {
   const targets: Record<string, string> = {
     ai_job: '/zs/point-ledger?tab=jobs',
     recharge_order: '/zs/recharge?tab=orders',
-    refund_order: '/zs/recharge?tab=orders',
-    manual_point_adjustment: '/zs/point-adjustments',
-    MANUAL_ADJUSTMENT: '/zs/point-adjustments'
+    refund_order: '/zs/recharge?tab=orders'
   }
   return targets[row.bizType] ? { path: targets[row.bizType] } : null
 }

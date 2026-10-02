@@ -53,7 +53,19 @@
         style="margin-bottom: 12px"
       />
 
-      <el-table :data="list" v-loading="loading" stripe @row-click="openDetail">
+      <div v-if="selectedRows.length" style="margin-bottom: 10px">
+        <el-button size="small" type="danger" plain @click="deleteSelected"
+          >批量删除（{{ selectedRows.length }}）</el-button
+        >
+      </div>
+      <el-table
+        :data="list"
+        v-loading="loading"
+        stripe
+        @row-click="openDetail"
+        @selection-change="(rows: any[]) => (selectedRows = rows)"
+      >
+        <el-table-column type="selection" width="42" />
         <el-table-column label="任务号" prop="jobId" width="200" />
         <el-table-column label="阶段" width="100">
           <template #default="{ row }">{{ row.phase === 'ELEVATION' ? '立面' : '平面' }}</template>
@@ -76,7 +88,7 @@
           <template #default="{ row }">
             <el-button size="small" text type="primary" @click.stop="openDetail(row)"
               >详情</el-button
-            >
+            ><el-button link type="danger" @click.stop="deleteRow(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -141,6 +153,7 @@ import { fmtTime } from '@/utils/zsFormat'
 defineOptions({ name: 'ZsAiJob' })
 // embedded=true 时内嵌于设计点流水页的“生成任务”tab，标题交给外层
 withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false })
+const message = useMessage()
 
 const loading = ref(false)
 /** 接口失败标记：用于把“加载失败”与“确实没有数据”区分开 */
@@ -148,6 +161,48 @@ const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ status: '', phase: '', pageNo: 1, pageSize: 10 })
+
+// 2026-10-02 运营决策：全模块可删（单个+批量，逻辑删除+审计）
+const selectedRows = ref<any[]>([])
+async function deleteRow(row: any) {
+  try {
+    await message.confirm('删除该任务？任务及其费用快照将从列表隐藏（逻辑删除，留审计）。')
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.deleteAdminData('ai-job', row.jobId)
+    if (!ok) {
+      message.warning('任务不存在或已删除')
+      return
+    }
+    message.success('已删除')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '删除失败，请重试')
+  }
+}
+async function deleteSelected() {
+  if (!selectedRows.value.length) return
+  try {
+    await message.confirm(
+      '批量删除选中的 ' + selectedRows.value.length + ' 个任务？（逻辑删除，留审计）'
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await ZsApi.batchDeleteAdminData(
+      'ai-job',
+      selectedRows.value.map((r) => r.jobId)
+    )
+    message.success('已删除 ' + (res?.deleted ?? 0) + ' / ' + selectedRows.value.length)
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '批量删除失败，请重试')
+  }
+}
+
 const detail = reactive({ visible: false, data: null as any })
 
 const statusText: Record<string, string> = {

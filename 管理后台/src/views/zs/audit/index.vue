@@ -96,7 +96,19 @@
         style="margin-bottom: 12px"
       />
 
-      <el-table :data="list" v-loading="loading" stripe @row-click="toggleDetail">
+      <div v-if="selectedRows.length" style="margin-bottom: 10px">
+        <el-button size="small" type="danger" plain @click="deleteSelected"
+          >批量删除（{{ selectedRows.length }}）</el-button
+        >
+      </div>
+      <el-table
+        :data="list"
+        v-loading="loading"
+        stripe
+        @row-click="toggleDetail"
+        @selection-change="(rows: any[]) => (selectedRows = rows)"
+      >
+        <el-table-column type="selection" width="42" />
         <el-table-column type="expand" title="详情">
           <template #default="{ row }">
             <div class="zs-audit-detail-block">
@@ -145,6 +157,11 @@
               :class="row.result === 'SUCCESS' ? 'zs-tag--green' : 'zs-tag--red'"
               >{{ auditResultText(row.result) }}</span
             >
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <span class="zs-link-danger" @click.stop="deleteRow(row)">删除</span>
           </template>
         </el-table-column>
         <el-table-column label="时间" width="180">
@@ -216,6 +233,48 @@ const loading = ref(false)
 const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
+
+// 2026-10-02 运营决策：操作记录可删（audit_event 无 deleted 列 → 物理删除）
+const selectedRows = ref<any[]>([])
+async function deleteRow(row: any) {
+  try {
+    await message.confirm('删除该操作记录？该记录将被物理删除且不留痕，请谨慎操作。')
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.deleteAdminData('audit-event', row.id)
+    if (!ok) {
+      message.warning('记录不存在')
+      return
+    }
+    message.success('已删除')
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '删除失败，请重试')
+  }
+}
+async function deleteSelected() {
+  if (!selectedRows.value.length) return
+  try {
+    await message.confirm(
+      '批量删除选中的 ' + selectedRows.value.length + ' 条操作记录？（物理删除，不留痕）'
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await ZsApi.batchDeleteAdminData(
+      'audit-event',
+      selectedRows.value.map((r) => r.id)
+    )
+    message.success('已删除 ' + (res?.deleted ?? 0) + ' / ' + selectedRows.value.length)
+    await load()
+  } catch (e: any) {
+    message.error(e?.msg || '批量删除失败，请重试')
+  }
+}
+
 const query = reactive({
   eventType: '',
   actorId: '',

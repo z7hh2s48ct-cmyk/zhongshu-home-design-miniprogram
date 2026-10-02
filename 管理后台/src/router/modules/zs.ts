@@ -99,9 +99,9 @@ const zsRouter: RouteRecordRaw[] = [
       },
       {
         path: 'point-adjustments',
-        component: () => import('@/views/zs/points/adjustments.vue'),
-        name: 'ZsPointAdjustments',
-        meta: { title: '点数调整审核', icon: 'ep:finished', noCache: true, group: 'auth' }
+        redirect: '/zs/account',
+        name: 'ZsPointAdjustmentsLegacy',
+        meta: { hidden: true, group: 'auth', activeMenu: '/zs/account' }
       },
       // —— 资金与点数 fund ——
       {

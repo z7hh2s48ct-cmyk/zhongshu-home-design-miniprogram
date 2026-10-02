@@ -24,11 +24,20 @@
         style="margin-bottom: 12px"
       />
 
+      <div
+        v-if="selectedRows.length && activeTab !== 'REFUNDS' && activeTab !== 'TRANSACTIONS'"
+        style="margin-bottom: 10px"
+      >
+        <el-button size="small" type="danger" plain @click="deleteSelected"
+          >批量删除（{{ selectedRows.length }}）</el-button
+        >
+      </div>
       <el-table
         v-if="activeTab !== 'REFUNDS' && activeTab !== 'TRANSACTIONS'"
         :data="list"
         v-loading="loading"
         stripe
+        @selection-change="(rows: any[]) => (selectedRows = rows)"
       >
         <el-table-column label="订单号" prop="orderNo" width="165" />
         <el-table-column label="用户" prop="userId" width="100" />
@@ -71,6 +80,9 @@
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <span class="zs-link" @click="openDetail(row)">详情</span>
+            <span class="zs-link-danger" style="margin-left: 10px" @click="deleteRow(row)"
+              >删除</span
+            >
             <span
               class="zs-link"
               v-if="row.paymentState === 'PENDING' || row.paymentState === 'UNKNOWN'"
@@ -213,6 +225,49 @@ defineOptions({ name: 'ZsRechargeOrder' })
 // embedded=true 时由充值管理合并页内嵌，标题交给外层
 defineProps<{ embedded?: boolean }>()
 const message = useMessage()
+
+// 2026-10-02 运营决策：全模块可删（单个+批量，逻辑删除+审计）
+const selectedRows = ref<any[]>([])
+async function deleteRow(row: any) {
+  try {
+    await message.confirm(
+      '删除该订单？订单将从列表隐藏；资金事实以渠道流水为准（逻辑删除，留审计）。'
+    )
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.deleteAdminData('recharge-order', row.orderId || row.id)
+    if (!ok) {
+      message.warning('订单不存在或已删除')
+      return
+    }
+    message.success('已删除')
+    load()
+  } catch (e: any) {
+    message.error(e?.msg || '删除失败，请重试')
+  }
+}
+async function deleteSelected() {
+  if (!selectedRows.value.length) return
+  try {
+    await message.confirm(
+      '批量删除选中的 ' + selectedRows.value.length + ' 个订单？（逻辑删除，留审计）'
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await ZsApi.batchDeleteAdminData(
+      'recharge-order',
+      selectedRows.value.map((r) => r.orderId || r.id)
+    )
+    message.success('已删除 ' + (res?.deleted ?? 0) + ' / ' + selectedRows.value.length)
+    load()
+  } catch (e: any) {
+    message.error(e?.msg || '批量删除失败，请重试')
+  }
+}
 
 const activeTab = ref('ALL')
 const loading = ref(false)

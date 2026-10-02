@@ -45,7 +45,19 @@
         style="margin-bottom: 12px"
       />
 
-      <el-table :data="list" v-loading="loading" stripe @row-click="openDetail">
+      <div v-if="selectedRows.length" style="margin-bottom: 10px">
+        <el-button size="small" type="danger" plain @click="deleteSelected"
+          >批量删除（{{ selectedRows.length }}）</el-button
+        >
+      </div>
+      <el-table
+        :data="list"
+        v-loading="loading"
+        stripe
+        @row-click="openDetail"
+        @selection-change="(rows: any[]) => (selectedRows = rows)"
+      >
+        <el-table-column type="selection" width="42" />
         <el-table-column label="用户编号" prop="id" width="200" />
         <el-table-column label="激活码" width="170">
           <template #default="{ row }">
@@ -76,11 +88,12 @@
         <el-table-column label="注册时间" width="170">
           <template #default="{ row }">{{ fmtTime(row.create_time) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button size="small" text type="primary" @click.stop="openDetail(row)"
               >详情</el-button
             >
+            <el-button size="small" text type="danger" @click.stop="deleteRow(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -225,7 +238,7 @@
     </el-drawer>
 
     <!-- 人工调点（制单）：目标用户即当前详情用户，复核在「调点复核」页双人完成 -->
-    <el-dialog v-model="adjustDialog.visible" title="人工调点（制单）" width="460px">
+    <el-dialog v-model="adjustDialog.visible" title="人工调点（直接生效）" width="460px">
       <el-form label-width="90px">
         <el-form-item label="目标用户">
           <el-input :model-value="detail.data?.id" disabled style="width: 240px" />
@@ -271,6 +284,53 @@ const loadError = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
 const query = reactive({ nickname: '', status: '', pageNo: 1, pageSize: 10 })
+// 2026-10-02 运营决策：全模块可删（逻辑删除+审计）；账号删除同时撤销授权
+const selectedRows = ref<any[]>([])
+async function deleteRow(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      '删除该客户？删除后其授权立即撤销、账号从列表隐藏（逻辑删除，留审计），点数余额冻结不清理。',
+      '确认删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const ok = await ZsApi.deleteAdminData('account', row.id)
+    if (!ok) {
+      ElMessage.warning('该客户不存在或已删除')
+      return
+    }
+    ElMessage.success('已删除')
+    load()
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '删除失败，请重试')
+  }
+}
+async function deleteSelected() {
+  try {
+    await ElMessageBox.confirm(
+      '批量删除选中的 ' +
+        selectedRows.value.length +
+        ' 个客户？删除后授权立即撤销（逻辑删除，留审计）。',
+      '批量删除',
+      { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const res = await ZsApi.batchDeleteAdminData(
+      'account',
+      selectedRows.value.map((r) => r.id)
+    )
+    ElMessage.success('已删除 ' + (res?.deleted ?? 0) + ' / ' + selectedRows.value.length)
+    load()
+  } catch (e: any) {
+    ElMessage.error(e?.msg || '批量删除失败，请重试')
+  }
+}
 const detail = reactive({ visible: false, loading: false, data: null as any, orders: [] as any[] })
 
 const statusText = (s: string) => ({ ACTIVE: '正常', DISABLED: '已停用', CLOSED: '已注销' })[s] || s
@@ -295,7 +355,7 @@ async function submitAdjustment() {
       delta: adjustDialog.delta,
       reason: adjustDialog.reason.trim()
     })
-    ElMessage.success('制单成功，待另一管理员在「调点复核」页复核后生效')
+    ElMessage.success('调点已直接生效，流水与审计已入账')
     adjustDialog.visible = false
     adjustDialog.delta = 10
     adjustDialog.reason = ''
