@@ -49,10 +49,18 @@ $prefix-cls: #{$namespace}-login;
     width: 100%;
     height: 100%;
     background-color: #f5eee7;
-    background-image: url('@/assets/imgs/zs/login-left.png');
-    background-position: center;
+    // 切图为 3:4 竖版且 logo/标语烙在图内：cover 居中裁切会在全屏宽幅下裁掉左上角 logo。
+    // contain 靠左保证完整显示，右缘渐变过渡到登录区底色，避免露出生硬拼接边。
+    background-image:
+      linear-gradient(to right, rgba(251, 247, 242, 0) 55%, rgba(251, 247, 242, 0.92) 94%, #fbf7f2 100%),
+      url('@/assets/imgs/zs/login-left.png');
+    background-position:
+      left center,
+      left center;
     background-repeat: no-repeat;
-    background-size: cover;
+    background-size:
+      100% 100%,
+      contain;
   }
 
   &__right {
