@@ -356,7 +356,11 @@ async function submitAdjustment() {
   }
   adjustDialog.submitting = true
   try {
-    const requestPayload = JSON.stringify([targetUserId, adjustDialog.delta, adjustDialog.reason.trim()])
+    const requestPayload = JSON.stringify([
+      targetUserId,
+      adjustDialog.delta,
+      adjustDialog.reason.trim()
+    ])
     if (adjustDialog.requestPayload !== requestPayload) {
       adjustDialog.requestKey = crypto.randomUUID()
       adjustDialog.requestPayload = requestPayload
