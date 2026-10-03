@@ -84,10 +84,10 @@ public class ManualPointAdjustmentService {
                 jdbcTemplate.update(
                         "INSERT INTO manual_point_adjustment (id, target_user_id, delta, reason, status, "
                                 + "maker_user_id, checker_user_id, checker_comment, request_key) "
-                                + "VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, 'Admin direct execution', ?)",
+                                + "VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, '管理员单人直接生效', ?)",
                         id, targetUserId, delta, reason, operator, operator, requestKey);
                 AdjustmentRow row = new AdjustmentRow(id, targetUserId, delta, reason, "APPROVED",
-                        operator, operator, "Admin direct execution", null);
+                        operator, operator, "管理员单人直接生效", null);
                 executeApproved(id, row, operator);
                 return id;
             });
