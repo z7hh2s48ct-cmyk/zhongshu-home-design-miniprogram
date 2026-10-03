@@ -56,7 +56,7 @@ public class AdminDataDeleteController {
 
     @DeleteMapping("/{type}/{id}")
     @Operation(summary = "删除单条运营数据（逻辑删除；审计事件为物理删除）")
-    @PreAuthorize("@ss.hasPermission('design:export:manage')")
+    @PreAuthorize("@ss.hasPermission('design:export:manage') and @ss.hasPermission(@adminDataDeleteController.deletePermission(#p0))")
     public CommonResult<Boolean> deleteOne(@PathVariable("type") String type, @PathVariable("id") String id) {
         requirePermission(type);
         boolean ok = deleteInternal(type, Long.parseLong(id));
@@ -65,7 +65,7 @@ public class AdminDataDeleteController {
 
     @PostMapping("/batch-deletes")
     @Operation(summary = "批量删除运营数据（逐条逻辑删除并逐条留审计，上限 200 条）")
-    @PreAuthorize("@ss.hasPermission('design:export:manage')")
+    @PreAuthorize("@ss.hasPermission('design:export:manage') and @ss.hasPermission(@adminDataDeleteController.deletePermission(#p0['type']))")
     public CommonResult<Map<String, Object>> deleteBatch(@RequestBody Map<String, Object> body) {
         String type = String.valueOf(body.get("type"));
         requirePermission(type);
@@ -76,7 +76,6 @@ public class AdminDataDeleteController {
         if (rawIds.size() > 200) {
             throw new IllegalArgumentException("单次批量删除上限 200 条");
         }
-        var jdbc = new JdbcTemplate(dataSource);
         long operator = SecurityFrameworkUtils.getLoginUserId();
         int deleted = 0;
         for (Object raw : rawIds) {
@@ -90,7 +89,22 @@ public class AdminDataDeleteController {
 
     // ========== 内部 ==========
 
+    public String deletePermission(String type) {
+        return switch (type == null ? "" : type) {
+            case "account" -> "identity:account:delete";
+            case "point-ledger" -> "commerce:points:delete";
+            case "recharge-order" -> "commerce:recharge-order:delete";
+            case "ai-job" -> "aiorchestration:job:delete";
+            case "submission" -> "design:submission:delete";
+            case "budget" -> "design:budget:delete";
+            case "case" -> "design:case:delete";
+            case "audit-event" -> "design:audit:delete";
+            default -> throw new IllegalArgumentException("Unsupported deletion type: " + type);
+        };
+    }
+
     private void requirePermission(String type) {
+        deletePermission(type);
         // 控制器级统一门禁已设（export:manage）；此处校验类型合法，方法级细分权限由各资源常量约束口径
         if (!TABLES.containsKey(type) && !"audit-event".equals(type)) {
             throw new IllegalArgumentException("不支持的资源类型: " + type);
@@ -103,6 +117,12 @@ public class AdminDataDeleteController {
         boolean ok;
         if ("audit-event".equals(type)) {
             ok = jdbc.update("DELETE FROM audit_event WHERE id = ?", id) == 1;
+        } else if ("recharge-order".equals(type)) {
+            // The conditional update serializes with the payment callback's order row lock.
+            ok = jdbc.update("UPDATE recharge_order SET deleted = TRUE, update_time = now() "
+                    + "WHERE id = ? AND deleted = FALSE AND payment_state IN ('CLOSED','FAILED') "
+                    + "AND fulfillment_state = 'NOT_READY' AND NOT EXISTS "
+                    + "(SELECT 1 FROM payment_transaction WHERE order_no = recharge_order.order_no)", id) == 1;
         } else {
             String table = TABLES.get(type);
             ok = jdbc.update("UPDATE " + table + " SET deleted = TRUE, update_time = now() WHERE id = ? AND deleted = FALSE", id) == 1;

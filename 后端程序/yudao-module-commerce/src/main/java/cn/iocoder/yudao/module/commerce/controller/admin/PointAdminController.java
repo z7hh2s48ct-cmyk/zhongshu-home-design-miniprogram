@@ -110,8 +110,10 @@ public class PointAdminController {
             throw new IllegalArgumentException("调点原因不能为空");
         }
         long operator = SecurityFrameworkUtils.getLoginUserId();
-        manualPointAdjustmentService.submitAndExecute(targetUserId, delta, reason, operator);
-        return success(Map.of("status", "EXECUTED"));
+        String requestKey = (String) body.get("requestKey");
+        long adjustmentId = manualPointAdjustmentService.submitAndExecute(
+                targetUserId, delta, reason, operator, requestKey);
+        return success(Map.of("status", "EXECUTED", "adjustmentId", String.valueOf(adjustmentId)));
     }
 
     @PostMapping("/manual-point-adjustments/{adjustmentId}/review-decisions")

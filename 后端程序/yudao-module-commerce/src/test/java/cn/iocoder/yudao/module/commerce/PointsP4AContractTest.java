@@ -372,6 +372,41 @@ class PointsP4AContractTest {
     // ========== 8. 查询合同 ==========
 
     @Test
+    void directAdjustmentRetryUsesOneLedgerAndRejectsChangedPayload() {
+        long first = adjustments.submitAndExecute(81L, 40L, "correction", 700L, "request-81");
+        long replay = adjustments.submitAndExecute(81L, 40L, "correction", 700L, "request-81");
+        assertThat(replay).isEqualTo(first);
+        assertThat(points.findAccount(81L).orElseThrow().availablePoints()).isEqualTo(40L);
+        assertThat(ledgerCount(81L)).isEqualTo(1);
+        assertThatThrownBy(() -> adjustments.submitAndExecute(81L, 41L, "correction", 700L, "request-81"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(ledgerCount(81L)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM manual_point_adjustment WHERE maker_user_id=700",
+                Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void concurrentDirectAdjustmentRetrySettlesExactlyOnce() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Callable<Long> request = () -> {
+                start.await();
+                return adjustments.submitAndExecute(82L, -10L, "correction", 701L, "request-82");
+            };
+            points.credit(82L, "RECHARGE_BASE_CREDIT", 20L, "recharge_order", "82", "seed-82", null, null);
+            Future<Long> one = executor.submit(request);
+            Future<Long> two = executor.submit(request);
+            start.countDown();
+            assertThat(one.get()).isEqualTo(two.get());
+            assertThat(points.findAccount(82L).orElseThrow().availablePoints()).isEqualTo(10L);
+            assertThat(ledgerCount(82L)).isEqualTo(2);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void ledgerPageQueryReturnsNewestFirst() {
         points.credit(11L, "RECHARGE_BASE_CREDIT", 10, "recharge_order", "r11", "k-credit-11", null, null);
         points.credit(11L, "RECHARGE_BONUS_CREDIT", 5, "recharge_order", "r11", "k-credit-11b", null, null);

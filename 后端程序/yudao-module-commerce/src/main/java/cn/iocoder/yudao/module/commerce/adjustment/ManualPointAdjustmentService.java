@@ -4,6 +4,7 @@ import cn.iocoder.yudao.module.commerce.points.PointAccountService;
 import cn.iocoder.yudao.module.infra.zhongshu.audit.AuditEventMessage;
 import cn.iocoder.yudao.module.infra.zhongshu.audit.AuditPort;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import org.springframework.dao.DuplicateKeyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -70,23 +71,52 @@ public class ManualPointAdjustmentService {
      * 创建即执行：单据以 APPROVED 落库（maker=checker 同人）并同事务入账；
      * 幂等键仍为 adjustmentId，重复调用不会重复调点。
      */
-    public long submitAndExecute(long targetUserId, long delta, String reason, long operator) {
+    public long submitAndExecute(long targetUserId, long delta, String reason, long operator, String requestKey) {
         if (delta == 0) {
-            throw new IllegalArgumentException("调整点数不能为 0");
+            throw new IllegalArgumentException("Adjustment delta must not be zero");
         }
-        txTemplate.executeWithoutResult(status -> {
-            long id = IdWorker.getId();
-            jdbcTemplate.update(
-                    "INSERT INTO manual_point_adjustment (id, target_user_id, delta, reason, status, "
-                            + "maker_user_id, checker_user_id, checker_comment) "
-                            + "VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, '管理员单人直接生效')",
-                    id, targetUserId, delta, reason, operator, operator);
-            AdjustmentRow row = new AdjustmentRow(id, targetUserId, delta, reason, "APPROVED",
-                    operator, operator, "管理员单人直接生效", null);
-            executeApproved(id, row, operator);
-        });
-        // 幂等：以目标用户最近一条该操作者创建的 EXECUTED 单据为准，直接返回成功即可
-        return 0L;
+        if (requestKey == null || requestKey.isBlank() || requestKey.length() > 128) {
+            throw new IllegalArgumentException("requestKey must contain 1-128 characters");
+        }
+        try {
+            return txTemplate.execute(status -> {
+                long id = IdWorker.getId();
+                jdbcTemplate.update(
+                        "INSERT INTO manual_point_adjustment (id, target_user_id, delta, reason, status, "
+                                + "maker_user_id, checker_user_id, checker_comment, request_key) "
+                                + "VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, 'Admin direct execution', ?)",
+                        id, targetUserId, delta, reason, operator, operator, requestKey);
+                AdjustmentRow row = new AdjustmentRow(id, targetUserId, delta, reason, "APPROVED",
+                        operator, operator, "Admin direct execution", null);
+                executeApproved(id, row, operator);
+                return id;
+            });
+        } catch (DuplicateKeyException duplicate) {
+            // The unique index waits for an in-flight request to commit. Read its durable result
+            // after the losing insert has rolled back.
+            return replayedAdjustment(targetUserId, delta, reason, operator, requestKey, duplicate);
+        }
+    }
+
+    private long replayedAdjustment(long targetUserId, long delta, String reason, long operator,
+                                    String requestKey, DuplicateKeyException duplicate) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT id, target_user_id, delta, reason, status, ledger_id "
+                        + "FROM manual_point_adjustment WHERE maker_user_id = ? AND request_key = ?",
+                operator, requestKey);
+        if (rows.isEmpty()) {
+            throw duplicate;
+        }
+        Map<String, Object> row = rows.get(0);
+        if (((Number) row.get("target_user_id")).longValue() != targetUserId
+                || ((Number) row.get("delta")).longValue() != delta
+                || !reason.equals(row.get("reason"))) {
+            throw new IllegalArgumentException("requestKey was already used for another adjustment");
+        }
+        if (!"EXECUTED".equals(row.get("status")) || row.get("ledger_id") == null) {
+            throw new IllegalStateException("Adjustment request has not completed");
+        }
+        return ((Number) row.get("id")).longValue();
     }
 
     /**
