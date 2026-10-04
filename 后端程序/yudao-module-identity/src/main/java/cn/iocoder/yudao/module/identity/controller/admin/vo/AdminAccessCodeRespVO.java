@@ -21,7 +21,7 @@ public class AdminAccessCodeRespVO {
     @Schema(description = "状态：ACTIVE / CONSUMED / DISABLED（过期由有效期计算）")
     private String status;
 
-    @Schema(description = "是否可复制明文（仅未使用、未过期且存在加密制品）")
+    @Schema(description = "是否存在可复制明文的加密制品（批次密文缺失时为 false）")
     private Boolean canCopy;
 
     @Schema(description = "发行时间")

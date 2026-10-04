@@ -81,11 +81,11 @@ public class AccessCodeAdminController {
     }
 
     @PostMapping("/{codeId}/copy")
-    @Operation(summary = "复制仍未使用且未过期的单个授权码；记录操作日志")
+    @Operation(summary = "复制授权码明文（任意未删除状态均可，含已绑定/已停用/已过期）；记录操作日志")
     @PreAuthorize("@ss.hasPermission('" + PermissionConstants.ACCESS_CODE_EXPORT + "')")
     public CommonResult<String> copyAccessCode(@PathVariable("codeId") Long codeId) {
         String operator = String.valueOf(SecurityFrameworkUtils.getLoginUserId());
-        return success(accessCodeService.copyActiveCode(codeId, operator));
+        return success(accessCodeService.copyCodePlaintext(codeId, operator));
     }
 
     @DeleteMapping("/{codeId}")

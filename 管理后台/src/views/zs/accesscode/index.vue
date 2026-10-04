@@ -147,7 +147,7 @@
           <el-table-column label="授权码" width="200">
             <template #default="{ row }">
               <span class="zs-code-text">{{ row.codeMask }}</span>
-              <el-tooltip :content="row.canCopy ? '复制授权码明文' : '复制掩码'" placement="top">
+              <el-tooltip content="复制授权码明文" placement="top">
                 <Icon icon="ep:copy-document" class="zs-copy-icon" @click.stop="copyRow(row)" />
               </el-tooltip>
             </template>
@@ -204,7 +204,7 @@
         <div class="zs-footnote">
           <div>明确规则：一码一账号，激活码仅可绑定一个微信账号；统计卡可点击筛选对应状态。</div>
           <div>
-            激活码旁的复制图标：未使用码复制明文（需权限），其余复制掩码；双击行同样复制掩码。
+            激活码旁的复制图标：任意状态均复制明文（需导出权限，失败时退回复制掩码）；双击行复制掩码。
           </div>
           <div>
             已停用的激活码不可重新启用（安全规则），请生成新码；已兑换码不可删除，解绑只会撤销用户访问、码仍作废。
@@ -356,7 +356,6 @@
           <h4 class="zs-drawer-section">操作</h4>
           <div class="zs-drawer-actions">
             <el-button
-              v-if="detail.row.canCopy"
               v-hasPermi="['identity:access-code:export']"
               @click="copyCode(detail.row)"
               >复制授权码</el-button
@@ -519,18 +518,24 @@ const load = async () => {
   loadStats()
 }
 
-// ---- 行内复制：图标点击（未使用码复制明文，其余复制掩码）；双击行复制掩码 ----
+// ---- 行内复制：任意状态均复制明文（需导出权限，失败退回复制掩码）；双击行复制掩码 ----
 async function copyRow(row: any) {
-  if (row.canCopy) {
-    await copyCode(row)
-    return
+  try {
+    const code = await ZsApi.copyAccessCode(row.id)
+    await navigator.clipboard.writeText(code)
+    message.success('激活码明文已复制')
+  } catch {
+    await copyMaskQuick(row, true)
   }
-  await copyMaskQuick(row)
 }
-async function copyMaskQuick(row: any) {
+async function copyMaskQuick(row: any, fallback = false) {
   try {
     await navigator.clipboard.writeText(row.codeMask)
-    message.success('掩码已复制')
+    if (fallback) {
+      message.warning('明文复制失败（需导出权限），已复制掩码')
+    } else {
+      message.success('掩码已复制')
+    }
   } catch {
     message.error('复制失败，请手动选择复制')
   }

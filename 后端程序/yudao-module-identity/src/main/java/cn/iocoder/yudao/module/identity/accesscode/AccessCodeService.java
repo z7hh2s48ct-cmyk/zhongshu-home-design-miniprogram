@@ -28,7 +28,7 @@ import static cn.iocoder.yudao.module.identity.enums.ErrorCodeConstants.ACCESS_C
  *
  * 合同：
  * - 批次明文只以 AES-GCM 密文留存；INLINE 在创建响应内返回；
- * - 授权管理员可再次复制仍未使用、未过期的单码，完整批次票据仍只能消费一次；
+ * - 授权管理员可复制任意未删除单码的明文（含已绑定、已停用、已过期），完整批次票据仍只能消费一次；
  * - 列表、搜索、日志、普通导出永远只返回掩码。
  */
 @Slf4j
@@ -165,23 +165,19 @@ public class AccessCodeService {
         return codes;
     }
 
-    /** 受控复制仍可兑换的单码；明文只从加密批次制品中临时解密，不写日志或普通列。 */
-    public String copyActiveCode(long codeId, String operator) {
+    /** 受控复制单个授权码明文：任意未删除状态均可复制（含已绑定、已停用、已过期）；明文只从加密批次制品中临时解密，不写日志或普通列。 */
+    public String copyCodePlaintext(long codeId, String operator) {
         return txTemplate.execute(status -> {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                    "SELECT c.batch_id, c.status, c.deleted, c.expires_at, b.encrypted_artifact "
+                    "SELECT c.batch_id, c.deleted, b.encrypted_artifact "
                             + "FROM design_access_code c JOIN design_access_code_batch b ON b.id = c.batch_id "
                             + "WHERE c.id = ? AND b.deleted = FALSE FOR UPDATE OF c, b", codeId);
             if (rows.isEmpty()) {
                 throw exception(ACCESS_CODE_INVALID);
             }
             Map<String, Object> row = rows.get(0);
-            if (Boolean.TRUE.equals(row.get("deleted")) || !"ACTIVE".equals(row.get("status"))) {
+            if (Boolean.TRUE.equals(row.get("deleted"))) {
                 throw exception(ACCESS_CODE_INVALID);
-            }
-            Timestamp expiresAt = (Timestamp) row.get("expires_at");
-            if (expiresAt != null && !expiresAt.toInstant().isAfter(Instant.now())) {
-                throw exception(ACCESS_CODE_EXPIRED);
             }
             byte[] artifact = (byte[]) row.get("encrypted_artifact");
             if (artifact == null) {
@@ -203,8 +199,8 @@ public class AccessCodeService {
                     "UPDATE design_access_code_batch SET exposed_count = CASE WHEN exposed_count = 0 "
                             + "THEN 1 ELSE exposed_count END, update_time = now() "
                             + "WHERE id = ?", batchId);
-            log.warn("[copyActiveCode][code={} batch={} 明文复制操作员={}]", codeId, batchId, operator);
-            return codes.get(index);
+        log.warn("[copyCodePlaintext][code={} batch={} 明文复制操作员={}]", codeId, batchId, operator);
+        return codes.get(index);
         });
     }
 
@@ -242,8 +238,7 @@ public class AccessCodeService {
         args.add((long) Math.max(pageNo - 1, 0) * size);
         return jdbcTemplate.query(
                 "SELECT c.id, c.batch_id, c.code_mask, c.status, "
-                        + "(c.status = 'ACTIVE' AND (c.expires_at IS NULL OR c.expires_at > now()) "
-                        + "AND b.encrypted_artifact IS NOT NULL) AS can_copy, c.issued_at, c.consumed_at, "
+                        + "(b.encrypted_artifact IS NOT NULL) AS can_copy, c.issued_at, c.consumed_at, "
                         + "c.secret_exposed_at, c.expires_at, r.account_id AS bound_account_id "
                         + "FROM design_access_code c "
                         + "JOIN design_access_code_batch b ON b.id = c.batch_id AND b.deleted = FALSE "
