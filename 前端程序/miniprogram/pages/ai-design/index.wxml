@@ -54,7 +54,7 @@
       <text class="settings-label">清晰度</text>
       <view class="resolution-grid">
         <view wx:for="{{resolutions}}" wx:key="value" class="resolution-option {{resolution === item.value ? 'selected' : ''}}" data-value="{{item.value}}" bindtap="selectResolution">
-          <text>{{item.label}}</text><span>{{item.detail}}</span><i wx:if="{{resolution === item.value}}"><t-icon name="check" size="16px" /></i>
+          <text>{{item.label}}</text><span>{{quoteByResolution[item.value] || item.detail}}</span><i wx:if="{{resolution === item.value}}"><t-icon name="check" size="16px" /></i>
         </view>
       </view>
       <text class="settings-label">画面方向</text>

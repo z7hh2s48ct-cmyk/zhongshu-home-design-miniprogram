@@ -18,6 +18,13 @@ function quote(stage, count, options) {
 function refresh(page, stage) {
   const seq = page._quoteSeq = (page._quoteSeq || 0) + 1;
   page.setData({ priceText: '正在获取报价…', quoteLoading: true, quoteReady: false, quoteError: '' });
+  // 各档位单价（2K/4K 每张分）非阻断并行拉取：供档位卡片展示，失败保留占位文案
+  ['2K', '4K'].forEach(resolution => {
+    quote(stage, page.data.count, { resolution }).then(value => {
+      if (page._quoteSeq !== seq) return;
+      page.setData({ ['quoteByResolution.' + resolution]: value.totalPointCost + ' 点' });
+    }).catch(() => {});
+  });
   return quote(stage, page.data.count, page.data).then(value => {
     if (page._quoteSeq === seq) page.setData({ priceText: '出图 ' + value.totalPointCost + ' 点，提示词 ' + value.usagePointCost + ' 点', quoteLoading: false, quoteReady: true, quoteError: '' });
   }).catch(() => {

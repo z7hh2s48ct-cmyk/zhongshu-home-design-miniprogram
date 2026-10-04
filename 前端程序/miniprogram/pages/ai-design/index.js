@@ -27,7 +27,7 @@ protectedPage({
     familyLabels: designInputs.familyLabels(),
     floorIndex: designInputs.indexOfFloor('两层'),
     familyIndex: designInputs.indexOfFamily('5室3厅2卫'),
-    points: '—', creating: false, quoteReady: false, quoteLoading: false, quoteError: '',
+    points: '—', creating: false, quoteReady: false, quoteLoading: false, quoteError: '', quoteByResolution: {},
     refCase: null, refCaseText: '', note: '', prompt: '', showNoteSuggestions: false,
     noteSuggestions: NOTE_SUGGESTIONS,
     sketchAssetId: null, sketchImage: '', resolution: flatDefaults.resolution, orientation: flatDefaults.orientation, outputPixels: flatDefaults.outputPixels,

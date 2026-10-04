@@ -80,15 +80,13 @@ test('写过关闭标记后不再展示；dismiss 落 storage 并收起', () => 
   assert.equal(fresh['zs_desktop_guide_closed_v1'], true, 'dismiss 必须持久化关闭标记');
 });
 
-test('home 与 profile 两页已接入 v12-desktop-guide 且在 json 注册', () => {
-  const pages = [
-    ['pages/home/index.wxml', 'pages/home/index.json'],
-    ['pages/profile/index.wxml', 'pages/profile/index.json']
-  ];
-  for (const [wxmlRel, jsonRel] of pages) {
-    const wxml = fs.readFileSync(path.join(root, wxmlRel), 'utf8');
-    const json = JSON.parse(fs.readFileSync(path.join(root, jsonRel), 'utf8'));
-    assert.match(wxml, /<v12-desktop-guide\s*\/>/, `${wxmlRel} 应使用 <v12-desktop-guide />`);
-    assert.equal(json.usingComponents['v12-desktop-guide'], '/components/v12-desktop-guide/index', `${jsonRel} 应注册组件`);
-  }
+test('profile 仍接入 v12-desktop-guide；home 已按 2026-10 决策移除', () => {
+  const profileWxml = fs.readFileSync(path.join(root, 'pages/profile/index.wxml'), 'utf8');
+  const profileJson = JSON.parse(fs.readFileSync(path.join(root, 'pages/profile/index.json'), 'utf8'));
+  assert.match(profileWxml, /<v12-desktop-guide\s*\/>/, 'profile 应使用 <v12-desktop-guide />');
+  assert.equal(profileJson.usingComponents['v12-desktop-guide'], '/components/v12-desktop-guide/index', 'profile json 应注册组件');
+  const homeWxml = fs.readFileSync(path.join(root, 'pages/home/index.wxml'), 'utf8');
+  const homeJson = JSON.parse(fs.readFileSync(path.join(root, 'pages/home/index.json'), 'utf8'));
+  assert.doesNotMatch(homeWxml, /v12-desktop-guide/, 'home 不应再使用桌面引导组件');
+  assert.equal(homeJson.usingComponents['v12-desktop-guide'], undefined, 'home json 不应再注册桌面引导组件');
 });

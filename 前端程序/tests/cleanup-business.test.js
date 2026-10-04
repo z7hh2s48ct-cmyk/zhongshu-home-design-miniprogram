@@ -33,10 +33,12 @@ test('数量快速改变时旧报价不能覆盖新报价', async () => {
   const price = load('utils/generation-price.js', { './api': { getGenerationQuote: (stage, count, resolution) =>
     new Promise(resolve => pending.push({ resolve, count, stage, resolution })) } });
   const page = { data: { count: 1, resolution: '2K' }, setData(patch) { Object.assign(this.data, patch); } };
+  // 2026-10-04 起 refresh 会并行拉取 2K/4K 档位单价：每次 refresh 产生 3 个调用（2K、4K、主报价），
+  // 主报价是每组最后一个。先解最新主报价，再解旧主报价，断言旧报价不回写。
   const old = price.refresh(page, 'FLAT'); page.data.count = 4; const latest = price.refresh(page, 'FLAT');
   const resolve = i => pending[i].resolve({ count: pending[i].count, stage: 'FLAT', resolution: pending[i].resolution, totalPointCost: pending[i].count * 7, unitPointCost: 7, ruleId: '1',
     usageProduct: 'AI_PROMPT', usageRuleId: '2', usageRuleVersion: 1, usagePointCost: 1 });
-  resolve(1); await latest; resolve(0); await old;
+  resolve(5); await latest; resolve(2); await old;
   assert.match(page.data.priceText, /28/);
 });
 
