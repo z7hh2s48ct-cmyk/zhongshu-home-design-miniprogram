@@ -65,14 +65,14 @@ $prefix-cls: #{$namespace}-login;
     background-size: cover;
 
     &::after {
-      content: '';
       position: absolute;
-      inset: 0;
       // 右缘软过渡 + 底部暖白光晕（与顶部天空留白呼应的「上天下地」构图），
       // 底部 20% 渐化同时彻底消除修字补丁的任何残余痕迹
       background:
         linear-gradient(to top, rgb(251 247 242 / 90%) 0%, rgb(251 247 242 / 0%) 20%),
         linear-gradient(to right, rgb(251 247 242 / 0%) 88%, #fbf7f2 100%);
+      content: '';
+      inset: 0;
     }
   }
 
@@ -93,8 +93,8 @@ $prefix-cls: #{$namespace}-login;
     span {
       font-size: 28px;
       font-weight: 700;
-      color: #6f4a28;
       letter-spacing: 3px;
+      color: #6f4a28;
     }
   }
 
@@ -105,8 +105,8 @@ $prefix-cls: #{$namespace}-login;
     z-index: 2;
     font-size: 19px;
     font-weight: 500;
-    color: #6f4a28;
     letter-spacing: 1px;
+    color: #6f4a28;
     text-shadow: 0 1px 6px rgb(251 247 242 / 65%);
   }
 

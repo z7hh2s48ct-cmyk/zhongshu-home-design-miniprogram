@@ -355,9 +355,7 @@
 
           <h4 class="zs-drawer-section">操作</h4>
           <div class="zs-drawer-actions">
-            <el-button
-              v-hasPermi="['identity:access-code:export']"
-              @click="copyCode(detail.row)"
+            <el-button v-hasPermi="['identity:access-code:export']" @click="copyCode(detail.row)"
               >复制授权码</el-button
             >
             <el-button

@@ -308,8 +308,13 @@ try {
     if (stage === "admin") verifyAdmin();
     if (stage === "backend") verifyBackend();
     if (stage === "e2e") verifyE2E();
-    if (stage === "runtime") runStep("runtime", "Runtime 无真实消费合同测试", process.execPath,
-      ["--test", ...readdirSync(join(repositoryDirectory,"ai-runtime/test")).filter(name=>name.endsWith('.test.mjs')).map(name=>join(repositoryDirectory,"ai-runtime/test",name))], repositoryDirectory);
+    if (stage === "runtime") {
+      // 2026-10-04 起 runtime 依赖 sharp（生成图尺寸归一化），测试前须按锁文件装依赖
+      runStep("runtime", "安装 ai-runtime 依赖（npm ci）", nativeCommand("npm"),
+        ["ci", "--no-fund", "--no-audit"], join(repositoryDirectory, "ai-runtime"));
+      runStep("runtime", "Runtime 无真实消费合同测试", process.execPath,
+        ["--test", ...readdirSync(join(repositoryDirectory,"ai-runtime/test")).filter(name=>name.endsWith('.test.mjs')).map(name=>join(repositoryDirectory,"ai-runtime/test",name))], repositoryDirectory);
+    }
   }
   console.log(`\n[verify] ${stages.join(" -> ")} 全部通过`);
 } catch (error) {
