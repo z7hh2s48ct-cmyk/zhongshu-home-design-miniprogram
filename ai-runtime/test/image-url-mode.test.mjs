@@ -107,14 +107,26 @@ test('新任务拒绝截断 PNG/JPEG 和与请求档位不符的原生尺寸', a
     await assert.rejects(provider.generate(job, 1, 'p', [], new AbortController().signal, options),
       /PROVIDER_IMAGE_INVALID/);
   }
+  // 2026-10-03 契约更新：供应商 edits 实测不守请求尺寸（真实失败案例 1312x1199 / 1448x1086），
+  // 运行时改为把可解析的真实图归一到请求档位（等比缩放+居中裁切），截断/伪造头仍拒绝。
   let mismatchCalls = 0;
   const mismatch = new Provider(settings(), journal, async () => {
     mismatchCalls += 1;
     return jsonResponse({ data: [{ b64_json: pngHeader(2048, 2048).toString('base64') }] });
   });
   await assert.rejects(mismatch.generate(job, 1, 'p', [], new AbortController().signal, options),
-    /PROVIDER_IMAGE_SIZE_MISMATCH/);
+    /PROVIDER_IMAGE_INVALID/);
   assert.equal(mismatchCalls, 1);
+
+  const realMismatch = await import('sharp').then(({ default: sharp }) =>
+    sharp({ create: { width: 2048, height: 2048, channels: 3, background: { r: 180, g: 160, b: 130 } } }).png().toBuffer());
+  const normalizing = new Provider(settings(), journal,
+    async () => jsonResponse({ data: [{ b64_json: Buffer.from(realMismatch).toString('base64') }] }));
+  const normalized = await normalizing.generate(job, 1, 'p', [], new AbortController().signal, options);
+  assert.equal(normalized.mimeType, 'image/png');
+  const outBytes = Buffer.from(normalized.encoded, 'base64');
+  assert.equal(outBytes.readUInt32BE(16), 2048);
+  assert.equal(outBytes.readUInt32BE(20), 1152);
 });
 
 test('历史任务无 imageOptions 时不新增像素头要求', async () => {

@@ -57,8 +57,29 @@ function imageDimensions(bytes, mimeType) {
   return null;
 }
 
-function verifyGeneratedImage(image, expectedSize) {
-  if (typeof image?.encoded !== 'string') throw Error('PROVIDER_IMAGE_INVALID');
+// 供应商（gpt-image 系列 /images/edits）实测不承诺精确输出尺寸（会按参考图比例自由发挥），
+// 而计费与展示契约要求 2K/4K 像素口径真实：这里把返回图等比缩放 + 居中裁切归一到请求尺寸。
+async function normalizeImageToSize(image, expectedSize) {
+  const [width, height] = expectedSize.split('x').map(Number);
+  if (!width || !height) throw Error('PROVIDER_IMAGE_INVALID');
+  const bytes = Buffer.from(image.encoded, 'base64');
+  const dimensions = imageDimensions(bytes, image.mimeType);
+  // 解析不出尺寸（截断/伪造头）的字节不在此处处理——交由 verifyGeneratedImage 按原契约拒绝；
+  // 只对「真实可解析且尺寸与请求不符」的图（供应商 edits 不守尺寸）做归一化。
+  if (!dimensions || (dimensions.width === width && dimensions.height === height)) return image;
+  const { default: sharp } = await import('sharp');
+  let output;
+  try {
+    output = await sharp(bytes).resize(width, height, { fit: 'cover', position: 'centre' }).png().toBuffer();
+  } catch {
+    // 头部声称可解析、实体却是坏字节（截断/伪造）：统一按供应商图无效处理。
+    throw Error('PROVIDER_IMAGE_INVALID');
+  }
+  if (output.length > MAX_IMAGE) throw Error('PROVIDER_IMAGE_TOO_LARGE');
+  return { encoded: output.toString('base64'), mimeType: 'image/png', sha256: sha(output), sizeBytes: output.length };
+}
+
+function verifyGeneratedImage(image, expectedSize) {  if (typeof image?.encoded !== 'string') throw Error('PROVIDER_IMAGE_INVALID');
   if (image.encoded.length > MAX_IMAGE_BASE64) throw Error('PROVIDER_IMAGE_TOO_LARGE');
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image.encoded)) throw Error('PROVIDER_IMAGE_INVALID');
   const bytes = Buffer.from(image.encoded, 'base64');
@@ -330,7 +351,7 @@ export class Provider {
         : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'image/jpeg' : null;
       if (bytes.length > MAX_IMAGE) throw Error('PROVIDER_IMAGE_TOO_LARGE');
       if (!mimeType) throw Error('PROVIDER_IMAGE_INVALID');
-      return { encoded: bytes.toString('base64'), mimeType, sha256: sha(bytes), sizeBytes: bytes.length };
+      return normalizeImageToSize({ encoded: bytes.toString('base64'), mimeType, sha256: sha(bytes), sizeBytes: bytes.length }, size);
     });
     if (options !== undefined) verifyGeneratedImage(image, size);
     return image;
