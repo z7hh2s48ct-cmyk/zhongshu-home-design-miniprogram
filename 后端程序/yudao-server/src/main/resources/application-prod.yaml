@@ -31,6 +31,14 @@ spring:
 yudao:
   security:
     mock-enable: false
+  web:
+    cors:
+      # 生产跨域白名单（逗号分隔的 origin pattern）。留空 = 不放开任何跨域来源。
+      # 说明：管理后台经 Nginx 以 /admin-api 同源代理、小程序不走浏览器 CORS，二者均不需要跨域放行；
+      # 因此生产默认留空最安全。若管理后台确为跨域（独立域名直连后端），在此填入其域名，例如：
+      #   allowed-origin-patterns: https://admin.zszhj.com
+      # 未配置时框架默认值 "*"（见 YudaoWebAutoConfiguration#corsFilterBean）会放开任意来源，禁止在生产使用。
+      allowed-origin-patterns: ${ZS_CORS_ALLOWED_ORIGINS:}
 zhongshu:
   ai:
     # P2-D（报告 15）：取消收敛调度器——未领取取消即时退款、失联取消超时兜底（资损修复）
@@ -88,3 +96,16 @@ management:
       show-values: NEVER
     configprops:
       show-values: NEVER
+
+# 上线加固（2026-10-04 上线前排查）：生产关闭接口文档与 Knife4j。
+# 底座 application.yaml 默认 springdoc/knife4j 均为 true，且安全链对 GET /*.html 放行，
+# 导致 /swagger-ui/index.html、/doc.html 在生产可匿名打开，接口结构对外暴露。
+# 关闭后 YudaoSwaggerAutoConfiguration 因 @ConditionalOnProperty 不再装配（见该类的 matchIfMissing=true）。
+# 如需临时排查，用命令行 --springdoc.api-docs.enabled=true 显式开启，排查后立即关闭。
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+knife4j:
+  enable: false

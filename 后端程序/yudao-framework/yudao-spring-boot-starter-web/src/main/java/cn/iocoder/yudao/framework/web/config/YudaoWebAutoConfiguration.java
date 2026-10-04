@@ -102,14 +102,24 @@ public class YudaoWebAutoConfiguration {
 
     /**
      * 创建 CorsFilter Bean，解决跨域问题
+     *
+     * 2026-10-04 上线加固：跨域来源从「硬编码 *」改为可配置白名单
+     * yudao.web.cors.allowed-origin-patterns（逗号分隔）。默认 "*" 以保持本地/联调便利；
+     * 生产 profile 必须显式收敛（见 application-prod.yaml），否则任意站点可携带凭证跨域调用接口。
      */
     @Bean
     @Order(value = WebFilterOrderEnum.CORS_FILTER) // 特殊：修复因执行顺序影响到跨域配置不生效问题
-    public FilterRegistrationBean<CorsFilter> corsFilterBean() {
+    public FilterRegistrationBean<CorsFilter> corsFilterBean(
+            @Value("${yudao.web.cors.allowed-origin-patterns:*}") String allowedOriginPatterns) {
         // 创建 CorsConfiguration 对象
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*"); // 设置访问源地址
+        // 设置访问源地址：白名单为空时不放开任何来源（fail-closed）
+        for (String pattern : allowedOriginPatterns.split(",")) {
+            if (StrUtil.isNotBlank(pattern)) {
+                config.addAllowedOriginPattern(pattern.trim());
+            }
+        }
         config.addAllowedHeader("*"); // 设置访问源请求头
         config.addAllowedMethod("*"); // 设置访问源请求方法
         // 创建 UrlBasedCorsConfigurationSource 对象

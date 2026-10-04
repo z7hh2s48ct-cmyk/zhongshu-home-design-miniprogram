@@ -1,6 +1,8 @@
 ## AdoptOpenJDK 停止发布 OpenJDK 二进制，而 Eclipse Temurin 是它的延伸，提供更好的稳定性
 ## 感谢复旦核博士的建议！灰子哥，牛皮！
-FROM eclipse-temurin:21-jre
+## 2026-10-04 上线前排查：与 .java-version / pom.xml(java.version=17) / 部署指南(Java 17) 对齐，
+## 原 21-jre 虽可运行 17 编译产物，但版本漂移会带来运行时行为差异，统一为 17。
+FROM eclipse-temurin:17-jre
 
 ## 创建目录，并使用它作为工作目录
 RUN mkdir -p /yudao-server

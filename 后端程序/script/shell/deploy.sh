@@ -8,8 +8,12 @@ BASE_PATH=/work/projects/yudao-server
 SOURCE_PATH=$BASE_PATH/build
 # 服务名称。同时约定部署服务的 jar 包名字也为它。
 SERVER_NAME=yudao-server
-# 环境
-PROFILES_ACTIVE=development
+# 环境：众墅之家生产必须为 pg,prod（见 application-prod.yaml 顶部 RG1/R06 与
+# 《18-正式环境部署指南》2.4 的 systemd ExecStart）。
+# 2026-10-04 上线前排查修复：原值 development 在本项目并不存在对应 application-development.yaml，
+# 会导致后端以「无环境特定配置」状态启动（数据库/Redis/密钥 provider 全缺失，且不会收敛 swagger、
+# 不会关闭 mock 登录），属严重上线风险。
+PROFILES_ACTIVE=pg,prod
 # 健康检查 URL
 HEALTH_CHECK_URL=http://127.0.0.1:48080/actuator/health/
 

@@ -93,8 +93,10 @@ public class OutboxDispatcherService {
         for (OutboxEventRecord event : events) {
             OutboxEventSink sink = sinks.stream().filter(s -> s.supports(event.getEventType())).findFirst().orElse(null);
             if (sink == null) {
-                log.warn("[dispatchOnce][事件 {}({}) 无 Sink 声明支持]", event.getEventId(), event.getEventType());
-                fail(event.getEventId(), claimedBy, "NO_SINK_SUPPORTS_EVENT_TYPE", backoffSeconds);
+                // 「无订阅者」不是投递失败：该事件类型没有任何 Sink 声明支持时按已处理收敛，
+                // 否则每次发布无消费方的事件（如 AI_JOB_CREATED）都会重试至 DEAD 污染 businessBacklog。
+                log.info("[dispatchOnce][事件 {}({}) 无 Sink 订阅，按已处理收敛]", event.getEventId(), event.getEventType());
+                complete(event.getEventId(), claimedBy);
                 continue;
             }
             try {
