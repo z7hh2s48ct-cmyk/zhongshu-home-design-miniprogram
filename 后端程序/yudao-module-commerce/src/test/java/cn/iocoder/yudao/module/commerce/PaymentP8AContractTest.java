@@ -148,6 +148,21 @@ class PaymentP8AContractTest {
     // ========== 3. 金额不符拒绝 ==========
 
     @Test
+    void latePaymentForHiddenOrderIsRecordedAsFailedNotProcessed() {
+        var order = payment.createOrder(84L, seedPlan(1000, 100, 0), "hidden-order", "test-openid-84");
+        jdbc.update("UPDATE recharge_order SET deleted=TRUE, payment_state='CLOSED' WHERE id=?", order.orderId());
+        byte[] body = ("{\"eventId\":\"evt-hidden\",\"orderNo\":\"" + order.orderNo()
+                + "\",\"transactionId\":\"txn-hidden\",\"amountCents\":1000,\"paidAtEpochSecond\":"
+                + Instant.now().getEpochSecond() + "}").getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> payment.handleNotification(Map.of(), body)).isInstanceOf(ServiceException.class);
+        assertThat(jdbc.queryForObject("SELECT process_status FROM payment_notification_inbox WHERE event_id='evt-hidden'",
+                String.class)).isEqualTo("FAILED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM payment_transaction WHERE order_no=?",
+                Integer.class, order.orderNo())).isZero();
+        assertThat(available(84L)).isZero();
+    }
+
+    @Test
     void amountMismatchRejected() {
         long planId = seedPlan(1000, 100, 0);
         var order = payment.createOrder(1L, planId, "key-amt", "test-openid-1");

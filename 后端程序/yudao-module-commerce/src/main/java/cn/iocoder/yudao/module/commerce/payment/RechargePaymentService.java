@@ -749,13 +749,17 @@ public class RechargePaymentService {
                                       long amountCents, Instant paidAt) {
         return Boolean.TRUE.equals(txTemplate.execute(status -> {
             List<Map<String, Object>> orders = jdbcTemplate.queryForList(
-                    "SELECT id, amount_cents, payment_state FROM recharge_order "
-                            + "WHERE order_no = ? AND deleted = FALSE FOR UPDATE", orderNo);
+                    "SELECT id, amount_cents, payment_state, deleted FROM recharge_order "
+                            + "WHERE order_no = ? FOR UPDATE", orderNo);
             if (orders.isEmpty()) {
                 log.warn("[processPaymentFact][未知订单号 {}]", orderNo);
                 return false;
             }
             Map<String, Object> order = orders.get(0);
+            if (Boolean.TRUE.equals(order.get("deleted"))) {
+                // Keep a late channel notification in the error/retry path for investigation.
+                throw exception(PAYMENT_ORDER_STATE_CONFLICT);
+            }
             long orderId = ((Number) order.get("id")).longValue();
             long declaredAmount = ((Number) order.get("amount_cents")).longValue();
             if (declaredAmount != amountCents) {

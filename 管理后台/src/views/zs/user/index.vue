@@ -340,7 +340,14 @@ const accessCodeStateText = (s: string) =>
   ({ ACTIVE: '未使用', CONSUMED: '已绑定', DISABLED: '已停用' })[s] || s
 
 // ---- 人工调点（对当前用户制单；复核双人分离在调点复核页） ----
-const adjustDialog = reactive({ visible: false, submitting: false, delta: 10, reason: '' })
+const adjustDialog = reactive({
+  visible: false,
+  submitting: false,
+  delta: 10,
+  reason: '',
+  requestKey: '',
+  requestPayload: ''
+})
 async function submitAdjustment() {
   const targetUserId = String(detail.data?.id || '')
   if (!/^\d{1,20}$/.test(targetUserId) || !adjustDialog.delta || !adjustDialog.reason.trim()) {
@@ -349,16 +356,28 @@ async function submitAdjustment() {
   }
   adjustDialog.submitting = true
   try {
+    const requestPayload = JSON.stringify([
+      targetUserId,
+      adjustDialog.delta,
+      adjustDialog.reason.trim()
+    ])
+    if (adjustDialog.requestPayload !== requestPayload) {
+      adjustDialog.requestKey = crypto.randomUUID()
+      adjustDialog.requestPayload = requestPayload
+    }
     // 目标用户以字符串提交：19 位雪花编号超出 JS 安全整数，后端按字符串解析
     await ZsApi.createManualAdjustment({
       targetUserId,
       delta: adjustDialog.delta,
-      reason: adjustDialog.reason.trim()
+      reason: adjustDialog.reason.trim(),
+      requestKey: adjustDialog.requestKey
     })
     ElMessage.success('调点已直接生效，流水与审计已入账')
     adjustDialog.visible = false
     adjustDialog.delta = 10
     adjustDialog.reason = ''
+    adjustDialog.requestKey = ''
+    adjustDialog.requestPayload = ''
     openDetail({ id: detail.data.id })
   } finally {
     adjustDialog.submitting = false
