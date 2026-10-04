@@ -67,7 +67,7 @@ Page({
   openServices() { openFeature('/pages/profile/services'); },
   openRecords(event) {
     const type = event.currentTarget.dataset.type;
-    if (['projects', 'submissions', 'favorites', 'orders'].includes(type)) openFeature('/pages/profile/records?type=' + type);
+    if (['projects', 'submissions', 'favorites', 'orders', 'points'].includes(type)) openFeature('/pages/profile/records?type=' + type);
   },
   contact() { return require('../../utils/support').contact(); }
 });

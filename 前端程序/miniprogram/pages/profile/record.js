@@ -66,7 +66,8 @@ protectedPage({
       nextLabel: NEXT_LABEL[project.resumeAction] || '继续设计',
       requirementRows: requirementRows(project.requirements), fields: [
       { label: '项目编号', value: project.projectId }, { label: '进度', value: versions.length ? '已形成 ' + versions.length + ' 个方案版本' : (project.stage === 'ELEVATION' ? '立面阶段，尚未选定最终方案' : '平面阶段，尚未形成最终方案') },
-      { label: '来源', value: project.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计' }
+      { label: '来源', value: project.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计' },
+      { label: '累计消耗', value: Number.isSafeInteger(project.pointsSpent) && project.pointsSpent > 0 ? project.pointsSpent + ' 设计点（含失败退款）' : '暂无生成消耗' }
     ] });
       this.loadCandidates(project);
       if (project.resumeAction === 'POLL_JOB' && view.id(project.jobId)) this.loadJobView(project.jobId);

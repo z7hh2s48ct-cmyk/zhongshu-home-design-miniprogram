@@ -1,7 +1,9 @@
 'use strict';
 const format = require('./format');
 function id(value) { return typeof value === 'string' && /^[1-9]\d{0,18}$/.test(value) ? value : null; }
-const titles = { projects: '我的方案', submissions: '我的投稿', favorites: '收藏户型', orders: '充值记录' };
+const titles = { projects: '我的方案', submissions: '我的投稿', favorites: '收藏户型', orders: '充值记录', points: '点数明细' };
+const ledgerBiz = { 'recharge_order': '充值到账', 'refund_order': '退款冲正', 'ai_job': 'AI 方案生成',
+  RECHARGE_BASE_REVERSAL: '充值基础点冲正', RECHARGE_BONUS_REVERSAL: '充值赠送点冲正', MANUAL_CREDIT: '人工调整' };
 function status(value) {
   return ({ ACTIVE: '设计档案', ARCHIVED: '已归档', DRAFT: '尚未完成', IN_PROGRESS: '设计中', COMPLETED: '方案已完成',
     VALIDATED: '校核通过，待提交', RESUBMITTED: '已重新提交，待审核', SUBMITTED: '待审核', PENDING: '待审核', PENDING_REVIEW: '待审核', IN_REVIEW: '审核中',
@@ -24,7 +26,7 @@ function projectState(raw) {
   return raw.stage === 'ELEVATION' ? '待选择立面方案' : '待选择平面方案';
 }
 function row(type, raw) {
-  const key = { projects: 'projectId', submissions: 'submissionId', favorites: 'caseId', orders: 'orderId' }[type];
+  const key = { projects: 'projectId', submissions: 'submissionId', favorites: 'caseId', orders: 'orderId', points: 'ledgerId' }[type];
   const keyId = raw && id(raw[key]);
   if (!keyId) throw Error('记录编号无效，请重试');
   let title, hint, state, time, url;
@@ -32,9 +34,10 @@ function row(type, raw) {
     title = '设计方案 · ' + keyId.slice(-6); hint = raw.sourceType === 'CASE_REFERENCE' ? '基于户型库设计' : '自主设计';
     state = projectState(raw); time = raw.createdAt;
     url = '/pages/profile/record?type=projects&id=' + keyId;
+    const spent = Number.isSafeInteger(raw.pointsSpent) ? raw.pointsSpent : null;
     return { id: keyId, title, hint, status: state, time: format.shortTime(time), url,
       stage: raw.stage || 'FLAT', jobStatus: raw.jobStatus || '', hasResult: !!raw.hasResult,
-      coverAssetId: raw.coverAssetId || '', coverUrl: '' };
+      pointsSpent: spent, coverAssetId: raw.coverAssetId || '', coverUrl: '' };
   } else if (type === 'submissions') {
     title = '投稿 · ' + keyId.slice(-6); hint = '第 ' + (raw.currentRound || 1) + ' 轮审核';
     state = raw.publicationStatus === 'PUBLISHED' ? '已发布到户型库' : status(raw.status); time = raw.submittedAt;
@@ -42,6 +45,16 @@ function row(type, raw) {
   } else if (type === 'favorites') {
     title = raw.title || '收藏户型'; hint = [format.styleLabel(raw.styleCode), raw.buildingArea ? raw.buildingArea + '㎡' : '', raw.floorCount ? raw.floorCount + '层' : ''].filter(Boolean).join(' · ');
     state = '查看户型'; url = '/pages/library/detail?id=' + keyId + '&fromFavorites=1';
+  } else if (type === 'points') {
+    const delta = Number.isSafeInteger(raw.delta) ? raw.delta : null;
+    title = delta == null ? '设计点变动' : (delta > 0 ? '+' + delta : String(delta)) + ' 设计点';
+    hint = ledgerBiz[raw.bizType] || raw.bizType || '账户变动';
+    state = Number.isSafeInteger(raw.balanceAfter) ? '余额 ' + raw.balanceAfter + ' 点' : '';
+    time = raw.createdAt;
+    // 反向跳转：生成消费→方案详情；充值/退款→订单页。其余类型（人工调整等）不可跳
+    if (raw.bizType === 'ai_job' && raw.projectRef && id(raw.projectRef)) url = '/pages/profile/record?type=projects&id=' + id(raw.projectRef);
+    else if (['recharge_order', 'refund_order'].includes(raw.bizType) && keyId) url = '/pages/payment/success?orderId=' + keyId;
+    else url = '';
   } else {
     title = '充值 ¥' + amount(raw.amountCents); hint = '基础 ' + (raw.basePoints ?? '—') + ' 点 · 赠送 ' + (raw.bonusPoints ?? '—') + ' 点';
     state = payment(raw); time = raw.createdAt; url = '/pages/payment/success?orderId=' + keyId;

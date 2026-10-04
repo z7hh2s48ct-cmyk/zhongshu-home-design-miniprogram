@@ -91,6 +91,7 @@ public class AppDesignProjectController {
             vo.setStatus(item.status());
             vo.setJobStatus(item.jobStatus());
             vo.setCoverAssetId(item.coverAssetId());
+            vo.setPointsSpent(item.pointsSpent());
             vo.setHasResult(item.hasResult());
             vo.setCreatedAt(item.createTime() == null ? null
                     : LocalDateTime.ofInstant(item.createTime(), ZoneId.systemDefault()));
@@ -125,7 +126,9 @@ public class AppDesignProjectController {
         List<DesignProjectService.CandidateRow> candidates = jobId == null || jobId.isBlank()
                 ? List.of()
                 : designProjectService.promoteCandidates(userId, id, Long.parseLong(jobId));
-        return success(toProjectVo(project, jobId, candidates));
+        var vo = toProjectVo(project, jobId, candidates);
+        vo.setPointsSpent(designProjectService.netPointsSpent(id));
+        return success(vo);
     }
 
     @GetMapping("/{projectId}/result-versions")

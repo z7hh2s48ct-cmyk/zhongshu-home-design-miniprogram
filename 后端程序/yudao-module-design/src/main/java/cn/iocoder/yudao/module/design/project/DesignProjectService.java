@@ -848,7 +848,7 @@ public class DesignProjectService {
 
     public record ProjectListItem(long projectId, String sourceType, Long refCaseId, String stage,
                                   String status, java.time.Instant createTime,
-                                  String coverAssetId, String jobStatus, boolean hasResult) {
+                                  String coverAssetId, String jobStatus, boolean hasResult, long pointsSpent) {
     }
 
     public record ProjectPage(List<ProjectListItem> list, String nextCursor) {
@@ -881,7 +881,7 @@ public class DesignProjectService {
                         rs.getString("stage"), rs.getString("status"),
                         rs.getTimestamp("create_time") == null ? null
                                 : rs.getTimestamp("create_time").toInstant(),
-                        null, null, false),
+                        null, null, false, 0L),
                 args.toArray());
         boolean hasMore = all.size() > size;
         List<ProjectListItem> page = hasMore ? all.subList(0, size) : all;
@@ -910,15 +910,34 @@ public class DesignProjectService {
             jdbcTemplate.query("SELECT DISTINCT ON (project_ref) project_ref, status FROM ai_job "
                             + "WHERE deleted = FALSE AND project_ref IN (" + quotedIds + ") ORDER BY project_ref, id DESC",
                     rs -> { jobs.put(Long.parseLong(rs.getString("project_ref")), rs.getString("status")); });
+            var pointsSpent = new java.util.HashMap<Long, Long>();
+            // 净消耗 = Σ(任务总扣点) − Σ(结算退款)；单任务失败退款经 ai_job_settlement 汇总
+            jdbcTemplate.query("SELECT project_ref, COALESCE(SUM(total_point_cost),0) "
+                            + "- COALESCE(SUM((SELECT COALESCE(SUM(s.refunded_points),0) FROM ai_job_settlement s "
+                            + "WHERE s.job_id = ai_job.id AND s.deleted = FALSE)),0) AS net "
+                            + "FROM ai_job WHERE deleted = FALSE AND project_ref IN (" + quotedIds + ") GROUP BY project_ref",
+                    rs -> { pointsSpent.put(Long.parseLong(rs.getString("project_ref")), rs.getLong("net")); });
             var results = new java.util.HashSet<Long>(jdbcTemplate.queryForList(
                     "SELECT DISTINCT project_id FROM design_result_version WHERE deleted = FALSE AND project_id IN (" + inClause + ")",
                     Long.class));
             page = page.stream().map(item -> new ProjectListItem(item.projectId(), item.sourceType(), item.refCaseId(),
                     item.stage(), item.status(), item.createTime(),
-                    covers.get(item.projectId()), jobs.get(item.projectId()), results.contains(item.projectId()))).toList();
+                    covers.get(item.projectId()), jobs.get(item.projectId()), results.contains(item.projectId()),
+                    pointsSpent.getOrDefault(item.projectId(), 0L))).toList();
         }
         String next = hasMore ? String.valueOf(page.get(page.size() - 1).projectId()) : null;
         return new ProjectPage(List.copyOf(page), next);
+    }
+
+    /** 单方案净消耗（详情页费用展示）：与列表聚合同口径（Σ扣点 − Σ退款），无任务返回 0。 */
+    public long netPointsSpent(long projectId) {
+        Long net = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(total_point_cost),0) "
+                        + "- COALESCE(SUM((SELECT COALESCE(SUM(s.refunded_points),0) FROM ai_job_settlement s "
+                        + "WHERE s.job_id = ai_job.id AND s.deleted = FALSE)),0) FROM ai_job "
+                        + "WHERE deleted = FALSE AND project_ref = ?",
+                Long.class, String.valueOf(projectId));
+        return net == null ? 0L : net;
     }
 
     /** 最新需求快照中的设计键（UX：方案记录详情直出用户输入）；budgetInputs 属预算域不下发。 */

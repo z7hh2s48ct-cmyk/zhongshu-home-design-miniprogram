@@ -5,6 +5,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.commerce.controller.app.vo.AppPointAccountRespVO;
 import cn.iocoder.yudao.module.commerce.controller.app.vo.AppPointLedgerItemRespVO;
 import cn.iocoder.yudao.module.commerce.points.PointAccountService;
+import org.springframework.jdbc.core.JdbcTemplate;
 import cn.iocoder.yudao.module.infra.zhongshu.api.IdentitySessionPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +41,9 @@ public class AppPointController {
     @Resource
     private IdentitySessionPort identitySessionPort;
 
+    @Resource
+    private JdbcTemplate jdbcTemplate;
+
     @GetMapping("/point-account")
     @Operation(summary = "我的点数账户（总余额 = available + reserved；服务端数据库是唯一真源）")
     public CommonResult<AppPointAccountRespVO> getPointAccount(
@@ -74,6 +78,21 @@ public class AppPointController {
             vo.setCreatedAt(java.time.LocalDateTime.ofInstant(row.createTime(), java.time.ZoneOffset.UTC));
             return vo;
         }).toList());
+        // ai_job 流水回填归属方案：小程序端点数明细 → 方案详情的反向跳转依赖此字段
+        var jobIds = result.getList().stream()
+                .filter(vo -> "ai_job".equals(vo.getBizType()) && vo.getBizId() != null && vo.getBizId().matches("\\d+"))
+                .map(AppPointLedgerItemRespVO::getBizId)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!jobIds.isEmpty()) {
+            var refs = new java.util.HashMap<String, String>();
+            jdbcTemplate.query("SELECT id::text, project_ref FROM ai_job WHERE deleted = FALSE AND id IN ("
+                    + String.join(",", jobIds) + ")", rs -> {
+                refs.put(rs.getString(1), rs.getString(2));
+            });
+            for (AppPointLedgerItemRespVO vo : result.getList()) {
+                if ("ai_job".equals(vo.getBizType())) vo.setProjectRef(refs.get(vo.getBizId()));
+            }
+        }
         return success(result);
     }
 

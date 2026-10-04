@@ -10,7 +10,7 @@
           <view class="record-info">
             <view class="record-top"><text class="record-title">{{item.title}}</text><t-icon name="chevron-right" size="20px" color="#a89a8c" /></view>
             <text class="record-hint">{{item.hint}}</text>
-            <view class="record-bottom"><text class="record-status {{item.jobStatus ? 'living' : ''}}">{{item.status}}</text><text>{{item.time}}</text></view>
+            <view class="record-bottom"><text class="record-status {{item.jobStatus ? 'living' : ''}}">{{item.status}}</text><text wx:if="{{item.pointsSpent > 0}}" class="record-cost">累计消耗 {{item.pointsSpent}} 点</text><text>{{item.time}}</text></view>
           </view>
         </view>
       </view>

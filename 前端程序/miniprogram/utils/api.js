@@ -70,6 +70,9 @@ module.exports = {
   listRechargeOrders: function (pageNo, pageSize) {
     return http.get(BASE + '/recharge-orders?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
   },
+  listPointLedger: function (pageNo, pageSize) {
+    return http.get(BASE + '/point-ledger?pageNo=' + (pageNo || 1) + '&pageSize=' + (pageSize || 20));
+  },
   createProject: function (body, idemKey) {
     return http.post(BASE + '/design-projects', body || null, idemKey ? { 'Idempotency-Key': idemKey } : undefined);
   },

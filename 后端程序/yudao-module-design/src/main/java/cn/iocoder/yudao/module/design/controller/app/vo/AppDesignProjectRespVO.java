@@ -53,6 +53,8 @@ public class AppDesignProjectRespVO {
 
     @Schema(description = "列表用封面资产（已选平面 > 最新结果版本），详情不下发")
     private String coverAssetId;
+    /** 净消耗设计点（Σ任务扣点 − Σ退款）；0=未生成或全额退款。 */
+    private Long pointsSpent;
 
     @Schema(description = "列表用：是否已产生结果版本")
     private Boolean hasResult;

@@ -11,7 +11,7 @@ protectedPage({
     this._type = Object.prototype.hasOwnProperty.call(view.titles, options.type) ? options.type : null;
     if (!this._type) { this.setData({ error: '记录类型无效，请从「我的」重新进入' }); return; }
     this.setData({ title: view.titles[this._type], canDelete: this._type === 'projects',
-      emptyText: ({ projects: '还没有方案，完成设计后会自动保留在这里', submissions: '还没有投稿，可从已完成的方案提交审核', favorites: '还没有收藏，去户型详情收藏喜欢的设计', orders: '还没有充值订单' })[this._type] });
+      emptyText: ({ projects: '还没有方案，完成设计后会自动保留在这里', submissions: '还没有投稿，可从已完成的方案提交审核', favorites: '还没有收藏，去户型详情收藏喜欢的设计', orders: '还没有充值订单', points: '还没有点数变动，充值或生成后会记录在这里' })[this._type] });
   },
   onShow() { if (this._type) this.reload(); },
   onUnload() { this._seq = (this._seq || 0) + 1; this._token = null; },
@@ -37,16 +37,17 @@ protectedPage({
     const seq = this._seq, cursor = this._cursor, pageNo = this._page, type = this._type;
     this.setData({ loading: true, error: '' });
     const request = type === 'orders' ? api.listRechargeOrders(pageNo, 20)
+      : type === 'points' ? api.listPointLedger(pageNo, 20)
       : ({ projects: api.listProjects, submissions: api.listSubmissions, favorites: api.listFavorites })[type](cursor, 20);
     return request.then(response => {
       if (!this.current(seq)) return;
       if (!response || !Array.isArray(response.list)) throw Error('记录数据不完整，请重试');
       if (type !== 'orders' && response.nextCursor != null && (!view.id(response.nextCursor) || response.nextCursor === cursor)) throw Error('分页数据异常，请刷新');
-      if (type === 'orders' && (!Number.isSafeInteger(response.total) || response.total < 0)) throw Error('订单分页数据异常');
+      if ((type === 'orders' || type === 'points') && (!Number.isSafeInteger(response.total) || response.total < 0)) throw Error('分页数据异常，请重试');
       const incoming = response.list.map(item => view.row(type, item));
       const seen = new Set(this.data.rows.map(item => item.id));
       const rows = this.data.rows.concat(incoming.filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; }));
-      const more = type === 'orders' ? pageNo * 20 < response.total : !!response.nextCursor;
+      const more = (type === 'orders' || type === 'points') ? pageNo * 20 < response.total : !!response.nextCursor;
       if (more && rows.length === this.data.rows.length) throw Error('分页未返回新的记录，请刷新');
       this._cursor = response.nextCursor || null; this._page = pageNo + 1;
       this.setData({ rows, hasMore: more, loading: false });
@@ -79,7 +80,7 @@ protectedPage({
     }
     if (!this.current(this._seq)) { this.setData({ rows: [], hasMore: false, error: '登录身份已变化，请重新进入' }); return; }
     const row = this.data.rows.find(item => item.id === id);
-    if (row) wx.navigateTo({ url: row.url, fail: () => wx.showToast({ title: '打开失败，请重试', icon: 'none' }) });
+    if (row && row.url) wx.navigateTo({ url: row.url, fail: () => wx.showToast({ title: '打开失败，请重试', icon: 'none' }) });
   },
   // —— 滑动删除（UX 2026-10）：横向滑动露出删除按钮，长按直达确认框；仅「我的方案」开启 ——
   swipeStart(event) {

@@ -29,6 +29,8 @@ public class AppPointLedgerItemRespVO {
 
     @Schema(description = "关联业务编号")
     private String bizId;
+    /** bizType=ai_job 时回填：该任务归属的方案 id，用于小程序端跳转方案详情。 */
+    private String projectRef;
 
     @Schema(description = "时间")
     private LocalDateTime createdAt;
