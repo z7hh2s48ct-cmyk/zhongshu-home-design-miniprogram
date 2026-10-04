@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生成页改版仿真 · 候选内联呈现与页内选择（使用真实生成图）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #2b2b2b; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 40px 24px 64px; }
+  .page-head { max-width: 1280px; margin: 0 auto 36px; color: #eee; }
+  .page-head h1 { font-size: 24px; font-weight: 600; }
+  .page-head p { margin-top: 10px; font-size: 14px; color: #b9b9b9; line-height: 1.8; }
+  .page-head .tag { display: inline-block; margin-right: 8px; padding: 3px 10px; border-radius: 12px; background: #8b4818; color: #fff; font-size: 12px; }
+  .board { display: flex; gap: 36px; justify-content: center; flex-wrap: wrap; max-width: 1280px; margin: 0 auto; }
+  .scene { width: 375px; }
+  .phone { width: 375px; height: 812px; background: #faf6f0; border-radius: 42px; border: 10px solid #111; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .statusbar { height: 44px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 28px 6px; font-size: 14px; font-weight: 600; color: #1a1a1a; background: #faf6f0; flex-shrink: 0; }
+  .navbar { height: 46px; display: flex; align-items: center; padding: 0 16px; background: #faf6f0; border-bottom: 1px solid #f0e9df; flex-shrink: 0; }
+  .navbar .back { font-size: 20px; color: #3c2f22; margin-right: 10px; }
+  .navbar .title { flex: 1; text-align: center; font-size: 17px; font-weight: 600; color: #1a1a1a; margin-right: 30px; }
+  .content { flex: 1; overflow-y: auto; padding: 16px 16px 20px; }
+  .content::-webkit-scrollbar { width: 0; }
+
+  .card { background: #fff; border-radius: 16px; padding: 18px 16px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(90, 60, 30, .05); }
+  /* Hero 生成状态 */
+  .hero { display: flex; flex-direction: column; align-items: center; padding: 26px 16px 20px; }
+  .orb { position: relative; width: 92px; height: 92px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .orb .ring { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #d9b98f; animation: pulse 1.8s ease-out infinite; }
+  .orb .core { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #8b4818, #a86a35); color: #fff; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  @keyframes pulse { 0% { transform: scale(.85); opacity: 1; } 100% { transform: scale(1.15); opacity: 0; } }
+  .hero h2 { font-size: 19px; font-weight: 600; color: #3c2f22; }
+  .hero .sub { margin-top: 6px; font-size: 13px; color: #a09384; }
+  .bar { width: 100%; height: 9px; margin-top: 18px; border-radius: 6px; background: #eee9e2; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #8b4818, #a86a35); }
+  .meter { width: 100%; margin-top: 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .meter .pct { color: #8a4a1a; font-size: 21px; font-weight: 600; }
+  .meter .elapsed { color: #9a938c; font-size: 12px; }
+  /* 阶段步条 */
+  .flow { display: flex; align-items: flex-start; padding: 18px 8px 14px; }
+  .fstep { width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .fstep i { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #d5cec5; color: #a09a92; background: #fff; font-style: normal; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .fstep span { font-size: 12px; color: #a09a92; }
+  .fstep.on i { border-color: #8b4818; background: #8b4818; color: #fff; }
+  .fstep.on span { color: #7b3f17; font-weight: 600; }
+  .fstep.done i { background: #f3e7d7; border-color: #d9b98f; color: #8a4a1a; }
+  .fline { flex: 1; margin-top: 14px; border-top: 2px dashed #ddd6cc; }
+  .fline.on { border-color: #c89a63; }
+  /* 候选区 */
+  .sec-title { font-size: 15px; font-weight: 600; color: #3c2f22; }
+  .sec-sub { display: block; margin-top: 6px; font-size: 12px; color: #a09384; line-height: 1.6; }
+  .cand-grid { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cand { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid #eee5d8; background: #f3eee7; animation: rise .6s ease both; }
+  .cand img { width: 100%; height: 150px; object-fit: cover; object-position: top; display: block; }
+  .cand .slot { position: absolute; top: 8px; left: 8px; background: rgba(60, 47, 34, .72); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .cand .pick { display: block; margin: 8px 10px 10px; text-align: center; padding: 7px 0; border-radius: 9px; border: 1.5px solid #c9a36b; color: #8a4a1a; font-size: 13px; background: #fff; }
+  .cand.selected { border-color: #8b4818; box-shadow: 0 0 0 3px rgba(139, 72, 24, .15); }
+  .cand.selected .pick { background: linear-gradient(100deg, #8b4818, #a86a35); color: #fff; border: 0; font-weight: 600; }
+  .cand.selected::before { content: '✓ 已选定'; position: absolute; z-index: 2; top: 8px; right: 8px; background: #2e7d43; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+  .cand.pending img { opacity: .28; }
+  .cand.pending .mask { position: absolute; inset: 0 0 44px; display: flex; align-items: center; justify-content: center; color: #8a7f70; font-size: 12px; }
+  .cand.pending .pick { color: #b3a898; border-color: #ddd6cc; }
+  @keyframes rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }
+  /* 提示与按钮 */
+  .tip { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid #ecd1ac; border-radius: 12px; background: #fff8ef; font-size: 12px; color: #8a6a45; }
+  .tip .ico { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #c78217; color: #c78217; font-size: 11px; display: flex; align-items: center; justify-content: center; font-style: normal; flex-shrink: 0; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  .btn { min-height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .btn.primary { background: linear-gradient(100deg, #8b4818, #7b5532); color: #fff; }
+  .btn.ghost { background: #fff; color: #7b5532; border: 1.5px solid #7b5532; }
+  .btn.next { width: 100%; min-height: 48px; background: linear-gradient(100deg, #8b4818, #a86a35); color: #fff; font-weight: 600; box-shadow: 0 6px 18px rgba(139, 72, 24, .25); }
+  /* 场景说明 */
+  .scene-note { margin-top: 18px; background: #333; border-radius: 12px; padding: 16px 18px; color: #ccc; font-size: 13px; line-height: 2; }
+  .scene-note b { color: #e8c48f; }
+  .scene-note h3 { color: #fff; font-size: 15px; margin-bottom: 8px; }
+  .footnote { max-width: 1280px; margin: 32px auto 0; color: #999; font-size: 13px; line-height: 1.9; border-top: 1px solid #444; padding-top: 18px; }
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1><span class="tag">改版仿真</span>AI 生成页：候选内联呈现 + 页内选择（平面 / 立面统一交互）</h1>
+    <p>以下三台手机均为同一版「生成页」的不同时刻，图中方案图均为<span style="color:#e8c48f">真实 AI 生成图</span>（非占位图）。
+    核心变化：① 每张方案一通过校验即在本页浮现；② 生成完成后<b>不再跳转选择页</b>，直接在本页查看并点「选它」；③ 选定后本页出现「下一步」引导，流程不断裂。</p>
+  </div>
+
+  <div class="board">
+    <!-- 场景 A：平面生成中 -->
+    <div class="scene">
+      <div class="phone">
+        <div class="statusbar"><span>16:37</span><span>▎▎ ⚡ ▉</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">平面方案生成</span></div>
+        <div class="content">
+          <div class="card hero">
+            <div class="orb"><div class="ring"></div><div class="core">AI</div></div>
+            <h2>AI 正在绘制方案</h2>
+            <div class="sub">为您生成 4 个平面方案 · 预计 2~4 分钟</div>
+            <div class="bar"><i style="width: 68%;"></i></div>
+            <div class="meter"><span class="pct">68%</span><span class="elapsed">已用时 02:41</span></div>
+          </div>
+          <div class="card">
+            <div class="flow">
+              <div class="fstep done"><i>1</i><span>排队</span></div><div class="fline on"></div>
+              <div class="fstep on"><i>2</i><span>生成</span></div><div class="fline"></div>
+              <div class="fstep"><i>3</i><span>校验</span></div><div class="fline"></div>
+              <div class="fstep"><i>4</i><span>完成</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <span class="sec-title">已生成候选（2/4）</span>
+            <span class="sec-sub">每张方案一通过校验就会出现在这里，无需等待全部完成</span>
+            <div class="cand-grid">
+              <div class="cand" style="animation-delay:.1s"><span class="slot">候选 1 · 已通过</span><img src="assets/plan-hq.png" alt=""><span class="pick">选它</span></div>
+              <div class="cand" style="animation-delay:.5s"><span class="slot">候选 2 · 已通过</span><img src="assets/plan-1024.png" alt=""><span class="pick">选它</span></div>
+              <div class="cand pending" style="animation-delay:.9s"><span class="slot">候选 3 · 生成中</span><img src="assets/plan-1024.png" alt=""><div class="mask">AI 绘制中…</div><span class="pick">—</span></div>
+              <div class="cand pending" style="animation-delay:1.3s"><span class="slot">候选 4 · 排队</span><img src="assets/plan-hq.png" alt=""><div class="mask">等待中</div><span class="pick">—</span></div>
+            </div>
+          </div>
+          <div class="tip"><i class="ico">i</i>生成失败或数量不足时按有效方案结算，退点自动到账</div>
+          <div class="actions"><div class="btn primary">后台继续</div><div class="btn ghost">取消生成</div></div>
+        </div>
+      </div>
+      <div class="scene-note">
+        <h3>场景 A · 生成中（平面）</h3>
+        <b>逐张浮现</b>：候选 1/2 已通过校验并成图淡入；候选 3/4 为灰占位（生成中/排队）。<br>
+        进度条与阶段步条照旧；「后台继续 / 取消生成」仅在生成中显示。
+      </div>
+    </div>
+
+    <!-- 场景 B：平面完成，页内选择 -->
+    <div class="scene">
+      <div class="phone">
+        <div class="statusbar"><span>16:39</span><span>▎▎ ⚡ ▉</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">平面方案生成</span></div>
+        <div class="content">
+          <div class="card hero">
+            <div class="orb"><div class="core" style="background:linear-gradient(135deg,#2e7d43,#3d9c58)">✓</div></div>
+            <h2>4 个方案全部生成完成</h2>
+            <div class="sub">点选一个满意的方案，继续立面设计</div>
+            <div class="bar"><i style="width: 100%;"></i></div>
+            <div class="meter"><span class="pct">100%</span><span class="elapsed">共耗时 03:12</span></div>
+          </div>
+          <div class="card">
+            <div class="flow">
+              <div class="fstep done"><i>1</i><span>排队</span></div><div class="fline on"></div>
+              <div class="fstep done"><i>2</i><span>生成</span></div><div class="fline on"></div>
+              <div class="fstep done"><i>3</i><span>校验</span></div><div class="fline on"></div>
+              <div class="fstep on"><i>4</i><span>完成</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <span class="sec-title">选择平面方案（2/4 已选定示例）</span>
+            <span class="sec-sub">点「选它」即完成选择，选定后可随时在本页更换</span>
+            <div class="cand-grid">
+              <div class="cand selected"><span class="slot">候选 1</span><img src="assets/plan-hq.png" alt=""><span class="pick">✓ 已选定</span></div>
+              <div class="cand"><span class="slot">候选 2</span><img src="assets/plan-1024.png" alt=""><span class="pick">选它</span></div>
+              <div class="cand"><span class="slot">候选 3</span><img src="assets/plan-hq.png" alt=""><span class="pick">选它</span></div>
+              <div class="cand"><span class="slot">候选 4</span><img src="assets/plan-1024.png" alt=""><span class="pick">选它</span></div>
+            </div>
+          </div>
+          <div class="tip"><i class="ico">i</i>选定平面后，立面将基于该方案的空间布局生成</div>
+          <div class="btn next">下一步：配置立面生成</div>
+        </div>
+      </div>
+      <div class="scene-note">
+        <h3>场景 B · 平面完成，页内选择</h3>
+        <b>不再跳转选择页</b>：候选在本页大图呈现，点「选它」完成确认（选中高亮 + 徽章）。<br>
+        选定后本页出现「下一步：配置立面生成」，流程不离开当前页。
+      </div>
+    </div>
+
+    <!-- 场景 C：立面完成，页内选择 -->
+    <div class="scene">
+      <div class="phone">
+        <div class="statusbar"><span>16:52</span><span>▎▎ ⚡ ▉</span></div>
+        <div class="navbar"><span class="back">‹</span><span class="title">立面方案生成</span></div>
+        <div class="content">
+          <div class="card hero">
+            <div class="orb"><div class="core" style="background:linear-gradient(135deg,#2e7d43,#3d9c58)">✓</div></div>
+            <h2>立面方案生成完成</h2>
+            <div class="sub">基于您选定的平面方案生成 · 新中式 / 坡屋顶 / 灰色石材</div>
+            <div class="bar"><i style="width: 100%;"></i></div>
+            <div class="meter"><span class="pct">100%</span><span class="elapsed">共耗时 02:38</span></div>
+          </div>
+          <div class="card">
+            <span class="sec-title">选择立面方案</span>
+            <span class="sec-sub">立面基于你选定的平面生成，尺寸与房间布局与平面一致</span>
+            <div class="cand-grid" style="grid-template-columns: 1fr;">
+              <div class="cand selected"><span class="slot">候选 1</span><img src="assets/elevation-real.png" style="height: 300px;" alt=""><span class="pick">✓ 已选定</span></div>
+            </div>
+          </div>
+          <div class="tip"><i class="ico">i</i>选定立面后即形成最终方案版本，可回看、保存预算与投稿</div>
+          <div class="btn next">查看最终方案</div>
+        </div>
+      </div>
+      <div class="scene-note">
+        <h3>场景 C · 立面完成，页内选择</h3>
+        立面与平面<b>同一套交互</b>：候选内联呈现 → 页内「选它」→「查看最终方案」进入版本回看。<br>
+        图为真实立面产出：双视图 + 尺寸标注 + 材料样板，与选定平面的 14m×12m、三层、老人房朝南约束一致。
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    说明：① 本仿真为交互与布局评审用高保真稿，图内方案均为本次本地真实 AI 生成图；② 平面/立面两个阶段共用同一套页面结构与交互，仅标题与下一步文案不同；
+    ③ 「后台继续」状态下从「我的方案」进入的详情页同样展示候选与下一步引导（已实现）；④ 确认本稿后按此实施小程序改造。
+  </div>
+</body>
+</html>
